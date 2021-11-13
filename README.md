@@ -7,11 +7,11 @@ This repository contains the code used in a currently anonymous article. It cont
 * [GAMS](https://www.gams.com)
 
 ## Heuristics
-This repository containts the following heuristics:
+This repository contains the following heuristics:
 * QMKOPT: optimisation model from the QMK heuristic solved with the solver CPLEX
 * QMK: optimisation model from the QMK heuristic solved with the solver BONMIN
-* CHISOL: CHI heuristic without a local search algorithm
-* CHI: CHI heuristic with a local search after CHISOL
+* CHISOL: CHI heuristic without local search
+* CHI: CHI heuristic with local search
 * KLINK: KLINK heuristic by [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004), replicated based on the article
 * GP: greedy pairs heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
 * GS: greedy seeds heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
