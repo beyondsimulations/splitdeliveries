@@ -16,7 +16,7 @@ This repository contains the following heuristics:
 * GP: greedy pairs heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
 * GS: greedy seeds heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
 * BS: bestselling heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
-* OPT: optimisation model to optimally solve the split-delivery minimisation with CPLEX based on the models of [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687) and [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
+* OPT: optimisation model to solve the split-delivery minimisation with CPLEX based on the models of [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687) and [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
 * RND: random allocation of SKUs to warehouses
 The choice of heuristics as well as parameters can be controlled in the file "main_benchmark_seetings.jl".
 
