@@ -1,9 +1,9 @@
 # greedy seeds heuristic by A. Catalan and M. Fisher (2012) doi:10. 2139/ssrn.2166687
 function GREEDYSEEDS(trans::Array{Int64,2},
+                     Q::Matrix{Int64},
                      capacity::Array{Int64,1})
     if CHECKCAPACITY(trans::Array{Int64,2}, capacity::Array{Int64,1}) == 1
         ## Calculate the coapperance matrix
-        Q = COAPPEARENCE(trans::Array{Int64,2})
         capacity_left = copy(capacity) .- 1
         ## Sort the SKUs by decreasing sales
         sales = SORTSALES(trans::Array{Int64,2})

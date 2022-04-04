@@ -1,3 +1,6 @@
+# Activate necessary environment
+    import Pkg
+    Pkg.activate("splitdeliveries")
 ## import packages
     include("load_packages.jl")
 
@@ -14,24 +17,28 @@
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
 
 # Set the number of cpu cores your computer has at its disposal
-    cpu_cores  = 6
+    cpu_cores  = 8
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKOPT = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK    = [1], # quadratic-multiple knapsack heuristic with BONMIN as solver
-                      CHISOL = [1], # chi-square heuristic without local search
-                      CHI    = [1], # chi-square heuristic with a local search based on the QMK objective function
-                      KLINK  = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      QMK    = [1], # quadratic-multiple knapsack heuristic with SBB as solver
+                      QMKLOC = [0], # quadratic-multiple knapsack heuristic with SBB as solver + local search based on the QMK objective function
+                      CHI    = [1], # chi-square heuristic 
+                      CHILOC = [1], # chi-square heuristic + local search based on the QMK objective function
+                      KLINK  = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       GP     = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GPLOC  = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
                       GS     = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GSLOC  = [0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
                       BS     = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      BSLOC  = [0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
                       OPT    = [0], # optimisation model to determine the optimal solution with CPLEX
                       RND    = [1]) # random allocation of SKUs (cannot be deactivated)
 
 # Parameter for the transaction generation if no transactional data is specified under the path 
 # "transactions/transactions_$experiment". The benchmark will generate random and independent transactions
 # while "order" specifies the number of transactions in each dataset
-    orders = 10000
+    orders = 100000
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -61,7 +68,7 @@
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
-    iterations = 1000
+    iterations = 100
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation

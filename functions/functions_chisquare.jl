@@ -131,9 +131,7 @@ function WHPOTDEP(cap_left::Array{Int64,1},
     wh_dep = Array{Float64,1}(undef,size(cap_left,1)) .= 0
     used_dep = Array{Float64,1}(undef,size(cap_left,1)) .= 0
     for k in 1:size(cap_left,1)
-        a = @view X[:,k]
-        b = @view dep[:,i]
-        wh_dep[k] = dot(a,b)
+        wh_dep[k] = dot(@view(X[:,k]),@view(dep[:,i]))
         if cap_left[k] > 0
             pot_dep[k] = wh_dep[k]
         end
@@ -237,11 +235,8 @@ function FINDDEP!(X::Array{Int64,2},
     allocated = sum(X,dims=2)
     for i in 1:size(X,1)
         if allocated[i] == 0
-            a = @view X[:,k]
-            b = @view dep[:,i]
-            c = @view nor[:,i]
-            pot_dep[i] = dot(a,b)
-            pot_nor[i] = dot(a,c)
+            pot_dep[i] = dot(@view(X[:,k]),@view(dep[:,i]))
+            pot_nor[i] = dot(@view(X[:,k]),@view(nor[:,i]))
             if pot_dep[i] > 0
                 pot_dep[i] += pot_nor[i]
             end
@@ -261,9 +256,7 @@ function FILLUP(X::Array{Int64,2},
             best_allocation = Array{Float64,1}(undef,size(Q,1)) .= 0
             for i = 1:size(Q,1)
                 if X[i,d] == 0
-                    a = @view X[:,d]
-                    b = @view Q[:,i]
-                    best_allocation[i] = dot(a,b)
+                    best_allocation[i] = dot(@view(X[:,d]),@view(Q[:,i]))
                 end
             end
             if findmax(best_allocation)[1] > 0
@@ -279,39 +272,34 @@ end
 
 # function to apply a pair-wise exchange local search on the allocation
 # of the CHI heuristic
-function LOCALSEARCH(W::Array{Int64,2},
-                      Q::Array{Int64,2})
-    iteration = 1
+function LOCALSEARCHCHI(W::Array{Int64,2},
+                        Q::Array{Int64,2})
     coapp_sort = Array{Int64,2}(undef,size(Q,1),2) .= 0
     for i = 1:size(Q,1)
         coapp_sort[i,1] = i
         coapp_sort[i,2] = sum(Q[i,:])
     end
-    coapp_sort = sortslices(coapp_sort,dims=1,by=x->x[2],rev=true)
-    while iteration > 0
-       iteration = 0
-       for i = 1:size(W,1)
-        i = coapp_sort[i,1]
-           for j = 1:size(W,1)
-            j = coapp_sort[j,1]
-               if i != j
-                   for k = 2:size(W,2)
-                       for g = 1:size(W,2)-1
-                           if W[i,k] == 1 && W[j,g] == 1 && W[i,g] == 0 && W[j,k] == 0
-                               iteration += POTENTIAL(i,j,k,g,W,Q)
-                           end
-                       end
-                   end
-               end
-           end
-       end
-   end
+    coapp_sort = sortslices(coapp_sort,dims=1,by=x->x[2],rev=true)[:,1]
+    for trial = 1:3
+        for k = 1:size(W,2)-1
+            for i in coapp_sort
+                if W[i,k] == 1 && W[i,k+1] == 0
+                    for j in coapp_sort
+                        if W[j,k+1] == 1 && W[j,k] == 0
+                            iteration = POTENTIALCHI!(i,j,k,k+1,W,Q)
+                            if iteration > 0
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
    return W::Array{Int64,2}
 end
 
-# function to calculate the potential improvement during
-# the local search procedure
-function POTENTIAL(i::Int64,
+function POTENTIALCHI!(i::Int64,
                         j::Int64,
                         k::Int64,
                         g::Int64,
@@ -319,25 +307,15 @@ function POTENTIAL(i::Int64,
                         Q::Array{Int64,2})
     potential = 0
     impr = 0
-    X[i,k] = 0
-    X[j,g] = 0
-    X[i,g] = 1
-    X[j,k] = 1
-    a = @view X[:,g]
-    b = @view X[:,k]
-    c = @view Q[i,:]
-    d = @view Q[j,:]
-    potential += dot(a,c)
-    potential -= dot(b,c)
-    potential += dot(b,d)
-    potential -= dot(a,d)
+    for y = 1:size(Q,1)
+        potential += (X[y,g] - X[y,k]) * Q[y,i] + (X[y,k] - X[y,g]) * Q[y,j]
+    end
     if potential > 0
         impr = 1
-    else
-        X[i,k] = 1
-        X[j,g] = 1
-        X[i,g] = 0
-        X[j,k] = 0
+        X[i,k] = 0
+        X[j,g] = 0
+        X[i,g] = 1
+        X[j,k] = 1
     end
     return impr::Int64
 end

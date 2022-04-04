@@ -1,7 +1,6 @@
 # Function to calculate the Coappearance Matrix Q
 function COAPPEARENCE(trans::Array{Int64,2})
-    Q = Array{Int64,2}(undef,size(trans,2),size(trans,2))
-    Q .= matmul(transpose(trans),trans)
+    Q = Octavian.matmul(transpose(trans),trans)
     for i = 1:size(Q,1)
         Q[i,i] = 0
     end
@@ -135,4 +134,60 @@ function RANDOMIND(orders::Int64, skus::Int64)
         end
     end
     return transactions::Array{Int64,2}
+end
+
+# function to apply a pair-wise exchange local search on the allocation
+# of all other heuristics
+function LOCALSEARCH(W::Array{Int64,2},
+                     Q::Array{Int64,2})
+    # lock to avoid racing conditions during the local search
+    ren_lock = ReentrantLock()
+    iteration = 1
+    coapp_sort = Array{Int64,2}(undef,size(Q,1),2) .= 0
+    for i = 1:size(Q,1)
+        coapp_sort[i,1] = i
+        coapp_sort[i,2] = sum(Q[i,:])
+    end
+    coapp_sort = sortslices(coapp_sort,dims=1,by=x->x[2],rev=true)
+    while iteration > 0
+        iteration = 0
+        for i in coapp_sort[:,1]
+            for j in coapp_sort[:,1]
+                if i != j
+                    for k = 2:size(W,2)
+                        for g = 1:size(W,2)-1
+                            if W[i,k] == 1 && W[j,g] == 1 && W[i,g] == 0 && W[j,k] == 0
+                                iteration += POTENTIAL!(i,j,k,g,W,Q)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+   return W::Array{Int64,2}
+end
+
+# function to calculate the potential improvement during
+# the local search procedure
+function POTENTIAL!(i::Int64,
+                        j::Int64,
+                        k::Int64,
+                        g::Int64,
+                        X::Array{Int64,2},
+                        Q::Array{Int64,2})
+    potential = 0
+    impr = 0
+    potential += dot(@view(X[:,g]),@view(Q[i,:]))
+    potential -= dot(@view(X[:,k]),@view(Q[i,:]))
+    potential += dot(@view(X[:,k]),@view(Q[j,:]))
+    potential -= dot(@view(X[:,g]),@view(Q[j,:]))
+    if potential > 0
+        impr = 1
+        X[i,k] = 0
+        X[j,g] = 0
+        X[i,g] = 1
+        X[j,k] = 1
+    end
+    return impr::Int64
 end
