@@ -106,7 +106,6 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
                     Qs::Array{Float64,2},
                     cap_left::Array{Int64,1})
     end
-
     ## return the resulting allocation matrix
     return X::Array{Int64,2}
 end

@@ -1,6 +1,7 @@
 # Activate necessary environment
     import Pkg
     Pkg.activate("splitdeliveries")
+
 ## import packages
     include("load_packages.jl")
 
@@ -17,7 +18,7 @@
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
 
 # Set the number of cpu cores your computer has at its disposal
-    cpu_cores  = 4
+    cpu_cores  = 8
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKOPT = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
@@ -38,7 +39,7 @@
 # Parameter for the transaction generation if no transactional data is specified under the path 
 # "transactions/transactions_$experiment". The benchmark will generate random and independent transactions
 # while "order" specifies the number of transactions in each dataset
-    orders = 100000
+    orders = 200000
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -59,7 +60,7 @@
 ## max_nodes: maximum number of nodes till termination
     abort       = 43200
     show_opt    = 0
-    allowed_gap = 0.0000
+    allowed_gap = 0.00000
     max_nodes   = 10000000
 
 # Parameters for CHISQUARE
