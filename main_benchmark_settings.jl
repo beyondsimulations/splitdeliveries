@@ -17,7 +17,7 @@
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
 
 # Set the number of cpu cores your computer has at its disposal
-    cpu_cores  = 8
+    cpu_cores  = 4
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKOPT = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver

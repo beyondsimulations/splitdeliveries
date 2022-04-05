@@ -280,7 +280,7 @@ function LOCALSEARCHCHI(W::Array{Int64,2},
         coapp_sort[i,2] = sum(Q[i,:])
     end
     coapp_sort = sortslices(coapp_sort,dims=1,by=x->x[2],rev=true)[:,1]
-    for trial = 1:3
+    for trial = 1:5
         for k = 1:size(W,2)-1
             for i in coapp_sort
                 if W[i,k] == 1 && W[i,k+1] == 0
