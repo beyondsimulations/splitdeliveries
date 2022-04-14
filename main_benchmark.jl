@@ -1,6 +1,9 @@
 function BENCHMARK(capacity_benchmark::Array{Int64,2},
+                   skus_benchmark::Vector{Int64},
                    start::DataFrame,
                    orders::Int64,
+                   max_groupsize::Int64,
+                   max_dependence::Float64,
                    trials::Int64,
                    stagnant::Int64,
                    strategy::Int64,
@@ -74,6 +77,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         end
         print("\ncapacity constellation: ",a," of ",size(capacity_benchmark,1),
             "\ncapacity: ",capacity)
+            
         ##  Note the numer of warehouses as well as the capacity in the export dataframes
         parcels_benchmark[a,:wareh] = 
         time_benchmark[a,:wareh] = 
@@ -93,7 +97,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Generate artificial random transactions without dependencies if there is no transactional dataset
         if isfile("transactions/transactions_$experiment.csv") == false
-            trans = RANDOMIND(orders,sum(capacity_benchmark[a,:]))
+            print("\nstarting generation of transactions.")
+            time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,skus_benchmark[a],
+                                                max_groupsize,min_dependence,max_dependence)
+            print("\ntransactions generated after ", round(time,digits = 3)," seconds.")
         end
 
         #  Calculate the coappearance matrix
@@ -126,7 +133,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                  capacity::Array{Int64,1},
                                  combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:QMKOPT] = sum(W)
-            parcels_benchmark[a,:QMKOPT] = sum(parcel)
+            parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans, W, capacity, combination)
             print("\n      qmkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
                   " / capacity_used: ", cap_used[a,:QMKOPT], " / time: ",round(time_benchmark[a,:QMKOPT],digits = 3))
         end
@@ -142,12 +149,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                  cpu_cores::Int64,
                                                                                  allowed_gap::Float64,
                                                                                  max_nodes::Int64)
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:QMK] = sum(W)
-            parcels_benchmark[a,:QMK] = sum(parcel)
+            parcels_benchmark[a,:QMK] = PARCELSSEND(trans, W, capacity, combination)
             print("\n         mqk: parcels after optimisation: ", parcels_benchmark[a,:QMK], 
                   " / capacity_used: ", cap_used[a,:QMK],  " / time: ", round(time_benchmark[a,:QMK], digits = 3))
         end
@@ -168,12 +171,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                  max_nodes::Int64)
             end
             time_benchmark[a,:QMKLOC] += @elapsed W = LOCALSEARCH(W::Array{Int64,2}, Q::Array{Int64,2})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:QMKLOC] = sum(W)
-            parcels_benchmark[a,:QMKLOC] = sum(parcel)
+            parcels_benchmark[a,:QMKLOC] = PARCELSSEND(trans, W, capacity, combination)
             print("\n     mqk+loc: parcels after optimisation: ", parcels_benchmark[a,:QMKLOC], 
                   " / capacity_used: ", cap_used[a,:QMKLOC],  " / time: ", round(time_benchmark[a,:QMKLOC], digits = 3))
         end
@@ -184,12 +183,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                     capacity::Array{Int64,1},
                                                                     Q::Array{Int64,2},
                                                                     sig::Float64)
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:CHI] = sum(W)
-            parcels_benchmark[a,:CHI] = sum(parcel)
+            parcels_benchmark[a,:CHI] = PARCELSSEND(trans, W, capacity, combination)
             print("\n         chi: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
                   " / capacity_used: ", cap_used[a,:CHI],  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
         end
@@ -205,12 +200,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                  sig::Float64)
             end
             time_benchmark[a,:CHILOC] += @elapsed W = LOCALSEARCHCHI(W::Array{Int64,2}, Q::Array{Int64,2})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:CHILOC] = sum(W)
-            parcels_benchmark[a,:CHILOC] = sum(parcel)
+            parcels_benchmark[a,:CHILOC] = PARCELSSEND(trans, W, capacity, combination)
             print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHILOC], 
                   " / capacity_used: ", cap_used[a,:CHILOC],  " / time: ",round(time_benchmark[a,:CHILOC], digits = 3))
         end
@@ -224,12 +215,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                            stagnant::Int64,
                                                            strategy::Int64,
                                                            klinkstatus::Int64)
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:KLINK] = sum(W)
-            parcels_benchmark[a,:KLINK] = sum(parcel)
+            parcels_benchmark[a,:KLINK] = PARCELSSEND(trans, W, capacity, combination)
             print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KLINK], 
                   " / capacity_used: ", cap_used[a,:KLINK],  " / time: ",round(time_benchmark[a,:KLINK], digits = 3))
         end
@@ -240,12 +227,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(trans::Array{Int64,2},
                                                              Q::Matrix{Int64},
                                                              capacity::Array{Int64,1})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:GP] = sum(W)
-            parcels_benchmark[a,:GP] = sum(parcel)
+            parcels_benchmark[a,:GP] = PARCELSSEND(trans, W, capacity, combination)
             print("\n          gp: parcels after optimisation: ", parcels_benchmark[a,:GP], 
                   " / capacity_used: ", cap_used[a,:GP],  " / time: ",round(time_benchmark[a,:GP], digits = 3))
         end
@@ -257,12 +240,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                 Q::Matrix{Int64},
                                                                 capacity::Array{Int64,1})
             time_benchmark[a,:GPLOC] += @elapsed W = LOCALSEARCH(W::Array{Int64,2}, Q::Array{Int64,2})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:GPLOC] = sum(W)
-            parcels_benchmark[a,:GPLOC] = sum(parcel)
+            parcels_benchmark[a,:GPLOC] = PARCELSSEND(trans, W, capacity, combination)
             print("\n      gp+loc: parcels after optimisation: ", parcels_benchmark[a,:GPLOC], 
                   " / capacity_used: ", cap_used[a,:GPLOC],  " / time: ",round(time_benchmark[a,:GPLOC], digits = 3))
         end
@@ -273,12 +252,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans::Array{Int64,2},
                                                              Q::Matrix{Int64},
                                                              capacity::Array{Int64,1})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:GS] = sum(W)
-            parcels_benchmark[a,:GS] = sum(parcel)
+            parcels_benchmark[a,:GS] = PARCELSSEND(trans, W, capacity, combination)
             print("\n          gs: parcels after optimisation: ", parcels_benchmark[a,:GS], 
                   " / capacity_used: ", cap_used[a,:GS],  " / time: ",round(time_benchmark[a,:GS], digits = 3))
         end
@@ -290,45 +265,33 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                 Q::Matrix{Int64},
                                                                 capacity::Array{Int64,1})
             time_benchmark[a,:GSLOC] += @elapsed W = LOCALSEARCH(W::Array{Int64,2}, Q::Array{Int64,2})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:GSLOC] = sum(W)
-            parcels_benchmark[a,:GSLOC] = sum(parcel)
+            parcels_benchmark[a,:GSLOC] = PARCELSSEND(trans, W, capacity, combination)
             print("\n      gs+loc: parcels after optimisation: ", parcels_benchmark[a,:GSLOC], 
                   " / capacity_used: ", cap_used[a,:GSLOC],  " / time: ",round(time_benchmark[a,:GSLOC], digits = 3))
         end
 
         ## Start our reproduction of the  bestselling heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
-        if  start[1,:BS] == 1  && sum(capacity) > size(trans,2)
+        if  start[1,:BS] == 1
             time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans::Array{Int64,2},
                                                              Q::Matrix{Int64},
                                                              capacity::Array{Int64,1})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:BS] = sum(W)
-            parcels_benchmark[a,:BS] = sum(parcel)
+            parcels_benchmark[a,:BS] = PARCELSSEND(trans, W, capacity, combination)
             print("\n          bs: parcels after optimisation: ", parcels_benchmark[a,:BS], 
                   " / capacity_used: ", cap_used[a,:BS],  " / time: ",round(time_benchmark[a,:BS], digits = 3))
         end
 
         ## Start our reproduction of the  bestselling heuristic with an additional local search by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
-        if  start[1,:BSLOC] == 1  && sum(capacity) > size(trans,2)
+        if  start[1,:BSLOC] == 1
             time_benchmark[a,:BSLOC] += @elapsed W = BESTSELLING(trans::Array{Int64,2},
                                                                 Q::Matrix{Int64},
                                                                 capacity::Array{Int64,1})
             time_benchmark[a,:BSLOC] += @elapsed W = LOCALSEARCH(W::Array{Int64,2}, Q::Array{Int64,2})
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:BSLOC] = sum(W)
-            parcels_benchmark[a,:BSLOC] = sum(parcel)
+            parcels_benchmark[a,:BSLOC] = PARCELSSEND(trans, W, capacity, combination)
             print("\n       bs+loc: parcels after optimisation: ", parcels_benchmark[a,:BSLOC], 
                   " / capacity_used: ", cap_used[a,:BSLOC],  " / time: ",round(time_benchmark[a,:BSLOC], digits = 3))
         end
@@ -354,19 +317,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                             allowed_gap::Float64,
                                                                                             max_nodes::Int64)
             end
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:OPT] = sum(W)
-            if popt == sum(parcel)
-                parcels_benchmark[a,:OPT] = sum(parcel)
-                print("\n Solution of optimisation: ",popt, "/ Solution of parcel simulation: ", sum(parcel),
-                " / time: ", round(time_benchmark[a,:OPT], digits = 3))
-            else
-                print("\n Optimisation Value: ",popt,"/ Parcel Simulation: ", sum(parcel))
-                error("Optimisation not working correctly.")
-            end
+            parcels_benchmark[a,:OPT] = PARCELSSEND(trans, W, capacity, combination)
+            print("\n Solution of optimisation: ",popt, "/ Solution of parcel simulation: ", sum(parcel),
+            " / time: ", round(time_benchmark[a,:OPT], digits = 3))
         end
 
         ## Benchmark the random allocation of SKUs

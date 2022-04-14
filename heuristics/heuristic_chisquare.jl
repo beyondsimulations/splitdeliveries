@@ -48,23 +48,23 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
         ## Start the allocation:
         ## If all SKUs are allocated once, continue after the while loop, else
         while sum(X) < I
-            ## select the SKU i with the highest coappearance not being allocated
-            ## to the warehouses yet. In addition, select the first sorted 
-            ## warehouse k which has unused capacity left.
-            ## Then, check for each warehouse with free space whether SKU i has 
-            ## significant dependencies to other already allocated SKUs.
-            ## If dependencies exist check whether they are expected to dominate.
-            ## If so, allocate SKU i to to the warehouse with the dependencies 
-            ## to complement the positive dependent SKUs in the warehouse. 
-            ## Otherwise allocate SKU i to warehouse k as the independent 
-            ## coappearances are expected to dominate.
-            ## If no dependencies to yet allocated SKUs exist, select the warehouse
-            ## with the highest unused capacity. If the dependet coappearances are
-            ## expected to to dominate later, we allocate SKU i to the warehouse 
-            ## with the highest unused capacity. This maximises the likelihood to 
-            ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
-            ## Otherwise we allocate it to warehouse k to maximise the independent 
-            ## coappearances in the allocation.
+        ## select the SKU i with the highest coappearance not being allocated
+        ## to the warehouses yet. In addition, select the first sorted 
+        ## warehouse k which has unused capacity left.
+        ## Then, check for each warehouse with free space whether SKU i has 
+        ## significant dependencies to other already allocated SKUs.
+        ## If dependencies exist check whether they are expected to dominate.
+        ## If so, allocate SKU i to to the warehouse with the dependencies 
+        ## to complement the positive dependent SKUs in the warehouse. 
+        ## Otherwise allocate SKU i to warehouse k as the independent 
+        ## coappearances are expected to dominate.
+        ## If no dependencies to yet allocated SKUs exist, select the warehouse
+        ## with the highest unused capacity. If the dependet coappearances are
+        ## expected to to dominate later, we allocate SKU i to the warehouse 
+        ## with the highest unused capacity. This maximises the likelihood to 
+        ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
+        ## Otherwise we allocate it to warehouse k to maximise the independent 
+        ## coappearances in the allocation.
             i,k  = SELECTIK(sum_dep::Array{Float64,1},
                             sum_nor::Array{Float64,1},
                             weight,
@@ -72,24 +72,25 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
                             X::Array{Int64,2},
                             dep::Array{Float64,2})
             ALLOCATEONE!(X::Array{Int64,2},
-                         sum_dep::Array{Float64,1},
-                         sum_nor::Array{Float64,1},
-                         cap_left::Array{Int64,1},
-                         i::Int64,
-                         k::Int64)
+                        sum_dep::Array{Float64,1},
+                        sum_nor::Array{Float64,1},
+                        cap_left::Array{Int64,1},
+                        i::Int64,
+                        k::Int64)
 
-            ## Check for all unallocated SKUs whether they have positive 
-            ## dependencies to the SKUs in the warehouse k the last SKU was allocated 
-            ## to. If so, check whether the dependencies are expected to dominate the 
-            ## independent coapperances. If yes, allocate the corresponding SKUs to 
-            ## the warehouse k.
+        ## Check for all unallocated SKUs whether they have positive 
+        ## dependencies to the SKUs in the warehouse k the last SKU was allocated 
+        ## to. If so, check whether the dependencies are expected to dominate the 
+        ## independent coapperances. If yes, allocate the corresponding SKUs to 
+        ## the warehouse k.
             ADDDEPENDENT!(X::Array{Int64,2},
-                          cap_left::Array{Int64,1},
-                          k::Int64,
-                          dep::Array{Float64,2},
-                          nor::Array{Float64,2},
-                          sum_dep::Array{Float64,1},
-                          sum_nor::Array{Float64,1})
+                        cap_left::Array{Int64,1},
+                        k::Int64,
+                        dep::Array{Float64,2},
+                        nor::Array{Float64,2},
+                        sum_dep::Array{Float64,1},
+                        sum_nor::Array{Float64,1})
+            FILLLAST!(X::Array{Int64,2},cap_left::Array{Int64,1})
         end
         ## First, remove every so far assigned dependent SKU-pair from the coappearance 
         ## matrix dep to prevent the allocation bias described in our article. 

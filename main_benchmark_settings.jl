@@ -1,7 +1,3 @@
-# Activate necessary environment
-    import Pkg
-    Pkg.activate("splitdeliveries")
-
 ## import packages
     include("load_packages.jl")
 
@@ -11,14 +7,17 @@
 ### 2_sensitivity_ind_100
 ### 2_sensitivity_md_100
 ### 2_sensitivity_hd_100
-### 3_calculation_time_1000
-    experiment = "3_calculation_time_1000"
+### 3_calculation_time_ind
+### 3_calculation_time_md
+### 3_calculation_time_hd
+    experiment = "3_calculation_time_company"
 
 ## Alternatively one could specify new transactional data sets and capacity constellations.
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
+    const ren_lock = ReentrantLock()
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKOPT = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
@@ -32,14 +31,19 @@
                       GS     = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GSLOC  = [0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
                       BS     = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      BSLOC  = [0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
+                      BSLOC  = [0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687  + local search
                       OPT    = [0], # optimisation model to determine the optimal solution with CPLEX
                       RND    = [1]) # random allocation of SKUs (cannot be deactivated)
 
 # Parameter for the transaction generation if no transactional data is specified under the path 
 # "transactions/transactions_$experiment". The benchmark will generate random and independent transactions
-# while "order" specifies the number of transactions in each dataset
+# while "order" specifies the number of transactions in each dataset. The parameter max_dependence 
+# specifies the maximal strength of
+# the dependecies between products
     orders = 200000
+    max_dependence = 0.0
+    min_dependence = 0.0
+    max_groupsize = 100
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -65,15 +69,16 @@
 
 # Parameters for CHISQUARE
 ## sig: significance level alpha for the chi-square tests
-    sig = 0.01
+    sig = 0.05
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
-    iterations = 100
+    iterations = 10
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
-    capacity_benchmark = readdlm("capacity/capacity_$experiment.csv", ';', Int64)
+    capacity_benchmark  = readdlm("capacity/capacity_$experiment.csv", ';', Int64)
+    skus_benchmark      = vec(readdlm("capacity/skus_$experiment.csv", ';', Int64))
 
 # Run the benchmark
     parcels_benchmark, 
@@ -82,8 +87,11 @@
     parcel_reduction, 
     split_reduction, 
     gap_optimisation = BENCHMARK(capacity_benchmark::Array{Int64,2},
+                                 skus_benchmark::Vector{Int64},
                                  start::DataFrame,
                                  orders::Int64,
+                                 max_groupsize::Int64,
+                                 max_dependence::Float64,
                                  trials::Int64,
                                  stagnant::Int64,
                                  strategy::Int64,

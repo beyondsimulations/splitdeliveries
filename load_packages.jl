@@ -1,3 +1,7 @@
+# Activate necessary environment
+import Pkg
+Pkg.activate("splitdeliveries")
+
 # Load all necessary packages (repositories)
 using DataFrames
 using DelimitedFiles
@@ -15,12 +19,14 @@ using CUDA
 using LinearAlgebra
 using Random
 using Statistics
+using SparseArrays
 
 ## import all basic functions
 include("functions/functions_basic.jl")
 include("functions/functions_catalan.jl")
 include("functions/functions_k-links.jl")
 include("functions/functions_chisquare.jl")
+include("functions/new_transactions.jl")
 
 ## import the heuristic functions
 include("heuristics/heuristic_qmkp.jl")

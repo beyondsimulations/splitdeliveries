@@ -29,7 +29,8 @@ function SORTPAIRS(Q::Array{Int64,2})
             iter += 1
         end
     end
-    pairs = sortslices(pairs,dims=1,by=x->x[3],rev=true)
+    #pairs = sortslices(pairs,dims=1,by=x->x[3],rev=true)
+    pairs = pairs[sortperm(pairs[:,3],rev=true),:]
     return pairs::Array{Int64,2}
 end
 

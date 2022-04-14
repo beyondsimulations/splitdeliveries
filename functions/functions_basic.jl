@@ -1,10 +1,12 @@
 # Function to calculate the Coappearance Matrix Q
-function COAPPEARENCE(trans::Array{Int64,2})
-    Q = Octavian.matmul(transpose(trans),trans)
+function COAPPEARENCE(trans::Matrix{Int64})
+    t_sparse = dropzeros(sparse(trans))
+    Q = t_sparse'*t_sparse
     for i = 1:size(Q,1)
         Q[i,i] = 0
     end
-    return Q::Array{Int64,2}
+    Q = Matrix(Q)
+    return Q
 end
 
 # Functions to evaluate the number of parcels necessary to fullfil all orders
@@ -21,8 +23,9 @@ function PARCELSSEND(trans::Array{Int64,2},
                      X::Array{Int64,2}, 
                      capacity::Array{Int64,1}, 
                      combination::Array{Array{Array{Int64,1},1},1})
-    if sum(capacity) == size(trans,2)
-        parcel = trans * X
+    t_sparse = dropzeros(sparse(trans))
+    if sum(capacity) == size(t_sparse,2)
+        parcel = t_sparse * X
         for j = 1:size(parcel,1)
             for k = 1:size(parcel,2)
                 if parcel[j,k] > 0
@@ -32,6 +35,7 @@ function PARCELSSEND(trans::Array{Int64,2},
                 end
             end
         end
+        parcel_out = sum(parcel)
     else
         warehouse_combination = Array{Int64,2}(undef,size(combination,1),size(X,1)) .= 0
         for i = 1:size(combination,1)
@@ -39,10 +43,11 @@ function PARCELSSEND(trans::Array{Int64,2},
                 warehouse_combination[i,:] += X[:,combination[i][j]]
             end
         end
-        parcel = Array{Int64,2}(undef,size(trans,1),size(capacity,1)) .= 0
-        for i in 1:size(trans,1)
+        parcel = spzeros(size(t_sparse,1),size(capacity,1))
+        #parcel = Array{Int64,2}(undef,size(t_sparse,1),size(capacity,1)) .= 0
+        for i in 1:size(t_sparse,1)
             for j in 1:size(warehouse_combination,1)
-                if all(x->x>=0, warehouse_combination[j,:] - trans[i,:])
+                if all(x->x>=0, warehouse_combination[j,:] - t_sparse[i,:])
                     for k = 1:size(combination[j],1)
                         parcel[i,combination[j][k]] .= 1
                     end
@@ -50,8 +55,9 @@ function PARCELSSEND(trans::Array{Int64,2},
                 end
             end
         end
+        parcel_out = sum(parcel)
     end
-    return parcel::Array{Int64,2}
+    return parcel_out::Int64
 end
 
 # Functions for the random allocation of SKUs to warehouses
@@ -97,10 +103,12 @@ function RANDOMBENCH(trans::Array{Int64,2},
                      iterations::Int64, 
                      combination::Array{Array{Array{Int64,1},1},1})
     randomcollection = Array{Int64,1}(undef,iterations) .= 0
-    for r = 1:iterations
+    Threads.@threads for r = 1:iterations
         W = RANDOMALLOCMULTI(trans,capacity)
         parcel = PARCELSSEND(trans,W,capacity,combination)
-        randomcollection[r] = sum(parcel)
+        Threads.lock(ren_lock) do
+            randomcollection[r] = parcel
+        end
     end
     average_parcels = round(sum(randomcollection)/iterations,digits=0)
     return average_parcels::Float64
@@ -117,25 +125,6 @@ function CHECKCAPACITY(trans::Array{Int64,2},
     return valid::Int64
 end
 
-# RANDOMIND: function that generates random transactions with independent SKUs
-function RANDOMIND(orders::Int64, skus::Int64)
-    transactions = Array{Int64,2}(undef,orders,skus) .= 0
-    for i = 1:size(transactions,1)
-        poi = 0
-        while poi == 0
-            poi = rand(Poisson(2))
-        end
-        while sum(transactions[i,:]) < poi
-            negbino = floor(Int,rand(Normal(skus/2, skus/4)))
-            while negbino <= 0 || negbino > skus
-                negbino = floor(Int,rand(Normal(skus/2, skus/4)))
-            end
-            transactions[i,negbino] = 1
-        end
-    end
-    return transactions::Array{Int64,2}
-end
-
 # function to apply a pair-wise exchange local search on the allocation
 # of all other heuristics
 function LOCALSEARCH(W::Array{Int64,2},
@@ -143,16 +132,12 @@ function LOCALSEARCH(W::Array{Int64,2},
     # lock to avoid racing conditions during the local search
     ren_lock = ReentrantLock()
     iteration = 1
-    coapp_sort = Array{Int64,2}(undef,size(Q,1),2) .= 0
-    for i = 1:size(Q,1)
-        coapp_sort[i,1] = i
-        coapp_sort[i,2] = sum(Q[i,:])
-    end
-    coapp_sort = sortslices(coapp_sort,dims=1,by=x->x[2],rev=true)
+    coapp_sort = vec(sum(Q,dims = 2))
+    coapp_sort = sortperm(coapp_sort,rev=true)
     while iteration > 0
         iteration = 0
-        for i in coapp_sort[:,1]
-            for j in coapp_sort[:,1]
+        for i in coapp_sort
+            for j in coapp_sort
                 if i != j
                     for k = 2:size(W,2)
                         for g = 1:size(W,2)-1

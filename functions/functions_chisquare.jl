@@ -7,30 +7,21 @@ function HYOPTHESISCHI(Q::Array{Int64,2},
                        sum_cond_sku::Array{Int64,1})
     # Initialise chi square test
     M = convert(Int64,((I^2-I)/2))
-    chi1 = - Q .+ sum_cond_sku
-    chi2 = - sum_cond_sku .+ J
-    scs2   = chi_mat(sum_cond_sku,sum_cond_sku,J)
-    scschi = chi_mat(sum_cond_sku,chi2,J)
-    chiscs = chi_mat(chi2,sum_cond_sku,J)
-    chi22  = chi_mat(chi2,chi2,J)
+
+    ## Determine the acceptance level of the test
+    accept = cquantile(Chisq(1), sig/M)
+
     ## Create the arrays for the export of the chi-square test
-    dep   = Array{Float64,2}(undef,I,I) .= 0
-    norm  = Array{Float64,2}(undef,I,I) .= 0
-    ## Start the test
-    chi_sort = chi_values(M,Q,chi1,chi2,scs2,scschi,chiscs,chi22,sum_cond_sku,I,J)
-    ## Perform the Bonferroni-Holm method to account to control the 
-    ## family-wise error rate
-    status = 0
-    for i in 1:size(chi_sort,1)
-        if  status == 0 && chi_sort[i,1] > cquantile(Chisq(1), sig/M)
-            norm[chi_sort[i,2], chi_sort[i,3]] = sum_cond_sku[chi_sort[i,2]] * 
-                                                 sum_cond_sku[chi_sort[i,3]]/J
-            dep[chi_sort[i,2], chi_sort[i,3]]  = Q[chi_sort[i,2], chi_sort[i,3]] - 
-                                                 norm[chi_sort[i,2], chi_sort[i,3]]
-            M -= 1
-        else
-            status = 1
-            norm[chi_sort[i,2], chi_sort[i,3]] = Q[chi_sort[i,2], chi_sort[i,3]]
+    chi_yy = convert.(Float64,Q)
+    norm   = Matrix{Float64}(undef,I,I) .= 0
+    dep    = Matrix{Float64}(undef,I,I) .= 0
+
+    @inbounds for i = 2:I
+        for j = 1:i-1
+            dep[i,j], norm[i,j] = chi_values(chi_yy[i,j], 
+                                             sum_cond_sku[i], 
+                                             sum_cond_sku[j], 
+                                             J, accept)
         end
     end
     dep = transpose(dep) + dep
@@ -39,55 +30,42 @@ function HYOPTHESISCHI(Q::Array{Int64,2},
            norm::Array{Float64,2}
 end
 
-function placeinvector(i::Int64, j::Int64)
-    out = 0
-    for x = 1:i-2
-        out += x
-    end
-    out += j
+function chi_part(a::Float64,b::Float64)
+    (a-b)^2/b
 end
 
-function leverage(Q::Matrix{Int64},sum_cond_sku::Vector{Int64},J::Int64,i::Int64,j::Int64)
-    Q[i, j]/J-sum_cond_sku[i]/J*sum_cond_sku[j]/J
+function chi_part(a::Int64,b::Float64)
+    (a-b)^2/b
 end
 
-function chi_mat(vec1::Vector{Int64}, vec2::Vector{Int64}, number::Int64)
-    out = Matrix{Float64}(undef,length(vec1),length(vec1))
-    for i = 2:length(vec1)
-        for j = 1:i-1
-            out[i,j] = (vec1[i]*vec2[j])/number
+function chi_values(chi_yy::Float64, 
+                    sum_cond_sku_i::Int64, 
+                    sum_cond_sku_j::Int64, 
+                    J::Int64,
+                    accept::Float64)
+    chi = 0.0
+    dep = 0.0
+    norm = (sum_cond_sku_i * sum_cond_sku_j)/J
+    if chi_yy > norm
+        chi_nr = J - sum_cond_sku_i
+        chi_nd = J - sum_cond_sku_j
+        chi_yn = sum_cond_sku_i - chi_yy
+        chi_ny = sum_cond_sku_j - chi_yy
+        chi_nn = chi_nd - chi_yn
+        ind_yn = (sum_cond_sku_i * chi_nd)/J
+        ind_ny = (sum_cond_sku_j * chi_nr)/J
+        ind_nn = (chi_nr * chi_nd)/J
+        chi += chi_part(chi_yy,norm)
+        chi += chi_part(chi_yn,ind_yn)
+        chi += chi_part(chi_ny,ind_ny)
+        chi += chi_part(chi_nn,ind_nn)
+        if chi > accept
+            dep = chi_yy - norm
+        else
+            norm = chi_yy
         end
     end
-    return out
-end
-
-function chi_values(M::Int64,
-                    Q::Matrix{Int64},
-                    chi1::Matrix{Int64},
-                    chi2::Vector{Int64},
-                    scs2::Matrix{Float64},
-                    scschi::Matrix{Float64},
-                    chiscs::Matrix{Float64},
-                    chi22::Matrix{Float64},
-                    sum_cond_sku::Vector{Int64},
-                    I::Int64,
-                    J::Int64)
-# lock to avoid racing conditions
-    chi_sort = Array{Int64,2}(undef,M,3) .= 0
-    for i = 2:I
-        for j = 1:i-1
-            chi_sort[placeinvector(i, j),2] = i
-            chi_sort[placeinvector(i, j),3] = j
-            if leverage(Q,sum_cond_sku,J,i,j) > 0
-                chi_sort[placeinvector(i, j),1] = round(Int64,(
-                        (abs(Q[i,j]-scs2[i,j])-0.5)^2/scs2[i,j] +
-                        (abs(chi1[j,i]-scschi[i,j])-0.5)^2/scschi[i,j] +
-                        (abs(chi1[i,j]-chiscs[i,j])-0.5)^2/chiscs[i,j] +
-                        (abs(chi2[i]-chi1[i,j]-chi22[i,j])-0.5)^2/chi22[i,j]))
-            end
-        end
-    end
-    chi_sort = sortslices(chi_sort,dims=1,by=x->x[1],rev=true)
+    return dep, norm
 end
 
 # function to calculate the weight of each warehouse. It shows us the density of 
@@ -162,11 +140,9 @@ function WHPOTDEP(cap_left::Array{Int64,1},
                   X::Array{Int64,2},
                   dep::Array{Float64,2})
     pot_dep = Array{Float64,1}(undef,size(cap_left,1)) .= 0
-    wh_dep = Array{Float64,1}(undef,size(cap_left,1)) .= 0
     for k in 1:size(cap_left,1)
-        wh_dep[k] = dot(@view(X[:,k]),@view(dep[:,i]))
         if cap_left[k] > 0
-            pot_dep[k] = wh_dep[k]
+            pot_dep[k] = CALCVAL(X,dep,i,k)
         end
     end
     return pot_dep::Array{Float64,1}
@@ -250,6 +226,28 @@ function ALLOCATEONE!(X::Array{Int64,2},
     end
 end
 
+## check whether all warehouse except the last one are already full. If
+## that is the case just allocate the remaining SKUs yet not allocated there.
+function FILLLAST!(X::Array{Int64,2},cap_left::Array{Int64,1})
+    go = 1
+    for i = 1:size(cap_left,1)-1
+        if cap_left[i] == 0 && go == 1
+            go = 1
+        else
+            go = 0
+        end
+    end
+    if go == 1
+        allocated = sum(X,dims=2)
+        for i = 1:length(allocated)
+            if allocated[i] == 0
+                X[i,size(cap_left,1)] = 1
+                cap_left[size(cap_left,1)] -= 1
+            end
+        end
+    end
+end
+
 # function to check the dependencies to already allocated SKUs
 function FINDDEP!(X::Array{Int64,2},
                   dep::Array{Float64,2},
@@ -258,7 +256,7 @@ function FINDDEP!(X::Array{Int64,2},
                   pot_dep::Array{Float64,1},
                   pot_nor::Array{Float64,1})
     allocated = sum(X,dims=2)
-    for i in 1:size(X,1)
+    @inbounds for i in 1:size(X,1)
         if allocated[i] == 0
             pot_dep[i] = CALCVAL(X,dep,i,k)
             pot_nor[i] = CALCVAL(X,nor,i,k)
@@ -308,20 +306,18 @@ end
 # of the CHI heuristic
 function LOCALSEARCHCHI(W::Array{Int64,2},
                         Q::Array{Int64,2})
-    coapp_sort = Array{Int64,2}(undef,size(Q,1),2) .= 0
-    for i = 1:size(Q,1)
-        coapp_sort[i,1] = i
-        coapp_sort[i,2] = sum(Q[i,:])
-    end
-    coapp_sort = sortslices(coapp_sort,dims=1,by=x->x[2],rev=true)[:,1]
-    for run = 1:5
-        for k = 1:size(W,2)-1
+    coapp_sort = vec(sum(Q,dims = 2))
+    coapp_sort = sortperm(coapp_sort,rev=true)
+    for trial = 1:3
+        improvement = 0
+        @inbounds for k = 1:size(W,2)-1
             for i in coapp_sort
                 if W[i,k] == 1 && W[i,k+1] == 0
                     for j in coapp_sort
                         if W[j,k+1] == 1 && W[j,k] == 0
                             iteration = POTENTIALCHI!(i,j,k,k+1,W,Q)
                             if iteration > 0
+                                improvement += 1
                                 break
                             end
                         end
