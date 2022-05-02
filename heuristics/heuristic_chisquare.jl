@@ -1,8 +1,8 @@
-function CHISQUAREHEUR(trans::Array{Int64,2},
+function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
                        capacity::Array{Int64,1},
                        Q::Array{Int64,2},
                        sig::Float64)
-    if CHECKCAPACITY(trans,capacity) == 1
+    if CHECKCAPACITY(Q,capacity) == 1
         # Number of transactions
         J = size(trans,1)
 
@@ -17,7 +17,7 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
         ## “net-benefit” of all unique positive dependent SKU-combinations 
         ## and a matrix nor with all "independent contributions" of the unique 
         ## SKU-combinations. More details in our article.
-        sum_cond_sku = vec(sum(trans,dims=1))
+        sum_cond_sku = Int.(vec(sum(trans,dims=1)))
         dep, nor = HYOPTHESISCHI(Q::Array{Int64,2},
                                  I::Int64,
                                  J::Int64,
@@ -25,7 +25,7 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
                                  sum_cond_sku::Array{Int64,1})
 
         ## Create the sku-warehouse allocation matrix
-        X = Array{Int64,2}(undef,I,size(capacity,1)) .= 0
+        X = Array{Bool,2}(undef,I,size(capacity,1)) .= false
 
         ## Determine the sum of the coappearances for each SKU on the base of
         ## the matrices dep and nor
@@ -65,13 +65,13 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
         ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
         ## Otherwise we allocate it to warehouse k to maximise the independent 
         ## coappearances in the allocation.
-            i,k  = SELECTIK(sum_dep::Array{Float64,1},
+        i,k  = SELECTIK(sum_dep::Array{Float64,1},
                             sum_nor::Array{Float64,1},
                             weight,
                             cap_left::Array{Int64,1},
-                            X::Array{Int64,2},
+                            X::Array{Bool,2},
                             dep::Array{Float64,2})
-            ALLOCATEONE!(X::Array{Int64,2},
+        ALLOCATEONE!(X::Array{Bool,2},
                         sum_dep::Array{Float64,1},
                         sum_nor::Array{Float64,1},
                         cap_left::Array{Int64,1},
@@ -83,31 +83,34 @@ function CHISQUAREHEUR(trans::Array{Int64,2},
         ## to. If so, check whether the dependencies are expected to dominate the 
         ## independent coapperances. If yes, allocate the corresponding SKUs to 
         ## the warehouse k.
-            ADDDEPENDENT!(X::Array{Int64,2},
+        ADDDEPENDENT!(X::Array{Bool,2},
                         cap_left::Array{Int64,1},
                         k::Int64,
                         dep::Array{Float64,2},
                         nor::Array{Float64,2},
                         sum_dep::Array{Float64,1},
                         sum_nor::Array{Float64,1})
-            FILLLAST!(X::Array{Int64,2},cap_left::Array{Int64,1})
+        FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1})
         end
-        ## First, remove every so far assigned dependent SKU-pair from the coappearance 
-        ## matrix dep to prevent the allocation bias described in our article. 
-        Qs = REMOVEALLOC(X::Array{Int64,2},
-                         cap_left::Array{Int64,1},
-                         nor::Array{Float64,2},
-                         dep::Array{Float64,2})
-        
-        ## Afterwards allocate the SKUs with the highest potential allocation value to 
-        ## each warehouse with leftover storage space until it is full. If no SKU 
-        ## with coappearances is found and there is still storage space left, terminate the 
-        ## algorithm as further allocations pose no benefit. 
-        X =  FILLUP(X::Array{Int64,2},
-                    Qs::Array{Float64,2},
-                    cap_left::Array{Int64,1})
+        if sum(cap_left) > 0
+            ## First, remove every so far assigned dependent SKU-pair from the coappearance 
+            ## matrix dep to prevent the allocation bias described in our article. 
+            Qs = REMOVEALLOC(X::Array{Bool,2},
+                            cap_left::Array{Int64,1},
+                            nor::Array{Float64,2},
+                            dep::Array{Float64,2})
+            
+            ## Afterwards allocate the SKUs with the highest potential allocation value to 
+            ## each warehouse with leftover storage space until it is full. If no SKU 
+            ## with coappearances is found and there is still storage space left, terminate the 
+            ## algorithm as further allocations pose no benefit. 
+            FILLUP!(X::Array{Bool,2},
+                        Qs::Array{Float64,2},
+                        cap_left::Array{Int64,1})
+        end
     end
     ## return the resulting allocation matrix
+    X = convert(Matrix{Int64},X)
     return X::Array{Int64,2}
 end
 

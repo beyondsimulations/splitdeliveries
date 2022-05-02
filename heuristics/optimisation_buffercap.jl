@@ -1,10 +1,11 @@
-function FULLOPTUEQ(trans::Array{Int64,2},
+function FULLOPTUEQ(trans::SparseMatrixCSC{Float64, Int64},
                     capacity::Array{Int64,1},
                     abort::Int64,
                     show_opt::Int64,
                     cpu_cores::Int64,
                     allowed_gap::Float64,
                     max_nodes::Int64)
+    trans = Matrix(trans)
     if CHECKCAPACITY(trans,capacity) == 1
         allocation = Model(GAMS.Optimizer)
         if show_opt == 0

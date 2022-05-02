@@ -2,10 +2,10 @@
 include("load_packages.jl")
 
 experiment = "3_calculation_time_company"
-capacity_steps      = 2
-min_cap             = 1000
-max_cap             = 2000
-warehouse_versions  = 2
+capacity_steps      = 5
+min_cap             = 10000
+max_cap             = 50000
+warehouse_versions  = 1
 buffer_addition     = 1
 buffer_size         = 0.2
 capacity_diffsteps  = 3

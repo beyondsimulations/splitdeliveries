@@ -1,5 +1,5 @@
 ## function to sort the SKUs after the number of sales
-function SORTSALES(trans::Array{Int64,2})
+function SORTSALES(trans::SparseMatrixCSC{Float64, Int64})
     sales = Array{Int64,2}(undef,size(trans,2),4) .= 0
     sales[:,3] = sum(trans,dims=1)
     sales[:,4] .= 0

@@ -1,13 +1,13 @@
  # bestselling heuristic by A. Catalan and M. Fisher (2012) doi:10. 2139/ssrn.2166687
-function BESTSELLING(trans::Array{Int64,2},
+function BESTSELLING(trans::SparseMatrixCSC{Float64, Int64},
                      Q::Matrix{Int64},
                      capacity::Array{Int64,1})
-    if CHECKCAPACITY(trans::Array{Int64,2},
+    if CHECKCAPACITY(Q::Array{Int64,2},
                      capacity::Array{Int64,1}) == 1
         #  Start the heuristic
         capacity_left = copy(capacity::Array{Int64,1})
         B = BESTSELLING_B(size(trans,2),capacity_left)
-        sales = SORTSALES(trans::Array{Int64,2})
+        sales = SORTSALES(trans)
         X = Array{Int64,2}(undef,size(trans,2),size(capacity,1)) .= 0
         # while there exists a DC d such that the overall capacity is smaller than B do
         # for such each DC d do

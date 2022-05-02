@@ -1,10 +1,11 @@
 # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) doi:10.1016/j.ejor.2019.07.004
-function KLINKS(trans::Array{Int64,2},
+function KLINKS(trans::SparseMatrixCSC{Float64, Int64},
                 capacity::Array{Int64,1},
                 trials::Int64,
                 stagnant::Int64,
                 strategy::Int64,
-                klinkstatus::Int64)           
+                klinkstatus::Int64)
+    trans = Matrix(trans)         
     if CHECKCAPACITY(trans,capacity) == 1
         ## Calculation of links based on orders
         ov = LINKADJUST(trans::Array{Int64,2})

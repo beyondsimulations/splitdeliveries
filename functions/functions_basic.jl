@@ -6,6 +6,17 @@ function COAPPEARENCE(trans::Matrix{Int64})
         Q[i,i] = 0
     end
     Q = Matrix(Q)
+    Q = Int.(Q)
+    return Q
+end
+
+function COAPPEARENCE(trans::SparseMatrixCSC{Float64, Int64})
+    Q = trans'*trans
+    for i = 1:size(Q,1)
+        Q[i,i] = 0
+    end
+    Q = Matrix(Q)
+    Q = Int.(Q)
     return Q
 end
 
@@ -19,11 +30,11 @@ function COMBINEWAREHOUSES(capacity::Array{Int64,1})
 end
 
 ## PARCELSSEND: number of parcels necessary to fulfill all orders
-function PARCELSSEND(trans::Array{Int64,2}, 
+function PARCELSSEND(trans::SparseMatrixCSC{Float64, Int64}, 
                      X::Array{Int64,2}, 
                      capacity::Array{Int64,1}, 
                      combination::Array{Array{Array{Int64,1},1},1})
-    t_sparse = dropzeros(sparse(trans))
+    t_sparse = trans
     if sum(capacity) == size(t_sparse,2)
         parcel = t_sparse * X
         for j = 1:size(parcel,1)
@@ -35,7 +46,7 @@ function PARCELSSEND(trans::Array{Int64,2},
                 end
             end
         end
-        parcel_out = sum(parcel)
+        parcel_out = round(Int64, sum(parcel))
     else
         warehouse_combination = Array{Int64,2}(undef,size(combination,1),size(X,1)) .= 0
         for i = 1:size(combination,1)
@@ -44,7 +55,6 @@ function PARCELSSEND(trans::Array{Int64,2},
             end
         end
         parcel = spzeros(size(t_sparse,1),size(capacity,1))
-        #parcel = Array{Int64,2}(undef,size(t_sparse,1),size(capacity,1)) .= 0
         for i in 1:size(t_sparse,1)
             for j in 1:size(warehouse_combination,1)
                 if all(x->x>=0, warehouse_combination[j,:] - t_sparse[i,:])
@@ -55,50 +65,46 @@ function PARCELSSEND(trans::Array{Int64,2},
                 end
             end
         end
-        parcel_out = sum(parcel)
+        parcel_out = round(Int64, sum(parcel))
     end
     return parcel_out::Int64
 end
 
 # Functions for the random allocation of SKUs to warehouses
 ## RANDOMALLOCONCE: allocate SKUs randomly in case each SKU can only be assigned once
-function RANDOMALLOCONCE(trans::Array{Int64,2},
+function RANDOMALLOCONCE(trans::SparseMatrixCSC{Float64, Int64},
                          capacity::Array{Int64,1})
-    if CHECKCAPACITY(trans,capacity) == 1
-        X = Array{Int64,2}(undef,size(trans,2),size(capacity,1))
-        X .= 0
-        for j in 1:size(X,1)
-            while sum(X[j,:]) == 0
-                randomnumber = rand(1:size(capacity,1))
-                if sum(X[:,randomnumber]) < capacity[randomnumber]
-                    X[j,randomnumber] = 1
-                end
+    X = Array{Int64,2}(undef,size(trans,2),size(capacity,1))
+    X .= 0
+    for j in 1:size(X,1)
+        while sum(X[j,:]) == 0
+            randomnumber = rand(1:size(capacity,1))
+            if sum(X[:,randomnumber]) < capacity[randomnumber]
+                X[j,randomnumber] = 1
             end
         end
-        X = X[shuffle(1:size(X,1)),:]
-        return X::Array{Int64,2}
     end
+    X = X[shuffle(1:size(X,1)),:]
+    return X::Array{Int64,2}
 end
 
 ## RANDOMALLOCMULTI: allocate SKUs randomly in case each SKU can be allocated multiple times
-function RANDOMALLOCMULTI(trans::Array{Int64,2},
+function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Float64, Int64},
                           capacity::Array{Int64,1})
-    if CHECKCAPACITY(trans,capacity) == 1
-        X = RANDOMALLOCONCE(trans,capacity)
-        for d = 1:size(capacity,1)
-            while sum(X[:,d]) < sum(capacity[d])
-                randomproduct = rand(1:size(trans,2))
-                if X[randomproduct,d] == 0
-                    X[randomproduct,d] = 1
-                end
+    X = RANDOMALLOCONCE(trans,capacity)
+    for d = 1:size(capacity,1)
+        while sum(X[:,d]) < sum(capacity[d])
+            randomproduct = rand(1:size(trans,2))
+            if X[randomproduct,d] == 0
+                X[randomproduct,d] = 1
             end
         end
-        return X::Array{Int64,2}
     end
+    return X::Array{Int64,2}
 end
 
 ## RANDOMBENCH: benchmark function to evaluate multiple random allocations
-function RANDOMBENCH(trans::Array{Int64,2}, 
+function RANDOMBENCH(trans::SparseMatrixCSC{Float64, Int64}, 
                      capacity::Array{Int64,1}, 
                      iterations::Int64, 
                      combination::Array{Array{Array{Int64,1},1},1})
@@ -115,7 +121,7 @@ function RANDOMBENCH(trans::Array{Int64,2},
 end
 
 ## CHECKCAPACITY: function to test whether the input capacity is viable for the transactional data
-function CHECKCAPACITY(trans::Array{Int64,2},
+function CHECKCAPACITY(trans,
                        capacity::Array{Int64,1})
     valid = 1
     if sum(capacity) < size(trans,2)

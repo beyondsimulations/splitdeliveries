@@ -19,13 +19,13 @@ function HYOPTHESISCHI(Q::Array{Int64,2},
     @inbounds for i = 2:I
         for j = 1:i-1
             dep[i,j], norm[i,j] = chi_values(chi_yy[i,j], 
-                                             sum_cond_sku[i], 
-                                             sum_cond_sku[j], 
-                                             J, accept)
+                                            sum_cond_sku[i], 
+                                            sum_cond_sku[j], 
+                                            J, accept)
         end
     end
-    dep = transpose(dep) + dep
-    norm = transpose(norm) + norm
+    dep = dep' + dep
+    norm = norm' + norm
     return dep::Array{Float64,2}, 
            norm::Array{Float64,2}
 end
@@ -103,7 +103,7 @@ function SELECTIK(sum_dep::Array{Float64,1},
                   sum_nor::Array{Float64,1},
                   weight::Array{Float64,1},
                   cap_left::Array{Int64,1},
-                  X::Array{Int64,2},
+                  X::Array{Bool,2},
                   dep::Array{Float64,2},)
     i       = findmax(sum_nor)[2]
     if sum(X[i,:]) > 0
@@ -137,7 +137,7 @@ end
 # SKU i has significant dependencies to other already allocated SKUs
 function WHPOTDEP(cap_left::Array{Int64,1},
                   i::Int64,
-                  X::Array{Int64,2},
+                  X::Array{Bool,2},
                   dep::Array{Float64,2})
     pot_dep = Array{Float64,1}(undef,size(cap_left,1)) .= 0
     for k in 1:size(cap_left,1)
@@ -151,7 +151,7 @@ end
 # function to remove every so far assigned dependent SKU-pair from 
 # the coappearance matrix dep to prevent the allocation bias described 
 # in our article. 
-function REMOVEALLOC(X::Array{Int64,2},
+function REMOVEALLOC(X::Array{Bool,2},
                      cap_left::Array{Int64,1},
                      nor::Array{Float64,2},
                      dep::Array{Float64,2})
@@ -176,7 +176,7 @@ end
 # to. If so, check whether the dependencies are expected to dominate the 
 # independent coapperances. If yes, allocate the corresponding SKUs to 
 # the warehouse k.
-function ADDDEPENDENT!(X::Array{Int64,2},
+function ADDDEPENDENT!(X::Array{Bool,2},
                        cap_left::Array{Int64,1},
                        k::Int64,
                        dep::Array{Float64,2},
@@ -188,7 +188,7 @@ function ADDDEPENDENT!(X::Array{Int64,2},
         add = 0
         pot_dep = Array{Float64,1}(undef,size(X,1)) .= 0
         pot_nor = Array{Float64,1}(undef,size(X,1)) .= 0
-        FINDDEP!(X::Array{Int64,2},
+        FINDDEP!(X::Array{Bool,2},
                 dep::Array{Float64,2},
                 nor::Array{Float64,2},
                 k::Int64,
@@ -197,7 +197,7 @@ function ADDDEPENDENT!(X::Array{Int64,2},
         i = findmax(pot_dep)[2]
         if findmax(pot_dep)[1] > 0
             if pot_dep[i] >= findmax(pot_nor)[1]
-                ALLOCATEONE!(X::Array{Int64,2},
+                ALLOCATEONE!(X::Array{Bool,2},
                              sum_dep::Array{Float64,1},
                              sum_nor::Array{Float64,1},
                              cap_left::Array{Int64,1},
@@ -210,7 +210,7 @@ function ADDDEPENDENT!(X::Array{Int64,2},
 end
 
 # function to allocate a selcted product to a selected warehouse
-function ALLOCATEONE!(X::Array{Int64,2},
+function ALLOCATEONE!(X::Array{Bool,2},
                       sum_dep::Array{Float64,1},
                       sum_nor::Array{Float64,1},
                       cap_left::Array{Int64,1},
@@ -228,7 +228,7 @@ end
 
 ## check whether all warehouse except the last one are already full. If
 ## that is the case just allocate the remaining SKUs yet not allocated there.
-function FILLLAST!(X::Array{Int64,2},cap_left::Array{Int64,1})
+function FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1})
     go = 1
     for i = 1:size(cap_left,1)-1
         if cap_left[i] == 0 && go == 1
@@ -249,14 +249,14 @@ function FILLLAST!(X::Array{Int64,2},cap_left::Array{Int64,1})
 end
 
 # function to check the dependencies to already allocated SKUs
-function FINDDEP!(X::Array{Int64,2},
+function FINDDEP!(X::Array{Bool,2},
                   dep::Array{Float64,2},
                   nor::Array{Float64,2},
                   k::Int64,
                   pot_dep::Array{Float64,1},
                   pot_nor::Array{Float64,1})
     allocated = sum(X,dims=2)
-    @inbounds for i in 1:size(X,1)
+    @inbounds @simd for i in 1:size(X,1)
         if allocated[i] == 0
             pot_dep[i] = CALCVAL(X,dep,i,k)
             pot_nor[i] = CALCVAL(X,nor,i,k)
@@ -269,10 +269,9 @@ function FINDDEP!(X::Array{Int64,2},
            pot_nor::Array{Float64,1}
 end
 
-function CALCVAL(X::Matrix{Int64},T::Matrix{Float64},i::Int64,k::Int64)
+function CALCVAL(X::Matrix{Bool},T::Matrix{Float64},i::Int64,k::Int64)
     out = 0
     @avxt for y = 1:size(X,1)
-        out += X[y,k] * T[y,i]
         out += X[y,k] * T[y,i]
     end
     return out
@@ -280,7 +279,7 @@ end
 
 # function to allocate the SKUs with the highest potential allocation 
 # value to each warehouse with leftover storage space until it is full
-function FILLUP(X::Array{Int64,2},
+function FILLUP!(X::Array{Bool,2},
                 Q::Array{Float64,2},
                 capacity_left::Array{Int64,1})
     for d = 1:size(capacity_left,1)
@@ -299,7 +298,6 @@ function FILLUP(X::Array{Int64,2},
             end
         end
     end
-    return X::Array{Int64,2}
 end
 
 # function to apply a pair-wise exchange local search on the allocation
@@ -310,8 +308,8 @@ function LOCALSEARCHCHI(W::Array{Int64,2},
     coapp_sort = sortperm(coapp_sort,rev=true)
     for trial = 1:3
         improvement = 0
-        @inbounds for k = 1:size(W,2)-1
-            for i in coapp_sort
+        for k = 1:size(W,2)-1
+            @inbounds for i in coapp_sort
                 if W[i,k] == 1 && W[i,k+1] == 0
                     for j in coapp_sort
                         if W[j,k+1] == 1 && W[j,k] == 0
