@@ -256,7 +256,7 @@ function FINDDEP!(X::Array{Bool,2},
                   pot_dep::Array{Float64,1},
                   pot_nor::Array{Float64,1})
     allocated = sum(X,dims=2)
-    @inbounds @simd for i in 1:size(X,1)
+    for i in 1:size(X,1)
         if allocated[i] == 0
             pot_dep[i] = CALCVAL(X,dep,i,k)
             pot_nor[i] = CALCVAL(X,nor,i,k)
@@ -265,8 +265,6 @@ function FINDDEP!(X::Array{Bool,2},
             end
         end
     end
-    return pot_dep::Array{Float64,1},
-           pot_nor::Array{Float64,1}
 end
 
 function CALCVAL(X::Matrix{Bool},T::Matrix{Float64},i::Int64,k::Int64)
