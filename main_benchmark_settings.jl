@@ -10,7 +10,7 @@
 ### 3_calculation_time_ind
 ### 3_calculation_time_md
 ### 3_calculation_time_hd
-    experiment = "3_calculation_time_md"
+    experiment = "3_calculation_time_test"
 
 ## Alternatively one could specify new transactional data sets and capacity constellations.
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
@@ -41,7 +41,7 @@
 # specifies the maximal strength of the dependecies between products. max-groupsize specifies the 
 # maximal group size while group link specifies the ratio of outlinks of each group. Finally, ind_chance
 # can be used to determine the chance that instead of group-allocations an independent product is ordered.
-    orders         = 200000
+    orders         = 2000
     min_dependence = 0.00
     max_dependence = 0.30
     group_link     = 0.05

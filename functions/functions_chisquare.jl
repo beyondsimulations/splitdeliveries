@@ -104,12 +104,12 @@ function SELECTIK(sum_dep::Array{Float64,1},
                   weight::Array{Float64,1},
                   cap_left::Array{Int64,1},
                   X::Array{Bool,2},
-                  dep::Array{Float64,2},)
+                  dep::Array{Float64,2},
+                  allocated::Vector{Bool})
     i       = findmax(sum_nor)[2]
     if sum(X[i,:]) > 0
-        alloc = sum(X, dims = 2)
         for j = 1:size(X,1)
-            if alloc[j] == 0
+            if allocated[j] == 0
                 i = j
                 break
             end
@@ -178,11 +178,15 @@ end
 # the warehouse k.
 function ADDDEPENDENT!(X::Array{Bool,2},
                        cap_left::Array{Int64,1},
+                       i::Int64,
                        k::Int64,
                        dep::Array{Float64,2},
                        nor::Array{Float64,2},
                        sum_dep::Array{Float64,1},
-                       sum_nor::Array{Float64,1})
+                       sum_nor::Array{Float64,1},
+                       state_dep::Matrix{Float64},
+                       state_nor::Matrix{Float64},
+                       allocated::Vector{Bool})
     add = 1
     while add == 1 && cap_left[k] > 0 && sum(X) < size(X,1)
         add = 0
@@ -193,7 +197,8 @@ function ADDDEPENDENT!(X::Array{Bool,2},
                 nor::Array{Float64,2},
                 k::Int64,
                 pot_dep::Array{Float64,1},
-                pot_nor::Array{Float64,1})
+                pot_nor::Array{Float64,1},
+                allocated::Vector{Bool})
         i = findmax(pot_dep)[2]
         if findmax(pot_dep)[1] > 0
             if pot_dep[i] >= findmax(pot_nor)[1]
@@ -201,48 +206,10 @@ function ADDDEPENDENT!(X::Array{Bool,2},
                              sum_dep::Array{Float64,1},
                              sum_nor::Array{Float64,1},
                              cap_left::Array{Int64,1},
+                             allocated::Vector{Bool},
                              i::Int64,
                              k::Int64)
                 add = 1
-            end
-        end
-    end
-end
-
-# function to allocate a selcted product to a selected warehouse
-function ALLOCATEONE!(X::Array{Bool,2},
-                      sum_dep::Array{Float64,1},
-                      sum_nor::Array{Float64,1},
-                      cap_left::Array{Int64,1},
-                      i::Int64,
-                      k::Int64)
-    if sum(X[i,:]) == 0
-        X[i,k] = 1
-        sum_dep[i] = 0
-        sum_nor[i] = 0
-        cap_left[k] -= 1
-    else
-        error("This product is already allocated!")
-    end
-end
-
-## check whether all warehouse except the last one are already full. If
-## that is the case just allocate the remaining SKUs yet not allocated there.
-function FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1})
-    go = 1
-    for i = 1:size(cap_left,1)-1
-        if cap_left[i] == 0 && go == 1
-            go = 1
-        else
-            go = 0
-        end
-    end
-    if go == 1
-        allocated = sum(X,dims=2)
-        for i = 1:length(allocated)
-            if allocated[i] == 0
-                X[i,size(cap_left,1)] = 1
-                cap_left[size(cap_left,1)] -= 1
             end
         end
     end
@@ -254,8 +221,8 @@ function FINDDEP!(X::Array{Bool,2},
                   nor::Array{Float64,2},
                   k::Int64,
                   pot_dep::Array{Float64,1},
-                  pot_nor::Array{Float64,1})
-    allocated = sum(X,dims=2)
+                  pot_nor::Array{Float64,1},
+                  allocated::Vector{Bool})
     for i in 1:size(X,1)
         if allocated[i] == 0
             pot_dep[i] = CALCVAL(X,dep,i,k)
@@ -266,6 +233,47 @@ function FINDDEP!(X::Array{Bool,2},
         end
     end
 end
+
+# function to allocate a selcted product to a selected warehouse
+function ALLOCATEONE!(X::Array{Bool,2},
+                      sum_dep::Array{Float64,1},
+                      sum_nor::Array{Float64,1},
+                      cap_left::Array{Int64,1},
+                      allocated::Vector{Bool},
+                      i::Int64,
+                      k::Int64)
+    if sum(X[i,:]) == 0
+        X[i,k] = 1
+        sum_dep[i] = 0
+        sum_nor[i] = 0
+        cap_left[k] -= 1
+        allocated[i] = true
+    else
+        error("This product is already allocated!")
+    end
+end
+
+## check whether all warehouse except the last one are already full. If
+## that is the case just allocate the remaining SKUs yet not allocated there.
+function FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1},allocated::Vector{Bool})
+    go = 1
+    for i = 1:size(cap_left,1)-1
+        if cap_left[i] == 0 && go == 1
+            go = 1
+        else
+            go = 0
+        end
+    end
+    if go == 1
+        for i = 1:length(allocated)
+            if allocated[i] == false
+                X[i,size(cap_left,1)] = 1
+                cap_left[size(cap_left,1)] -= 1
+            end
+        end
+    end
+end
+
 
 function CALCVAL(X::Matrix{Bool},T::Matrix{Float64},i::Int64,k::Int64)
     out = 0
