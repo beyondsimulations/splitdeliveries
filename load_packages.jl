@@ -10,10 +10,8 @@ using Combinatorics
 using Distributions
 using JuMP
 using GAMS
-using Octavian
 using LoopVectorization
 using Plots
-using CUDA
 
 # Load all necessary packages from the standard library module
 using LinearAlgebra

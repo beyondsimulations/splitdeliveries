@@ -40,6 +40,11 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left = copy(capacity)
 
+        ## Create an array that saves the current dependencies for all unallocated
+        ## SKUs to all warehouses
+        pot_dep  = Matrix{Float64}(undef,size(X,1),length(cap_left)) .= 0
+        pot_nor = Matrix{Float64}(undef,size(X,1),length(cap_left))  .= 0
+
         ## In the heuristic we compare the split-delivery minimising potential 
         ## of SKU allocations to maximise dependent coappearances (SKUs with 
         ## positive dependencies are stored in the same warehouse) with the 
@@ -65,32 +70,35 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
         ## Otherwise we allocate it to warehouse k to maximise the independent 
         ## coappearances in the allocation.
-        i,k  = SELECTIK(sum_dep::Array{Float64,1},
+            i,k  = SELECTIK(sum_dep::Array{Float64,1},
+                                sum_nor::Array{Float64,1},
+                                weight,
+                                cap_left::Array{Int64,1},
+                                X::Array{Bool,2},
+                                dep::Array{Float64,2})
+            ALLOCATEONE!(X::Array{Bool,2},
+                            sum_dep::Array{Float64,1},
                             sum_nor::Array{Float64,1},
-                            weight,
                             cap_left::Array{Int64,1},
-                            X::Array{Bool,2},
-                            dep::Array{Float64,2})
-        ALLOCATEONE!(X::Array{Bool,2},
-                        sum_dep::Array{Float64,1},
-                        sum_nor::Array{Float64,1},
-                        cap_left::Array{Int64,1},
-                        i::Int64,
-                        k::Int64)
+                            i::Int64,
+                            k::Int64)
 
         ## Check for all unallocated SKUs whether they have positive 
         ## dependencies to the SKUs in the warehouse k the last SKU was allocated 
         ## to. If so, check whether the dependencies are expected to dominate the 
         ## independent coapperances. If yes, allocate the corresponding SKUs to 
         ## the warehouse k.
-        ADDDEPENDENT!(X::Array{Bool,2},
-                        cap_left::Array{Int64,1},
-                        k::Int64,
-                        dep::Array{Float64,2},
-                        nor::Array{Float64,2},
-                        sum_dep::Array{Float64,1},
-                        sum_nor::Array{Float64,1})
-        FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1})
+            ADDDEPENDENT!(X::Array{Bool,2},
+                          cap_left::Array{Int64,1},
+                          i::Int64,
+                          #k::Int64,
+                          dep::Array{Float64,2},
+                          nor::Array{Float64,2},
+                          sum_dep::Array{Float64,1},
+                          sum_nor::Array{Float64,1})#,
+                          #pot_dep::Matrix{Float64},
+                          #pot_nor::Matrix{Float64})
+            FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1})
         end
         if sum(cap_left) > 0
             ## First, remove every so far assigned dependent SKU-pair from the coappearance 

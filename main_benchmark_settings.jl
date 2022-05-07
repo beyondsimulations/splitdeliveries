@@ -10,7 +10,7 @@
 ### 3_calculation_time_ind
 ### 3_calculation_time_md
 ### 3_calculation_time_hd
-    experiment = "3_calculation_time_company"
+    experiment = "3_calculation_time_md"
 
 ## Alternatively one could specify new transactional data sets and capacity constellations.
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
@@ -41,12 +41,13 @@
 # specifies the maximal strength of the dependecies between products. max-groupsize specifies the 
 # maximal group size while group link specifies the ratio of outlinks of each group. Finally, ind_chance
 # can be used to determine the chance that instead of group-allocations an independent product is ordered.
-    orders = 500000
-    min_dependence = 0.0
-    max_dependence = 0.3
-    max_groupsize = 100
-    group_link = 0.01
-    ind_chance = 0.01
+    orders         = 200000
+    min_dependence = 0.00
+    max_dependence = 0.30
+    group_link     = 0.05
+    ind_chance     = 0.30
+    one_direction  = 0.30
+    multi_relatio  = 0.50
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -93,7 +94,6 @@
                                  skus_benchmark::Vector{Int64},
                                  start::DataFrame,
                                  orders::Int64,
-                                 max_groupsize::Int64,
                                  max_dependence::Float64,
                                  trials::Int64,
                                  stagnant::Int64,

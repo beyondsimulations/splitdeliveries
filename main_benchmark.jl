@@ -2,7 +2,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                    skus_benchmark::Vector{Int64},
                    start::DataFrame,
                    orders::Int64,
-                   max_groupsize::Int64,
                    max_dependence::Float64,
                    trials::Int64,
                    stagnant::Int64,
@@ -64,6 +63,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     c = cgrad(:bone_1), 
                     clim = (-1,1)))
                     savefig("graphs/cor_$experiment.pdf")
+        trans = trans .* 1.0
+        trans = sparse(trans)
     end
 
     # Iterate all capacity constellations
@@ -98,9 +99,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Generate artificial random transactions without dependencies if there is no transactional dataset
         if isfile("transactions/transactions_$experiment.csv") == false
             print("\nstarting generation of transactions.")
-            time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,
-                                                max_groupsize,min_dependence,max_dependence,
-                                                group_link,ind_chance)
+            time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,ceil(Int64,skus_benchmark[a]/10),
+                                                min_dependence,max_dependence,
+                                                group_link,ind_chance,one_direction,
+                                                multi_relatio)
             print("\ntransactions generated after ", round(time,digits = 3)," seconds.")
         end
 
@@ -128,10 +130,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                        cpu_cores::Int64,
                                                                                        allowed_gap::Float64,
                                                                                        max_nodes::Int64)
-            parcel = PARCELSSEND(trans::Array{Int64,2}, 
-                                 W::Array{Int64,2}, 
-                                 capacity::Array{Int64,1},
-                                 combination::Array{Array{Array{Int64,1},1},1})
+            parcel = PARCELSSEND(trans, W::Array{Int64,2}, capacity::Array{Int64,1}, combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:QMKOPT] = sum(W)
             parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans, W, capacity, combination)
             print("\n      qmkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
