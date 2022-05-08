@@ -1,7 +1,8 @@
 function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
                        capacity::Array{Int64,1},
                        Q::Array{Int64,2},
-                       sig::Float64)
+                       sig::Float64,
+                       localsearch::Bool)
     if CHECKCAPACITY(Q,capacity) == 1
         # Number of transactions
         J = size(trans,1)
@@ -78,9 +79,13 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
                             X::Array{Bool,2},
                             dep::Array{Float64,2},
                             allocated::Vector{Bool})
-            ALLOCATEONE!(X::Array{Bool,2},
+               ALLOCATEONE!(X::Array{Bool,2},
+                            dep::Matrix{Float64},
+                            nor::Matrix{Float64},
                             sum_dep::Array{Float64,1},
                             sum_nor::Array{Float64,1},
+                            state_dep::Matrix{Float64},
+                            state_nor::Matrix{Float64},
                             cap_left::Array{Int64,1},
                             allocated::Vector{Bool},
                             i::Int64,
@@ -119,12 +124,17 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
             ## with coappearances is found and there is still storage space left, terminate the 
             ## algorithm as further allocations pose no benefit. 
             FILLUP!(X::Array{Bool,2},
-                        Qs::Array{Float64,2},
-                        cap_left::Array{Int64,1})
+                    Qs::Array{Float64,2},
+                    cap_left::Array{Int64,1})
         end
     end
-    ## return the resulting allocation matrix
     X = convert(Matrix{Int64},X)
+    if localsearch == true
+        X = LOCALSEARCHCHI(X::Matrix{Int64},
+                           Q::Array{Int64,2},
+                           nor::Matrix{Float64})
+    end
+    ## return the resulting allocation matrix
     return X::Array{Int64,2}
 end
 

@@ -195,16 +195,23 @@ function ADDDEPENDENT!(X::Array{Bool,2},
         FINDDEP!(X::Array{Bool,2},
                 dep::Array{Float64,2},
                 nor::Array{Float64,2},
+                i::Int64,
                 k::Int64,
                 pot_dep::Array{Float64,1},
                 pot_nor::Array{Float64,1},
+                state_dep::Matrix{Float64},
+                state_nor::Matrix{Float64},
                 allocated::Vector{Bool})
         i = findmax(pot_dep)[2]
         if findmax(pot_dep)[1] > 0
             if pot_dep[i] >= findmax(pot_nor)[1]
                 ALLOCATEONE!(X::Array{Bool,2},
+                             dep::Matrix{Float64},
+                             nor::Matrix{Float64},
                              sum_dep::Array{Float64,1},
                              sum_nor::Array{Float64,1},
+                             state_dep::Matrix{Float64},
+                             state_nor::Matrix{Float64},
                              cap_left::Array{Int64,1},
                              allocated::Vector{Bool},
                              i::Int64,
@@ -219,16 +226,21 @@ end
 function FINDDEP!(X::Array{Bool,2},
                   dep::Array{Float64,2},
                   nor::Array{Float64,2},
+                  i::Int64,
                   k::Int64,
                   pot_dep::Array{Float64,1},
                   pot_nor::Array{Float64,1},
+                  state_dep::Matrix{Float64},
+                  state_nor::Matrix{Float64},
                   allocated::Vector{Bool})
-    for i in 1:size(X,1)
-        if allocated[i] == 0
-            pot_dep[i] = CALCVAL(X,dep,i,k)
-            pot_nor[i] = CALCVAL(X,nor,i,k)
-            if pot_dep[i] > 0
-                pot_dep[i] += pot_nor[i]
+    for j in 1:size(X,1)
+        if allocated[j] == 0
+            pot_dep[j]  = state_dep[j,k] 
+            pot_nor[j]  = state_nor[j,k] 
+            #pot_dep[j] = CALCVAL(X,dep,j,k)
+            #pot_nor[j] = CALCVAL(X,nor,j,k)
+            if pot_dep[j] > 0
+                pot_dep[j] += pot_nor[j]
             end
         end
     end
@@ -236,8 +248,12 @@ end
 
 # function to allocate a selcted product to a selected warehouse
 function ALLOCATEONE!(X::Array{Bool,2},
+                      dep::Matrix{Float64},
+                      nor::Matrix{Float64},
                       sum_dep::Array{Float64,1},
                       sum_nor::Array{Float64,1},
+                      state_dep::Matrix{Float64},
+                      state_nor::Matrix{Float64},
                       cap_left::Array{Int64,1},
                       allocated::Vector{Bool},
                       i::Int64,
@@ -248,6 +264,14 @@ function ALLOCATEONE!(X::Array{Bool,2},
         sum_nor[i] = 0
         cap_left[k] -= 1
         allocated[i] = true
+        state_dep[i,k] = 0
+        state_nor[i,k] = 0
+        for j in 1:size(X,1)
+            if allocated[j] == 0
+                state_dep[j,k]  += dep[j,i]
+                state_nor[j,k]  += nor[j,i]
+            end
+        end
     else
         error("This product is already allocated!")
     end
@@ -283,10 +307,18 @@ function CALCVAL(X::Matrix{Bool},T::Matrix{Float64},i::Int64,k::Int64)
     return out
 end
 
+function CALCVAL(X::Matrix{Int64},T::Matrix{Int64},i::Int64,k::Int64)
+    out = 0
+    @avxt for y = 1:size(X,1)
+        out += X[y,k] * T[y,i]
+    end
+    return out
+end
+
 # function to allocate the SKUs with the highest potential allocation 
 # value to each warehouse with leftover storage space until it is full
 function FILLUP!(X::Array{Bool,2},
-                Q::Array{Float64,2},
+                 Q::Array{Float64,2},
                 capacity_left::Array{Int64,1})
     for d = 1:size(capacity_left,1)
         while capacity_left[d] > 0
@@ -308,20 +340,40 @@ end
 
 # function to apply a pair-wise exchange local search on the allocation
 # of the CHI heuristic
-function LOCALSEARCHCHI(W::Array{Int64,2},
-                        Q::Array{Int64,2})
+function LOCALSEARCHCHI(X::Matrix{Int64},
+                        Q::Array{Int64,2},
+                        nor::Matrix{Float64})
     coapp_sort = vec(sum(Q,dims = 2))
     coapp_sort = sortperm(coapp_sort,rev=true)
-    for trial = 1:3
+    state = Matrix{Float64}(undef,size(X,1),size(X,2)) .= 0
+    for i = 1:size(X,1)
+        for k = 1:size(X,2)
+            state[i,k] = CALCVAL(X,Q,i,k)
+        end
+    end
+    improvement = 1
+    for trial = 1:10
         improvement = 0
-        for k = 1:size(W,2)-1
+        for k = 1:size(X,2)-1
             @inbounds for i in coapp_sort
-                if W[i,k] == 1 && W[i,k+1] == 0
+                if X[i,k] == 1 && X[i,k+1] == 0
                     for j in coapp_sort
-                        if W[j,k+1] == 1 && W[j,k] == 0
-                            iteration = POTENTIALCHI!(i,j,k,k+1,W,Q)
-                            if iteration > 0
-                                improvement += 1
+                        if X[j,k+1] == 1 && X[j,k] == 0
+                            #iteration = POTENTIALCHI!(i,j,k,k+1,X,Q)
+                            #if iteration > 0
+                            #    improvement += 1
+                            #    break
+                            #end
+                            if POTENTIAL(state,i,j,k) > 0
+                                X[i,k]   = 0
+                                X[j,k+1] = 0
+                                X[i,k+1] = 1
+                                X[j,k]   = 1
+                                for y in 1:size(X,1)
+                                    state[y,k]    += Q[y,j] - Q[y,i]
+                                    state[y,k+1]  += Q[y,i] - Q[y,j]
+                                end
+                                improvement = 1
                                 break
                             end
                         end
@@ -330,14 +382,18 @@ function LOCALSEARCHCHI(W::Array{Int64,2},
             end
         end
     end
-   return W::Array{Int64,2}
+   return X::Array{Int64,2}
+end
+
+function POTENTIAL(state::Matrix{Float64},i::Int64,j::Int64,k::Int64)
+    state[i,k+1] - state[i,k] + state[j,k] - state[j,k+1]
 end
 
 function POTENTIALCHI!(i::Int64,
                        j::Int64,
                        k::Int64,
                        g::Int64,
-                       X::Array{Int64,2},
+                       X::Matrix{Int64},
                        Q::Array{Int64,2})
     potential = 0
     @avxt for y = 1:size(Q,1)

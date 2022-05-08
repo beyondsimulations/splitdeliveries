@@ -10,7 +10,7 @@
 ### 3_calculation_time_ind
 ### 3_calculation_time_md
 ### 3_calculation_time_hd
-    experiment = "3_calculation_time_test"
+    experiment = "3_calculation_time_ind"
 
 ## Alternatively one could specify new transactional data sets and capacity constellations.
 ## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
@@ -22,16 +22,12 @@
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKOPT = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
                       QMK    = [1], # quadratic-multiple knapsack heuristic with SBB as solver
-                      QMKLOC = [0], # quadratic-multiple knapsack heuristic with SBB as solver + local search based on the QMK objective function
                       CHI    = [1], # chi-square heuristic 
                       CHILOC = [1], # chi-square heuristic + local search based on the QMK objective function
                       KLINK  = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       GP     = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      GPLOC  = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
                       GS     = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      GSLOC  = [0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687 + local search
                       BS     = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      BSLOC  = [0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687  + local search
                       OPT    = [0], # optimisation model to determine the optimal solution with CPLEX
                       RND    = [1]) # random allocation of SKUs (cannot be deactivated)
 
@@ -41,9 +37,9 @@
 # specifies the maximal strength of the dependecies between products. max-groupsize specifies the 
 # maximal group size while group link specifies the ratio of outlinks of each group. Finally, ind_chance
 # can be used to determine the chance that instead of group-allocations an independent product is ordered.
-    orders         = 2000
+    orders         = 500000
     min_dependence = 0.00
-    max_dependence = 0.30
+    max_dependence = 0.25
     group_link     = 0.05
     ind_chance     = 0.30
     one_direction  = 0.30
