@@ -1,55 +1,48 @@
 ## import packages
 include("load_packages.jl")
 
-experiment = "3_calculation_time_test"
-capacity_steps      = 2
-min_cap             = 25
-max_cap             = 50
-warehouse_versions  = 3
-buffer_addition     = 1
-buffer_size         = 0.2
-capacity_diffsteps  = 3
-capacity_diffmax    = 0.3
+experiment = "2_sensitivity"
+capa = 400:400:4000
+ware = 2:1:3
+diff = 0.0:0.05:0.25
+buff = 0.0:0.2:0.2
 
-total_rows = capacity_steps * warehouse_versions * (capacity_diffsteps) * (buffer_addition + 1)
-total_cols = warehouse_versions + 1
-base_cap   = min_cap:(max_cap-min_cap)/(capacity_steps-1):max_cap
-base_ware  = 2:warehouse_versions+1
+total_rows = length(capa)*length(ware)*length(diff)*length(buff)
+total_cols = length(ware)+1
+
+#total_rows = capacity_steps * warehouse_versions * (capacity_diffsteps) * (buffer_addition + 1)
+#total_cols = warehouse_versions + 1
+#base_cap   = min_cap:(max_cap-min_cap)/(capacity_steps-1):max_cap
+#base_ware  = 2:warehouse_versions+1
 
 benchmark = Matrix{Int64}(undef,total_rows,total_cols) .= 0
 sku_list  = Vector{Int64}(undef,total_rows) .= 0
 
 current_row = 1
-for buffstep = 1:buffer_addition + 1
-    for cstep in base_cap
-        if buffstep == 1
-            capacity = cstep
-        else
-            capacity = cstep * (1+buffer_size)
-        end
-        for warestep in base_ware
-            for capvarstep = 1:capacity_diffsteps
-                vararray = Vector{Float64}(undef,warestep) .= 0
-                if capvarstep == 1
-                    vararray .= 1/length(vararray)
+for cstep in capa
+    for bstep in buff
+        for wstep in ware
+            for dstep in diff
+                capacity = cstep * (1+bstep)
+                vararray = Vector{Float64}(undef,wstep) .= 0
+                if dstep == 0.00
+                    vararray .= 1/wstep
                 else
-                    capacity_diff = capacity_diffmax/(capacity_diffsteps-capvarstep+1)
-                    step = 1
-                    for i = (1+capacity_diff):-(capacity_diff*2)/(length(vararray)-1):(1-capacity_diff)
-                        vararray[step] = i/length(vararray)
-                        step += 1
+                    vstep = 1+dstep:-(2*dstep)/wstep:1-dstep
+                    for i = 1:wstep
+                        vararray[i] = vstep[i]/wstep
                     end
                 end
-                for warehouse = 1:warestep
+                for warehouse = 1:wstep
                     if warehouse == 1
-                        benchmark[current_row,warehouse] = ceil(vararray[warehouse] * capacity)
-                    elseif  warehouse != warestep
+                        benchmark[current_row,warehouse] = ceil(round(vararray[warehouse] * capacity, digits = 2))
+                    elseif  warehouse != wstep
                         benchmark[current_row,warehouse] = round(vararray[warehouse] * capacity)
                     else
-                        benchmark[current_row,warehouse] = capacity - sum(benchmark[current_row,:])
+                        benchmark[current_row,warehouse] = round(round(capacity - sum(benchmark[current_row,:]), digits = 2))
                     end
                 end
-                sku_list[current_row] = sum(benchmark[current_row,:])
+                sku_list[current_row] = cstep
                 global current_row += 1
             end
         end

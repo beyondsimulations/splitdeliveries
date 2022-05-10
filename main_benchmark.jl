@@ -65,7 +65,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     end
 
     # Iterate all capacity constellations
-    print("\n\n### Benchmark started ###")
     for a = 1:size(capacity_benchmark,1)        
         ## Load the capacity of each individual run
         ### Note: It has to be sorted starting with the largest capacity
@@ -114,7 +113,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         gap_optimisation[a,:buffer] = sum(capacity) - size(trans,2)
 
         #  Calculate the coappearance matrix
-        time_benchmark[a,3:end] .= coapp_time =  @elapsed Q = COAPPEARENCE(trans)
+        cut = round(Int64,size(trans,1) * train_test)
+        time_benchmark[a,3:end] .= coapp_time =  @elapsed Q = COAPPEARENCE(trans[1:cut,:])
         if start[1,:KLINK] == 1
             time_benchmark[a,:KLINK] = 0
         end
@@ -137,12 +137,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                        cpu_cores::Int64,
                                                                                        allowed_gap::Float64,
                                                                                        max_nodes::Int64)
-            parcel = PARCELSSEND(trans, W::Array{Int64,2}, capacity::Array{Int64,1}, combination::Array{Array{Array{Int64,1},1},1})
             cap_used[a,:QMKOPT] = sum(W)
-            parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n      qmkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
                   " / capacity_used: ", cap_used[a,:QMKOPT], " / time: ",round(time_benchmark[a,:QMKOPT],digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start QMK heuristic with SBB as solver
@@ -156,10 +155,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                  allowed_gap::Float64,
                                                                                  max_nodes::Int64)
             cap_used[a,:QMK] = sum(W)
-            parcels_benchmark[a,:QMK] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:QMK] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n         mqk: parcels after optimisation: ", parcels_benchmark[a,:QMK], 
                   " / capacity_used: ", cap_used[a,:QMK],  " / time: ", round(time_benchmark[a,:QMK], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start CHI square heuristic without local search
@@ -170,10 +169,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                  sig::Float64,
                                                                  false)
             cap_used[a,:CHI] = sum(W)
-            parcels_benchmark[a,:CHI] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:CHI] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n         chi: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
                   " / capacity_used: ", cap_used[a,:CHI],  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start CHI square heuristic with local search
@@ -183,26 +182,26 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                         sig::Float64,
                                                                         true)
             cap_used[a,:CHILOC] = sum(W)
-            parcels_benchmark[a,:CHILOC] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:CHILOC] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHILOC], 
                   " / capacity_used: ", cap_used[a,:CHILOC],  " / time: ",round(time_benchmark[a,:CHILOC], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start our reproduction of the  K-LINKS heuristic by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
         if  start[1,:KLINK] == 1 && sum(capacity) == size(trans,2)
-            time_benchmark[a,:KLINK] += @elapsed W = KLINKS(trans::SparseMatrixCSC{Float64, Int64},
+            time_benchmark[a,:KLINK] += @elapsed W = KLINKS(trans[1:cut,:],
                                                            capacity::Array{Int64,1},
                                                            trials::Int64,
                                                            stagnant::Int64,
                                                            strategy::Int64,
                                                            klinkstatus::Int64)
             cap_used[a,:KLINK] = sum(W)
-            parcels_benchmark[a,:KLINK] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:KLINK] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KLINK], 
                   " / capacity_used: ", cap_used[a,:KLINK],  " / time: ",round(time_benchmark[a,:KLINK], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start our reproduction of the greedy pairs heuristic by
@@ -211,34 +210,34 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(Q::Matrix{Int64},
                                                               capacity::Array{Int64,1})
             cap_used[a,:GP] = sum(W)
-            parcels_benchmark[a,:GP] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:GP] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n          gp: parcels after optimisation: ", parcels_benchmark[a,:GP], 
                   " / capacity_used: ", cap_used[a,:GP],  " / time: ",round(time_benchmark[a,:GP], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start our reproduction of the greedy seeds heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if start[1,:GS] == 1
-            time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans, Q::Matrix{Int64},
+            time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans[1:cut,:], Q::Matrix{Int64},
                                                              capacity::Array{Int64,1})
             cap_used[a,:GS] = sum(W)
-            parcels_benchmark[a,:GS] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:GS] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n          gs: parcels after optimisation: ", parcels_benchmark[a,:GS], 
                   " / capacity_used: ", cap_used[a,:GS],  " / time: ",round(time_benchmark[a,:GS], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start our reproduction of the  bestselling heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if  start[1,:BS] == 1
-            time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans, Q::Matrix{Int64},
+            time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans[1:cut,:], Q::Matrix{Int64},
                                                               capacity::Array{Int64,1})
             cap_used[a,:BS] = sum(W)
-            parcels_benchmark[a,:BS] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:BS] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n          bs: parcels after optimisation: ", parcels_benchmark[a,:BS], 
                   " / capacity_used: ", cap_used[a,:BS],  " / time: ",round(time_benchmark[a,:BS], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Start the search for optimal solution with the solver CPLEX
@@ -246,7 +245,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## FULLOPTUEQ if SKUs can be allocated multiple times
         if start[1,:OPT] == 1
             if sum(capacity) == size(trans,2)
-                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTEQ(trans::SparseMatrixCSC{Float64, Int64},
+                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTEQ(trans[1:cut,:],
                                                                                            capacity::Array{Int64,1},
                                                                                            abort::Int64,
                                                                                            show_opt::Int64,
@@ -254,7 +253,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                            allowed_gap::Float64,
                                                                                            max_nodes::Int64)
             else
-                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTUEQ(trans::SparseMatrixCSC{Float64, Int64},
+                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTUEQ(trans[1:cut,:],
                                                                                             capacity::Array{Int64,1},
                                                                                             abort::Int64,
                                                                                             show_opt::Int64,
@@ -263,31 +262,31 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                             max_nodes::Int64)
             end
             cap_used[a,:OPT] = sum(W)
-            parcels_benchmark[a,:OPT] = PARCELSSEND(trans, W, capacity, combination)
+            parcels_benchmark[a,:OPT] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n Solution of optimisation: ",popt, "/ Solution of parcel simulation: ", sum(parcel),
             " / time: ", round(time_benchmark[a,:OPT], digits = 3))
-            sleep(3)
+            sleep(0.5)
         end
 
         ## Benchmark the random allocation of SKUs
-        time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans::SparseMatrixCSC{Float64, Int64},
-                                                                                   capacity::Array{Int64,1},
-                                                                                   iterations::Int64,
-                                                                                   combination::Array{Array{Array{Int64,1},1},1})
+        time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans[cut+1:end,:],
+                                                                                   capacity,
+                                                                                   iterations,
+                                                                                   combination)
         print("\n      random: parcels after optimisation: ", parcels_benchmark[a,:RND])
-        sleep(3)
+        sleep(0.5)
 
         ## Calculate number of split deliveries
-        split_reduction[a:a,3:end] .= parcels_benchmark[a:a,3:end] .- size(trans,1)
+        split_reduction[a:a,4:end] .= parcels_benchmark[a:a,4:end] .- (size(trans,1) - cut)
         print("\n\n")
     end
 
     ## Caclculate the improvements of the heuristics compared to the random allocations
     for i = 1:size(parcels_benchmark,1)
-        for j = 3:size(parcels_benchmark,2)
+        for j = 4:size(parcels_benchmark,2)
             if parcels_benchmark[i,j] > 0
-                parcel_reduction[i,j] = (parcels_benchmark[i,:RND]-parcels_benchmark[i,j])/parcels_benchmark[i,:RND]
-                split_reduction[i,j] = (split_reduction[i,:RND]-split_reduction[i,j])/(split_reduction[i,:RND])
+                parcel_reduction[i,j] = 1-(parcels_benchmark[i,j]/parcels_benchmark[i,:RND])
+                split_reduction[i,j]  = 1-(split_reduction[i,j]/split_reduction[i,:RND])
             else
                 parcel_reduction[i,j] = 0
                 split_reduction[i,j] = 0

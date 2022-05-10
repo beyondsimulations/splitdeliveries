@@ -34,9 +34,9 @@ function PARCELSSEND(trans::SparseMatrixCSC{Float64, Int64},
                      X::Array{Int64,2}, 
                      capacity::Array{Int64,1}, 
                      combination::Array{Array{Array{Int64,1},1},1})
-    t_sparse = trans
-    if sum(capacity) == size(t_sparse,2)
-        parcel = t_sparse * X
+    trans = trans
+    if sum(capacity) == size(trans,2)
+        parcel = trans * X
         for j = 1:size(parcel,1)
             for k = 1:size(parcel,2)
                 if parcel[j,k] > 0
@@ -46,28 +46,32 @@ function PARCELSSEND(trans::SparseMatrixCSC{Float64, Int64},
                 end
             end
         end
-        parcel_out = round(Int64, sum(parcel))
+        parcel = round(Int64, sum(parcel))
     else
-        warehouse_combination = Array{Int64,2}(undef,size(combination,1),size(X,1)) .= 0
+        warehouse_combination = Array{Int64,2}(undef,size(X,1),size(combination,1)) .= 0
+        parcels_out = zeros(size(combination,1))
         for i = 1:size(combination,1)
             for j = 1:size(combination[i],1)
-                warehouse_combination[i,:] += X[:,combination[i][j]]
+                for k = 1:size(X,1)
+                    if X[k,combination[i][j]] == [1]
+                        warehouse_combination[k,i] = 1
+                    end
+                end
+                parcels_out[i] += 1
             end
         end
-        parcel = spzeros(size(t_sparse,1),size(capacity,1))
-        for i in 1:size(t_sparse,1)
+        warehouse_combination = warehouse_combination'
+        parcel = 0
+        for i in 1:size(trans,1)
             for j in 1:size(warehouse_combination,1)
-                if all(x->x>=0, warehouse_combination[j,:] - t_sparse[i,:])
-                    for k = 1:size(combination[j],1)
-                        parcel[i,combination[j][k]] .= 1
-                    end
+                if sum(trans[i,:]) == sum(trans[i,:].*warehouse_combination[j,:])
+                    parcel += parcels_out[j]
                     break
                 end
             end
         end
-        parcel_out = round(Int64, sum(parcel))
     end
-    return parcel_out::Int64
+    return parcel
 end
 
 # Functions for the random allocation of SKUs to warehouses

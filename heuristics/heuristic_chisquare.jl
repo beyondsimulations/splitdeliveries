@@ -8,7 +8,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         J = size(trans,1)
 
         # Number of products
-        I = size(trans,2)
+        I = size(Q,2)
 
         # Chi Square Test
         ## We start the chi-square heuristic by performing chi-square tests 

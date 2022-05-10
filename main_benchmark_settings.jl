@@ -3,17 +3,23 @@
 
 # Choose the benchmark which should be evaluated
 ## Benchmarks used in our article:
-### 1_solution_gap_10
-### 2_sensitivity_ind_100
-### 2_sensitivity_md_100
-### 2_sensitivity_hd_100
-### 3_calculation_time_ind
-### 3_calculation_time_md
-### 3_calculation_time_hd
-    experiment = "3_calculation_time_ind"
+### 1_gap
+### 2_sensitivity
+### 3_time
+## Dependencies used in our article:
+### IND
+### MD
+### HD
+    experiment = "2_sensitivity"
+    dependency = "MD"
 
-## Alternatively one could specify new transactional data sets and capacity constellations.
-## To see how the data has to be specified take a look at the "capacity_***" and "transactions_***" data.
+#  Specify the number of orders and the ratio between test
+## and training data for the generated transactional data sets
+    orders     = 500000
+    train_test = 0.80
+
+# load the data that specifies the dependencies
+    include("dependency/$dependency.jl")
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
@@ -30,20 +36,6 @@
                       BS     = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       OPT    = [0], # optimisation model to determine the optimal solution with CPLEX
                       RND    = [1]) # random allocation of SKUs (cannot be deactivated)
-
-# Parameter for the transaction generation if no transactional data is specified under the path 
-# "transactions/transactions_$experiment". The benchmark will generate random and independent transactions
-# while "order" specifies the number of transactions in each dataset. The parameter max_dependence 
-# specifies the maximal strength of the dependecies between products. max-groupsize specifies the 
-# maximal group size while group link specifies the ratio of outlinks of each group. Finally, ind_chance
-# can be used to determine the chance that instead of group-allocations an independent product is ordered.
-    orders         = 500000
-    min_dependence = 0.00
-    max_dependence = 0.25
-    group_link     = 0.05
-    ind_chance     = 0.30
-    one_direction  = 0.30
-    multi_relatio  = 0.50
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -62,14 +54,14 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 43200
+    abort       = 3600
     show_opt    = 0
     allowed_gap = 0.00000
     max_nodes   = 10000000
 
 # Parameters for CHISQUARE
 ## sig: significance level alpha for the chi-square tests
-    sig = 0.05
+    sig = 0.01
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
@@ -79,35 +71,37 @@
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
     capacity_benchmark  = readdlm("capacity/capacity_$experiment.csv", ';', Int64)
     skus_benchmark      = vec(readdlm("capacity/skus_$experiment.csv", ';', Int64))
-
+    
 # Run the benchmark
+    print("\n\n### Benchmark of dependency ",dependency," on experiment ",experiment," ###")
     parcels_benchmark, 
     time_benchmark, 
     cap_used, 
     parcel_reduction, 
     split_reduction, 
     gap_optimisation = BENCHMARK(capacity_benchmark::Array{Int64,2},
-                                 skus_benchmark::Vector{Int64},
-                                 start::DataFrame,
-                                 orders::Int64,
-                                 max_dependence::Float64,
-                                 trials::Int64,
-                                 stagnant::Int64,
-                                 strategy::Int64,
-                                 klinkstatus::Int64,
-                                 abort::Int64,
-                                 iterations::Int64,
-                                 show_opt::Int64,
-                                 cpu_cores::Int64,
-                                 allowed_gap::Float64,
-                                 max_nodes::Int64,
-                                 sig::Float64)
-                                                                         
+                                    skus_benchmark::Vector{Int64},
+                                    start::DataFrame,
+                                    orders::Int64,
+                                    max_dependence::Float64,
+                                    trials::Int64,
+                                    stagnant::Int64,
+                                    strategy::Int64,
+                                    klinkstatus::Int64,
+                                    abort::Int64,
+                                    iterations::Int64,
+                                    show_opt::Int64,
+                                    cpu_cores::Int64,
+                                    allowed_gap::Float64,
+                                    max_nodes::Int64,
+                                    sig::Float64)
+                                                                        
 
-# Export the results
-CSV.write("results/parcels_sent_$experiment.csv", parcels_benchmark)
-CSV.write("results/duration_$experiment.csv", time_benchmark)
-CSV.write("results/capacity_used_$experiment.csv", cap_used)
-CSV.write("results/parcel_reduction_$experiment.csv", parcel_reduction)
-CSV.write("results/split_reduction_$experiment.csv", split_reduction)
-CSV.write("results/optimisation_gap_$experiment.csv", gap_optimisation)
+    # Export the results
+    CSV.write("results/$(experiment)_a_parcels_sent_$dependency.csv",       parcels_benchmark)
+    CSV.write("results/$(experiment)_b_duration_$dependency.csv",           time_benchmark)
+    CSV.write("results/$(experiment)_c_capacity_used_$dependency.csv",      cap_used)
+    CSV.write("results/$(experiment)_d_parcel_reduction_$dependency.csv",   parcel_reduction)
+    CSV.write("results/$(experiment)_e_split_reduction_$dependency.csv",    split_reduction)
+    CSV.write("results/$(experiment)_f_optimisation_gap_$dependency.csv",   gap_optimisation)
+    

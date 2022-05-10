@@ -319,17 +319,27 @@ end
 # value to each warehouse with leftover storage space until it is full
 function FILLUP!(X::Array{Bool,2},
                  Q::Array{Float64,2},
-                capacity_left::Array{Int64,1})
+                 capacity_left::Array{Int64,1})
+    state = Matrix{Float64}(undef,size(X,1),size(X,2)) .= 0
+    for i = 1:size(X,1)
+        for d = 1:size(X,2)
+            state[i,d] = CALCVAL(X,Q,i,d)
+        end
+    end
     for d = 1:size(capacity_left,1)
         while capacity_left[d] > 0
             best_allocation = Array{Float64,1}(undef,size(Q,1)) .= 0
             for i = 1:size(Q,1)
                 if X[i,d] == 0
-                    best_allocation[i] = CALCVAL(X,Q,i,d)
+                    best_allocation[i] = state[i,d]
                 end
             end
-            if findmax(best_allocation)[1] > 0
-                X[findmax(best_allocation)[2],d] = 1
+            best = findmax(best_allocation)
+            if best[1] > 0
+                X[best[2],d] = 1
+                for j in 1:size(X,1)
+                    state[j,d]  += dep[j,best[2]]
+                end
                 capacity_left[d] -= 1
             else
                 capacity_left[d] = 0
@@ -354,27 +364,23 @@ function LOCALSEARCHCHI(X::Matrix{Int64},
     improvement = 1
     for trial = 1:10
         improvement = 0
-        for k = 1:size(X,2)-1
-            @inbounds for i in coapp_sort
-                if X[i,k] == 1 && X[i,k+1] == 0
-                    for j in coapp_sort
-                        if X[j,k+1] == 1 && X[j,k] == 0
-                            #iteration = POTENTIALCHI!(i,j,k,k+1,X,Q)
-                            #if iteration > 0
-                            #    improvement += 1
-                            #    break
-                            #end
-                            if POTENTIAL(state,i,j,k) > 0
-                                X[i,k]   = 0
-                                X[j,k+1] = 0
-                                X[i,k+1] = 1
-                                X[j,k]   = 1
-                                for y in 1:size(X,1)
-                                    state[y,k]    += Q[y,j] - Q[y,i]
-                                    state[y,k+1]  += Q[y,i] - Q[y,j]
+        for k = 2:size(X,2)
+            for g = 1:size(X,2)-1
+                @inbounds for i in coapp_sort
+                    if X[i,k] == 1 && X[i,g] == 0
+                        for j in coapp_sort
+                            if X[j,g] == 1 && X[j,k] == 0
+                                if POTENTIAL(state,i,j,k,g) > 0
+                                    X[i,k]   = 0
+                                    X[j,g]   = 0
+                                    X[i,g]   = 1
+                                    X[j,k]   = 1
+                                    for y in 1:size(X,1)
+                                        state[y,k]  += Q[y,j] - Q[y,i]
+                                        state[y,g]  += Q[y,i] - Q[y,j]
+                                    end
+                                    break
                                 end
-                                improvement = 1
-                                break
                             end
                         end
                     end
@@ -385,8 +391,8 @@ function LOCALSEARCHCHI(X::Matrix{Int64},
    return X::Array{Int64,2}
 end
 
-function POTENTIAL(state::Matrix{Float64},i::Int64,j::Int64,k::Int64)
-    state[i,k+1] - state[i,k] + state[j,k] - state[j,k+1]
+function POTENTIAL(state::Matrix{Float64},i::Int64,j::Int64,k::Int64,g::Int64)
+    state[i,g] - state[i,k] + state[j,k] - state[j,g]
 end
 
 function POTENTIALCHI!(i::Int64,

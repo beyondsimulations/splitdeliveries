@@ -58,27 +58,28 @@ function RANDOMTRANS(skus::Int64,
             end
         end
     end
-    #show(DataFrame(D, :auto))
-    #show(DataFrame(C, :auto))
-    transactions = spzeros(orders,skus)
+    #transactions = spzeros(orders,skus)
+    transactions = spzeros(skus,orders)
     for i = 1:orders
         already_allocated = 0
         skus_order = 1 + floor(abs(rand(Normal(0,3))))
         while already_allocated < skus_order 
             new_sku = skus + 1
             while new_sku > skus
-                new_sku = 1+ floor(Int64, abs(rand(Normal(0,skus/2.0))))
-                #new_sku = rand(1:skus)
+                new_sku = 1+ floor(Int64, abs(rand(Normal(0,skus/2.5))))
             end
             already_allocated += 1
-            transactions[i,new_sku] = 1
+            #transactions[i,new_sku] = 1
+            transactions[new_sku,i] = 1
             if rand() > ind_chance
                 for j in randperm(skus)
                     if D[new_sku,j] == 1
-                        if transactions[i,j] == 0
+                        #if transactions[i,j] == 0
+                        if transactions[j,i] == 0
                             if already_allocated < skus_order
                                 if rand() < C[new_sku,j]
-                                    transactions[i,j] = 1
+                                    #transactions[i,j] = 1
+                                    transactions[j,i] = 1
                                     already_allocated += 1
                                 end
                             else
@@ -90,9 +91,7 @@ function RANDOMTRANS(skus::Int64,
             end
         end
     end
-    #trans_product = sum(transactions, dims = 2)
-    #trans_orders  = sum(transactions, dims = 1)
-    #display(histogram(trans_product, bins=20))
-    #display(histogram(transpose(trans_orders), bins = 10))
+    #return transactions
+    transactions = sparse(transactions')
     return transactions
 end
