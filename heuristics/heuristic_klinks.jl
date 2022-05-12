@@ -8,7 +8,7 @@ function KLINKS(trans::SparseMatrixCSC{Float64, Int64},
     if CHECKCAPACITY(trans,capacity) == 1
         ## Calculation of links based on orders
         ov = LINKADJUST(trans::SparseMatrixCSC{Float64, Int64})
-        L = LINKS(trans::SparseMatrixCSC{Float64, Int64}, ov::Array{Float64,1})
+        L  = LINKS(trans::SparseMatrixCSC{Float64, Int64}, ov::Array{Float64,1})
         ## Set trial = 0
         besttrial = 0
         lw_trial = Array{Float64,1}(undef,trials) .= 0

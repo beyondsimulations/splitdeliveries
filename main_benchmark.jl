@@ -27,7 +27,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                       :QMK, 
                                                       :CHI, 
                                                       :CHILOC, 
-                                                      :KLINK, 
+                                                      :KLINK,
+                                                      :KLINKQMK,
                                                       :GP,
                                                       :GS,
                                                       :BS,
@@ -119,6 +120,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         if start[1,:KLINK] == 1
             time_benchmark[a,:KLINK] = 0
         end
+        if start[1,:KLINKQMK] == 1
+            time_benchmark[a,:KLINKQMK] = 0
+        end
         if start[1,:OPT] == 1
             time_benchmark[a,:OPT] = 0
         end
@@ -202,6 +206,25 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             parcels_benchmark[a,:KLINK] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KLINK], 
                   " / capacity_used: ", cap_used[a,:KLINK],  " / time: ",round(time_benchmark[a,:KLINK], digits = 3))
+            sleep(0.5)
+        end
+
+        ## Start our reproduction of the  K-LINKS optimization with SBB by
+        ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
+        if  start[1,:KLINKQMK] == 1 && sum(capacity) == size(trans,2)
+            time_benchmark[a,:KLINKQMK] += @elapsed L  = round.(Int64, LINKS(trans[1:cut,:],LINKADJUST(trans[1:cut,:])).*(1))
+            time_benchmark[a,:KLINKQMK] += @elapsed W, gap_optimisation[a,:KLINKQMK] = MQKP(capacity::Array{Int64,1},
+                                                                                        L::Array{Int64,2},
+                                                                                        abort::Int64,
+                                                                                        "SBB",
+                                                                                        show_opt::Int64,
+                                                                                        cpu_cores::Int64,
+                                                                                        allowed_gap::Float64,
+                                                                                        max_nodes::Int64)
+            cap_used[a,:KLINKQMK] = sum(W)
+            parcels_benchmark[a,:KLINKQMK] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
+            print("\n k-links+mqk: parcels after optimisation: ", parcels_benchmark[a,:KLINKQMK], 
+                  " / capacity_used: ", cap_used[a,:KLINKQMK],  " / time: ",round(time_benchmark[a,:KLINKQMK], digits = 3))
             sleep(0.5)
         end
 
