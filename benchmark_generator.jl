@@ -1,11 +1,11 @@
 ## import packages
 include("load_packages.jl")
 
-experiment = "2_sensitivity"
-capa = 400:400:4000
-ware = 2:1:3
-diff = 0.0:0.05:0.25
-buff = 0.0:0.2:0.2
+experiment = "4_10000skus"
+capa = 10000:10000:100000
+ware = 2:1:4
+diff = 0.0:0.10:0.20
+buff = 0.0:0.20:0.20
 
 total_rows = length(capa)*length(ware)*length(diff)*length(buff)
 total_cols = length(ware)+1
@@ -26,22 +26,24 @@ for cstep in capa
                 capacity = cstep * (1+bstep)
                 vararray = Vector{Float64}(undef,wstep) .= 0
                 if dstep == 0.00
-                    vararray .= 1/wstep
+                    vararray .= round(capacity/wstep)
                 else
-                    vstep = 1+dstep:-(2*dstep)/wstep:1-dstep
+                    max_w  = round((1+dstep)*capacity/wstep)
+                    step_w = - round(((2*dstep)/(wstep-1))*capacity/wstep)
+                    min_w  = round((1+dstep)*capacity/wstep) + (wstep-1) * step_w
+                    vstep = max_w:step_w:min_w
                     for i = 1:wstep
-                        vararray[i] = vstep[i]/wstep
+                        vararray[i] = vstep[i]
                     end
                 end
                 for warehouse = 1:wstep
-                    if warehouse == 1
-                        benchmark[current_row,warehouse] = ceil(round(vararray[warehouse] * capacity, digits = 2))
-                    elseif  warehouse != wstep
-                        benchmark[current_row,warehouse] = round(vararray[warehouse] * capacity)
+                    if warehouse != wstep
+                        benchmark[current_row,warehouse] = vararray[warehouse]
                     else
-                        benchmark[current_row,warehouse] = round(round(capacity - sum(benchmark[current_row,:]), digits = 2))
+                        benchmark[current_row,warehouse] = capacity - sum(benchmark[current_row,:])
                     end
                 end
+                benchmark[current_row,:] = sort(benchmark[current_row,:], rev=true)
                 sku_list[current_row] = cstep
                 global current_row += 1
             end

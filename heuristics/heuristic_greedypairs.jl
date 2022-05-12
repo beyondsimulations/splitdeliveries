@@ -5,11 +5,12 @@ function GREEDYPAIRS(Q::Matrix{Int64},
         ## Calculate the coapperance matrix
         capacity_left = copy(capacity)
         ## Sort the pairs of distinct SKUs by decreasing coappearance
-        pairs = SORTPAIRS(Q::Array{Int64,2})
-        X = Array{Int64,2}(undef,size(Q,2),size(capacity,1)) .= 0
-        GREEDYPAIRSMAIN!(pairs::Array{Int64,2}, X::Array{Int64,2}, capacity_left::Array{Int64,1})
+        pairs = SORTPAIRS(Q)
+        X = Array{Bool,2}(undef,size(Q,2),size(capacity,1)) .= 0
+        GREEDYPAIRSMAIN!(pairs,X,capacity_left)
         ## While there is unallocated space in the DCs do
-        X = FILLUP(X::Array{Int64,2}, Q::Array{Int64,2}, capacity_left::Array{Int64,1})
+        FILLUP!(X,Q,capacity_left)
+        X = convert(Matrix{Int64},X)
         return X::Array{Int64,2}
     end
 end

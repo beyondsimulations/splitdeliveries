@@ -69,16 +69,13 @@ function RANDOMTRANS(skus::Int64,
                 new_sku = 1+ floor(Int64, abs(rand(Normal(0,skus/2.5))))
             end
             already_allocated += 1
-            #transactions[i,new_sku] = 1
             transactions[new_sku,i] = 1
             if rand() > ind_chance
                 for j in randperm(skus)
                     if D[new_sku,j] == 1
-                        #if transactions[i,j] == 0
                         if transactions[j,i] == 0
                             if already_allocated < skus_order
                                 if rand() < C[new_sku,j]
-                                    #transactions[i,j] = 1
                                     transactions[j,i] = 1
                                     already_allocated += 1
                                 end
@@ -91,7 +88,6 @@ function RANDOMTRANS(skus::Int64,
             end
         end
     end
-    #return transactions
     transactions = sparse(transactions')
     return transactions
 end

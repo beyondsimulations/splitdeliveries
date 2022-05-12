@@ -168,7 +168,8 @@ function REMOVEALLOC(X::Array{Bool,2},
         end
     end
     Qs = nor .+ Qs
-    return Qs::Array{Float64,2}
+    Qs = round.(Int64,Qs)
+    return Qs::Matrix{Int64}
 end
 
 # function to check for all unallocated SKUs whether they have positive 
@@ -307,7 +308,7 @@ function CALCVAL(X::Matrix{Bool},T::Matrix{Float64},i::Int64,k::Int64)
     return out
 end
 
-function CALCVAL(X::Matrix{Int64},T::Matrix{Int64},i::Int64,k::Int64)
+function CALCVAL(X::Matrix{Bool},T::Matrix{Int64},i::Int64,k::Int64)
     out = 0
     @avxt for y = 1:size(X,1)
         out += X[y,k] * T[y,i]
@@ -318,7 +319,7 @@ end
 # function to allocate the SKUs with the highest potential allocation 
 # value to each warehouse with leftover storage space until it is full
 function FILLUP!(X::Array{Bool,2},
-                 Q::Array{Float64,2},
+                 Q::Array{Int64,2},
                  capacity_left::Array{Int64,1})
     state = Matrix{Float64}(undef,size(X,1),size(X,2)) .= 0
     for i = 1:size(X,1)
@@ -338,7 +339,7 @@ function FILLUP!(X::Array{Bool,2},
             if best[1] > 0
                 X[best[2],d] = 1
                 for j in 1:size(X,1)
-                    state[j,d]  += dep[j,best[2]]
+                    state[j,d]  += Q[j,best[2]]
                 end
                 capacity_left[d] -= 1
             else
@@ -350,7 +351,7 @@ end
 
 # function to apply a pair-wise exchange local search on the allocation
 # of the CHI heuristic
-function LOCALSEARCHCHI(X::Matrix{Int64},
+function LOCALSEARCHCHI(X::Matrix{Bool},
                         Q::Array{Int64,2},
                         nor::Matrix{Float64})
     coapp_sort = vec(sum(Q,dims = 2))
@@ -361,16 +362,22 @@ function LOCALSEARCHCHI(X::Matrix{Int64},
             state[i,k] = CALCVAL(X,Q,i,k)
         end
     end
-    improvement = 1
-    for trial = 1:10
-        improvement = 0
+    impro_now = 1
+    impro_bef = 0
+    impro_max = 0
+    while impro_now != impro_bef && impro_max < 100
+        impro_bef  = impro_now
+        impro_now  = 0
+        impro_max += 1  
         for k = 2:size(X,2)
             for g = 1:size(X,2)-1
                 @inbounds for i in coapp_sort
                     if X[i,k] == 1 && X[i,g] == 0
                         for j in coapp_sort
                             if X[j,g] == 1 && X[j,k] == 0
-                                if POTENTIAL(state,i,j,k,g) > 0
+                                pot = POTENTIAL(state,i,j,k,g)
+                                if pot > 0
+                                    impro_now += 1
                                     X[i,k]   = 0
                                     X[j,g]   = 0
                                     X[i,g]   = 1
@@ -388,31 +395,9 @@ function LOCALSEARCHCHI(X::Matrix{Int64},
             end
         end
     end
-   return X::Array{Int64,2}
+   return X::Array{Bool,2}
 end
 
 function POTENTIAL(state::Matrix{Float64},i::Int64,j::Int64,k::Int64,g::Int64)
     state[i,g] - state[i,k] + state[j,k] - state[j,g]
-end
-
-function POTENTIALCHI!(i::Int64,
-                       j::Int64,
-                       k::Int64,
-                       g::Int64,
-                       X::Matrix{Int64},
-                       Q::Array{Int64,2})
-    potential = 0
-    @avxt for y = 1:size(Q,1)
-        potential += (X[y,g] - X[y,k]) * Q[y,i] + (X[y,k] - X[y,g]) * Q[y,j]
-    end
-    if potential > 0
-        impr = 1
-        X[i,k] = 0
-        X[j,g] = 0
-        X[i,g] = 1
-        X[j,k] = 1
-    else
-        impr = 0
-    end
-    return impr::Int64
 end

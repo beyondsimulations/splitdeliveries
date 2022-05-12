@@ -192,11 +192,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
         if  start[1,:KLINK] == 1 && sum(capacity) == size(trans,2)
             time_benchmark[a,:KLINK] += @elapsed W = KLINKS(trans[1:cut,:],
-                                                           capacity::Array{Int64,1},
-                                                           trials::Int64,
-                                                           stagnant::Int64,
-                                                           strategy::Int64,
-                                                           klinkstatus::Int64)
+                                                            capacity::Array{Int64,1},
+                                                            trials::Int64,
+                                                            stagnant::Int64,
+                                                            strategy::Int64,
+                                                            klinkstatus::Int64)
             cap_used[a,:KLINK] = sum(W)
             parcels_benchmark[a,:KLINK] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
             print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KLINK], 

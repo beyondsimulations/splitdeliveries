@@ -60,11 +60,13 @@ function PARCELSSEND(trans::SparseMatrixCSC{Float64, Int64},
                 parcels_out[i] += 1
             end
         end
-        warehouse_combination = warehouse_combination'
+        warehouse_combination = dropzeros(sparse(warehouse_combination))
+        parcel_evalu = trans * warehouse_combination
+        parcel_check = sum(trans, dims = 2)
         parcel = 0
-        for i in 1:size(trans,1)
-            for j in 1:size(warehouse_combination,1)
-                if sum(trans[i,:]) == sum(trans[i,:].*warehouse_combination[j,:])
+        for i in 1:size(parcel_evalu,1)
+            for j in 1:size(parcel_evalu,2)
+                if parcel_evalu[i,j] == parcel_check[i]
                     parcel += parcels_out[j]
                     break
                 end
@@ -78,7 +80,7 @@ end
 ## RANDOMALLOCONCE: allocate SKUs randomly in case each SKU can only be assigned once
 function RANDOMALLOCONCE(trans::SparseMatrixCSC{Float64, Int64},
                          capacity::Array{Int64,1})
-    X = Array{Int64,2}(undef,size(trans,2),size(capacity,1))
+    X = Array{Bool,2}(undef,size(trans,2),size(capacity,1))
     X .= 0
     for j in 1:size(X,1)
         while sum(X[j,:]) == 0
@@ -89,7 +91,7 @@ function RANDOMALLOCONCE(trans::SparseMatrixCSC{Float64, Int64},
         end
     end
     X = X[shuffle(1:size(X,1)),:]
-    return X::Array{Int64,2}
+    return X::Array{Bool,2}
 end
 
 ## RANDOMALLOCMULTI: allocate SKUs randomly in case each SKU can be allocated multiple times
@@ -104,7 +106,7 @@ function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Float64, Int64},
             end
         end
     end
-    return X::Array{Int64,2}
+    return X::Array{Bool,2}
 end
 
 ## RANDOMBENCH: benchmark function to evaluate multiple random allocations
@@ -115,6 +117,7 @@ function RANDOMBENCH(trans::SparseMatrixCSC{Float64, Int64},
     randomcollection = Array{Int64,1}(undef,iterations) .= 0
     Threads.@threads for r = 1:iterations
         W = RANDOMALLOCMULTI(trans,capacity)
+        W = convert(Matrix{Int64},W)
         parcel = PARCELSSEND(trans,W,capacity,combination)
         Threads.lock(ren_lock) do
             randomcollection[r] = parcel

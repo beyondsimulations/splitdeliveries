@@ -124,16 +124,16 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
             ## with coappearances is found and there is still storage space left, terminate the 
             ## algorithm as further allocations pose no benefit. 
             FILLUP!(X::Array{Bool,2},
-                    Qs::Array{Float64,2},
+                    Qs::Array{Int64,2},
                     cap_left::Array{Int64,1})
         end
     end
-    X = convert(Matrix{Int64},X)
     if localsearch == true
-        X = LOCALSEARCHCHI(X::Matrix{Int64},
+        X = LOCALSEARCHCHI(X::Matrix{Bool},
                            Q::Array{Int64,2},
                            nor::Matrix{Float64})
     end
+    X = convert(Matrix{Int64},X)
     ## return the resulting allocation matrix
     return X::Array{Int64,2}
 end

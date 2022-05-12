@@ -5,16 +5,13 @@ function BESTSELLING(trans::SparseMatrixCSC{Float64, Int64},
     if CHECKCAPACITY(Q::Array{Int64,2},
                      capacity::Array{Int64,1}) == 1
         #  Start the heuristic
-        capacity_left = copy(capacity::Array{Int64,1})
+        capacity_left = copy(capacity)
         B = BESTSELLING_B(size(trans,2),capacity_left)
         sales = SORTSALES(trans)
-        X = Array{Int64,2}(undef,size(trans,2),size(capacity,1)) .= 0
+        X = Array{Bool,2}(undef,size(trans,2),size(capacity,1)) .= 0
         # while there exists a DC d such that the overall capacity is smaller than B do
         # for such each DC d do
-        BESTSELLINGSTART!(sales::Array{Int64,2},
-                          capacity_left::Array{Int64,1},
-                          B::Int64,
-                          X::Array{Int64,2})
+        BESTSELLINGSTART!(sales,capacity_left,B,X)
         if B == 0
             for j = 1:size(capacity_left,1)
                 if capacity_left[j] > 0
@@ -25,17 +22,18 @@ function BESTSELLING(trans::SparseMatrixCSC{Float64, Int64},
             ## Mark the SKU that is now allocated and the capacity used
             sales[1,4] = 1
             ## Start the assignment of the other SKUs
-            GREEDYSEEDSTART!(sales::Array{Int64,2}, X::Array{Int64,2}, Q::Array{Int64,2}, capacity_left::Array{Int64,1})
+            GREEDYSEEDSTART!(sales,X,Q,capacity_left)
             ## For each SKUs sorted by decreasing sales that has not been allocated yet
-            GREEDYSEEDMAIN!(sales::Array{Int64,2}, X::Array{Int64,2}, Q::Array{Int64,2}, capacity_left::Array{Int64,1})
+            GREEDYSEEDMAIN!(sales,X,Q,capacity_left)
             ## While there is unallocated space in the DCs do
-            X = FILLUP(X::Array{Int64,2}, Q::Array{Int64,2}, capacity_left::Array{Int64,1})
+            FILLUP!(X,Q,capacity_left)
         else
             ## Assign the B top selling SKUs to each warehouse with capacity > B
-            BESTSELLINGTOP!(sales::Array{Int64,2}, capacity_left::Array{Int64,1}, B::Int64, X::Array{Int64,2})
-            GREEDYSEEDMAIN!(sales::Array{Int64,2}, X::Array{Int64,2}, Q::Array{Int64,2}, capacity_left::Array{Int64,1})
-            X = FILLUP(X::Array{Int64,2}, Q::Array{Int64,2}, capacity_left::Array{Int64,1})
+            BESTSELLINGTOP!(sales,capacity_left,B,X)
+            GREEDYSEEDMAIN!(sales,X,Q,capacity_left)
+            FILLUP!(X,Q,capacity_left)
         end
+        X = convert(Matrix{Int64},X)
         return X::Array{Int64,2}
     end
 end

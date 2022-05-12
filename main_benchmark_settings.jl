@@ -10,13 +10,13 @@
 ### IND
 ### MD
 ### HD
-    experiment = "2_sensitivity"
-    dependency = "MD"
+    experiment = "2_100skus"
+    dependency = "HD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 500000
-    train_test = 0.80
+    orders     = 100000
+    train_test = 0.90
 
 # load the data that specifies the dependencies
     include("dependency/$dependency.jl")
@@ -30,7 +30,7 @@
                       QMK    = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHI    = [1], # chi-square heuristic 
                       CHILOC = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KLINK  = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLINK  = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       GP     = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS     = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS     = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
@@ -54,7 +54,7 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 3600
+    abort       = 1800
     show_opt    = 0
     allowed_gap = 0.00000
     max_nodes   = 10000000
