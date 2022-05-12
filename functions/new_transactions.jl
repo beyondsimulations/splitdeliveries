@@ -58,36 +58,39 @@ function RANDOMTRANS(skus::Int64,
             end
         end
     end
-    #transactions = spzeros(orders,skus)
-    transactions = spzeros(skus,orders)
-    for i = 1:orders
-        already_allocated = 0
-        skus_order = 1 + floor(abs(rand(Normal(0,3))))
-        while already_allocated < skus_order 
-            new_sku = skus + 1
-            while new_sku > skus
-                new_sku = 1+ floor(Int64, abs(rand(Normal(0,skus/2.5))))
-            end
-            already_allocated += 1
-            transactions[new_sku,i] = 1
-            if rand() > ind_chance
-                for j in randperm(skus)
-                    if D[new_sku,j] == 1
-                        if transactions[j,i] == 0
-                            if already_allocated < skus_order
-                                if rand() < C[new_sku,j]
-                                    transactions[j,i] = 1
-                                    already_allocated += 1
+    trans = spzeros(0,skus)
+    for part = 1:100
+        transactions = spzeros(skus,round(Int64,orders/100))
+        for i = 1:round(Int64,orders/100)
+            already_allocated = 0
+            skus_order = 1 + floor(abs(rand(Normal(0,3))))
+            while already_allocated < skus_order 
+                new_sku = skus + 1
+                while new_sku > skus
+                    new_sku = 1+ floor(Int64, abs(rand(Normal(0,skus/2.5))))
+                end
+                already_allocated += 1
+                transactions[new_sku,i] = 1
+                if rand() > ind_chance
+                    for j in randperm(skus)
+                        if D[new_sku,j] == 1
+                            if transactions[j,i] == 0
+                                if already_allocated < skus_order
+                                    if rand() < C[new_sku,j]
+                                        transactions[j,i] = 1
+                                        already_allocated += 1
+                                    end
+                                else
+                                    break
                                 end
-                            else
-                                break
                             end
                         end
                     end
                 end
             end
         end
+        transactions = sparse(transactions')
+        trans = vcat(trans,transactions)
     end
-    transactions = sparse(transactions')
-    return transactions
+    return trans
 end

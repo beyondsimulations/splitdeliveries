@@ -89,6 +89,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                     group_link,ind_chance,one_direction,
                                                     multi_relatio)
                 print("\ntransactions generated after ", round(time,digits = 3)," seconds.")
+                print("\nnumber of transactions ", size(trans,1),". Ratio train to test is ",train_test,".")
             end
         end
 
@@ -139,7 +140,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                        max_nodes::Int64)
             cap_used[a,:QMKOPT] = sum(W)
             parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
-            print("\n      qmkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
+            print("\n      mqkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
                   " / capacity_used: ", cap_used[a,:QMKOPT], " / time: ",round(time_benchmark[a,:QMKOPT],digits = 3))
             sleep(0.5)
         end
@@ -263,8 +264,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             end
             cap_used[a,:OPT] = sum(W)
             parcels_benchmark[a,:OPT] = PARCELSSEND(trans[cut+1:end,:], W, capacity, combination)
-            print("\n Solution of optimisation: ",popt, "/ Solution of parcel simulation: ", sum(parcel),
-            " / time: ", round(time_benchmark[a,:OPT], digits = 3))
+            print("\n         opt: parcels after optimisation: ", parcels_benchmark[a,:OPT], 
+                  " / capacity_used: ", cap_used[a,:OPT],  " / time: ",round(time_benchmark[a,:OPT], digits = 3))
             sleep(0.5)
         end
 

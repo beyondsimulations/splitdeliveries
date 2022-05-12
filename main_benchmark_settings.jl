@@ -11,11 +11,11 @@
 ### MD
 ### HD
     experiment = "2_100skus"
-    dependency = "HD"
+    dependency = "IND"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 100000
+    orders     = 1000000
     train_test = 0.90
 
 # load the data that specifies the dependencies
