@@ -5,8 +5,8 @@ function link(j::Int64,
               L::Array{Float64,2},
               X::Array{Bool,2})
     out = 0.0
-    if q != j && X[q,g] == 1
-        out = L[j,q] * X[j,k] * X[q,g]
+    if  X[q,g] == 1 &&  X[j,k] == 1 && q != j
+        out = L[j,q]
     end
     return out::Float64
 end
