@@ -2,8 +2,8 @@
 include("load_packages.jl")
 
 experiment = "1_gap"
-capa = 40:40:40
-ware = 2:1:4
+capa = 20:20:20
+ware = 2:1:3
 diff = 0.0:0.10:0.20
 buff = 0.0:0.20:0.20
 
