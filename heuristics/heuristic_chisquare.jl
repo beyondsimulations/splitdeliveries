@@ -114,24 +114,23 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         if sum(cap_left) > 0
             ## First, remove every so far assigned dependent SKU-pair from the coappearance 
             ## matrix dep to prevent the allocation bias described in our article. 
-            Qs = REMOVEALLOC(X::Array{Bool,2},
-                            cap_left::Array{Int64,1},
-                            nor::Array{Float64,2},
-                            dep::Array{Float64,2})
+            #Qs = REMOVEALLOC(X::Array{Bool,2},
+            #                cap_left::Array{Int64,1},
+            #                nor::Array{Float64,2},
+            #                dep::Array{Float64,2})
             
             ## Afterwards allocate the SKUs with the highest potential allocation value to 
             ## each warehouse with leftover storage space until it is full. If no SKU 
             ## with coappearances is found and there is still storage space left, terminate the 
             ## algorithm as further allocations pose no benefit. 
             FILLUP!(X::Array{Bool,2},
-                    Qs::Array{Int64,2},
+                    Q::Array{Int64,2},
                     cap_left::Array{Int64,1})
         end
     end
     if localsearch == true
         X = LOCALSEARCHCHI(X::Matrix{Bool},
-                           Q::Array{Int64,2},
-                           nor::Matrix{Float64})
+                           Q::Array{Int64,2})
     end
     X = convert(Matrix{Int64},X)
     ## return the resulting allocation matrix

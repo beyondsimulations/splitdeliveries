@@ -4,18 +4,19 @@
 # Choose the benchmark which should be evaluated
 ## Benchmarks used in our article:
 ### 1_gap
-### 2_sensitivity
-### 3_time
+### 2_100skus
+### 3_1000skus
+### 4_5000skus
 ## Dependencies used in our article:
 ### IND
 ### MD
 ### HD
     experiment = "4_10000skus"
-    dependency = "IND"
+    dependency = "HD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 10000000
+    orders     = 1000000
     train_test = 0.90
 
 # load the data that specifies the dependencies
@@ -55,7 +56,7 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 3600
+    abort       = 54000
     show_opt    = 0
     allowed_gap = 0.00000
     max_nodes   = 10000000

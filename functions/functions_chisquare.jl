@@ -352,8 +352,7 @@ end
 # function to apply a pair-wise exchange local search on the allocation
 # of the CHI heuristic
 function LOCALSEARCHCHI(X::Matrix{Bool},
-                        Q::Array{Int64,2},
-                        nor::Matrix{Float64})
+                        Q::Array{Int64,2})
     coapp_sort = vec(sum(Q,dims = 2))
     coapp_sort = sortperm(coapp_sort,rev=true)
     state = Matrix{Float64}(undef,size(X,1),size(X,2)) .= 0

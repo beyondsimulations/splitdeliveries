@@ -34,7 +34,6 @@ function PARCELSSEND(trans::SparseMatrixCSC{Float64, Int64},
                      X::Array{Int64,2}, 
                      capacity::Array{Int64,1}, 
                      combination::Array{Array{Array{Int64,1},1},1})
-    trans = trans
     if sum(capacity) == size(trans,2)
         parcel = trans * X
         for j = 1:size(parcel,1)
