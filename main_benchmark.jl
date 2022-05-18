@@ -90,7 +90,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                     group_link,ind_chance,one_direction,
                                                     multi_relatio)
                 print("\ntransactions generated after ", round(time,digits = 3)," seconds.")
-                print("\nnumber of transactions ", size(trans,1),". Ratio train to test is ",train_test,".")
             end
         end
 
@@ -118,10 +117,12 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         if train_test > 0.00
             cut = round(Int64,size(trans,1) * train_test)
             trans_train = trans[1:cut,:]
-            trans_test  = trans[cut+1:end,:]
+            trans_test  = trans[(cut+1):size(trans,1),:]
         else
             trans_train = trans_test = trans
         end
+        print("\nNumber of transactions for training ", size(trans_train,1),".") 
+        print("\nNumber of transactions for validation ",size(trans_test,1),".")
 
         time_benchmark[a,4:end] .= coapp_time =  @elapsed Q = COAPPEARENCE(trans_train)
         if start[1,:KLINK] == 1

@@ -11,7 +11,7 @@
 ### IND
 ### MD
 ### HD
-    experiment = "4_10000skus"
+    experiment = "5_1000skus_buff"
     dependency = "HD"
 
 #  Specify the number of orders and the ratio between test

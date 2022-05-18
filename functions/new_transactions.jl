@@ -61,9 +61,10 @@ function RANDOMTRANS(skus::Int64,
     C = dropzeros(sparse(C))
     D = dropzeros(sparse(D))
     trans = spzeros(0,skus)
-    for part = 1:100
-        transactions = spzeros(round(Int64,orders/100),skus)
-        for i = 1:round(Int64,orders/1000)
+    divide = 100
+    for part = 1:divide
+        transactions = spzeros(round(Int64,orders/divide),skus)
+        for i = 1:round(Int64,orders/divide)
             already_allocated = 0
             skus_order = 1 + floor(abs(rand(Normal(0,3))))
             while already_allocated < skus_order 
