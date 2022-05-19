@@ -11,8 +11,8 @@
 ### IND
 ### MD
 ### HD
-    experiment = "2_100skus"
-    dependency = "IND"
+    experiment = "4_10000skus"
+    dependency = "HD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
