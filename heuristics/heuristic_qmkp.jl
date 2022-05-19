@@ -34,6 +34,6 @@ function MQKP(capacity::Array{Int64,1},
                 end
             end
         end
-        return out::Array{Int64,2},G::Float64
+        return out::Array{Int64,2}, G::Float64
     end
 end
