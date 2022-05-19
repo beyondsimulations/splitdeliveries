@@ -1,15 +1,4 @@
 # Function to calculate the Coappearance Matrix Q
-function COAPPEARENCE(trans::Matrix{Int64})
-    t_sparse = dropzeros(sparse(trans))
-    Q = t_sparse'*t_sparse
-    for i = 1:size(Q,1)
-        Q[i,i] = 0
-    end
-    Q = Matrix(Q)
-    Q = Int.(Q)
-    return Q
-end
-
 function COAPPEARENCE(trans::SparseMatrixCSC{Float64, Int64})
     Q = trans'*trans
     for i = 1:size(Q,1)
