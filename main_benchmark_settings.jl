@@ -12,11 +12,11 @@
 ### MD
 ### HD
     experiment = "4_10000skus"
-    dependency = "HD"
+    dependency = "IND"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 1000000
+    orders     = 10000000
     train_test = 0.90
 
 # load the data that specifies the dependencies
@@ -31,9 +31,9 @@
                       QMK      = [0], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHI      = [1], # chi-square heuristic 
                       CHILOC   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KLINK    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLINK    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       KLINKQMK = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      GP       = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GP       = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS       = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS       = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       OPT      = [0], # optimisation model to determine the optimal solution with CPLEX
