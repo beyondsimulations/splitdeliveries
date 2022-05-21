@@ -11,12 +11,12 @@
 ### IND
 ### MD
 ### HD
-    experiment = "1_gap"
-    dependency = "HD"
+    experiment = "4_10000skus"
+    dependency = "IND"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 1000
+    orders     = 10000000
     train_test = 0.90
 
 # load the data that specifies the dependencies
@@ -49,7 +49,7 @@
     trials   = 100
     stagnant = 10
     strategy = 2
-    klinkstatus = 0
+    klinkstatus = 1
 
 # Parameters for all Optimisations
 ## abort: number of seconds until the Optimisation is aborted
