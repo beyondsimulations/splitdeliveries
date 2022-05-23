@@ -13,10 +13,10 @@ function HYOPTHESISCHI(Q::Array{Int64,2},
 
     ## Create the arrays for the export of the chi-square test
     chi_yy = convert.(Float64,Q)
-    norm   = Matrix{Float64}(undef,I,I) .= 0
-    dep    = Matrix{Float64}(undef,I,I) .= 0
+    norm   = zeros(I,I)
+    dep    = copy(norm)
 
-    @inbounds for i = 2:I
+    for i = 2:I
         for j = 1:i-1
             dep[i,j], norm[i,j] = chi_values(chi_yy[i,j], 
                                             sum_cond_sku[i], 
@@ -364,7 +364,7 @@ function LOCALSEARCHCHI(X::Matrix{Bool},
     impro_now = 1
     impro_bef = 0
     impro_max = 0
-    while impro_now != impro_bef && impro_max < 100
+    while impro_now != impro_bef && impro_max < 25
         impro_bef  = impro_now
         impro_now  = 0
         impro_max += 1  

@@ -1,11 +1,11 @@
 ## import packages
 include("load_packages.jl")
 
-experiment = "5_1000skus_buff"
-capa = 1000:1000:1000
+experiment = "4_10000skus"
+capa = 10000:5000:60000
 ware = 2:1:4
 diff = 0.0:0.10:0.20
-buff = 0.0:0.05:0.20
+buff = 0.0:0.20:0.20
 
 total_rows = length(capa)*length(ware)*length(diff)*length(buff)
 total_cols = length(ware)+1
@@ -40,7 +40,7 @@ for cstep in capa
                     if warehouse != wstep
                         benchmark[current_row,warehouse] = vararray[warehouse]
                     else
-                        benchmark[current_row,warehouse] = capacity - sum(benchmark[current_row,:])
+                        benchmark[current_row,warehouse] = round(Int64, capacity - sum(benchmark[current_row,:]))
                     end
                 end
                 benchmark[current_row,:] = sort(benchmark[current_row,:], rev=true)
