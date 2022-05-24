@@ -61,7 +61,11 @@ function RANDOMTRANS(skus::Int64,
     C = dropzeros(sparse(C))
     D = dropzeros(sparse(D))
     trans = spzeros(0,skus)
-    divide = 100
+    if rem(orders,1000) != 0
+        divide = 1
+    else
+        divide = orders/10000
+    end
     for part = 1:divide
         transactions = spzeros(round(Int64,orders/divide),skus)
         for i = 1:round(Int64,orders/divide)
