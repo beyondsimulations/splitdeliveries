@@ -66,10 +66,10 @@ function LINKS(trans::SparseMatrixCSC{Float64, Int64},
     L = Array{Float64,2}(undef,size(trans,2),size(trans,2)) .= 0
     for j = 2:size(trans,2)
         for q = 1:j-1
-            L[j,q] = sum(trans[:,j] .* trans[:,q] .* ov[:])
+            L[j,q] = sum(@view(trans[:,j]) .* @view(trans[:,q]) .* @view(ov[:]))
+            L[q,j] = L[j,q]
         end
     end
-    L = L + L'
     return L::Array{Float64,2}
 end
 

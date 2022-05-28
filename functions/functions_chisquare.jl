@@ -22,10 +22,10 @@ function HYOPTHESISCHI(Q::Array{Int64,2},
                                             sum_cond_sku[i], 
                                             sum_cond_sku[j], 
                                             J, accept)
+            dep[j,i]  = dep[i,j]
+            norm[j,i] = norm[i,j]
         end
     end
-    dep = dep' + dep
-    norm = norm' + norm
     return dep::Array{Float64,2}, 
            norm::Array{Float64,2}
 end
@@ -238,8 +238,6 @@ function FINDDEP!(X::Array{Bool,2},
         if allocated[j] == 0
             pot_dep[j]  = state_dep[j,k] 
             pot_nor[j]  = state_nor[j,k] 
-            #pot_dep[j] = CALCVAL(X,dep,j,k)
-            #pot_nor[j] = CALCVAL(X,nor,j,k)
             if pot_dep[j] > 0
                 pot_dep[j] += pot_nor[j]
             end

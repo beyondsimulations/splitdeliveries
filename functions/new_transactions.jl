@@ -61,7 +61,7 @@ function RANDOMTRANS(skus::Int64,
     C = dropzeros(sparse(C))
     D = dropzeros(sparse(D))
     trans = spzeros(0,skus)
-    if rem(orders,1000) != 0
+    if rem(orders,1000) != 0 || orders <= 10000
         divide = 1
     else
         divide = orders/10000
