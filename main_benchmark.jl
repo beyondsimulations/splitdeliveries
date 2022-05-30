@@ -176,7 +176,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Start CHI square heuristic without local search
         if start[1,:CHI] == 1
-            time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans, 
+            time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train, 
                                                                  capacity::Array{Int64,1},
                                                                  Q::Array{Int64,2},
                                                                  sig::Float64,
@@ -190,7 +190,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Start CHI square heuristic with local search
         if start[1,:CHILOC] == 1
-            time_benchmark[a,:CHILOC] += @elapsed W = CHISQUAREHEUR(trans, capacity::Array{Int64,1},
+            time_benchmark[a,:CHILOC] += @elapsed W = CHISQUAREHEUR(trans_train, capacity::Array{Int64,1},
                                                                         Q::Array{Int64,2},
                                                                         sig::Float64,
                                                                         true)
