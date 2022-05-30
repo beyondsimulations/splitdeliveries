@@ -11,12 +11,12 @@
 ### IND
 ### MD
 ### HD
-    experiment = "4_10000skus"
-    dependency = "HD"
+    experiment = "3_1000skus"
+    dependency = "IND"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 10000000
+    orders     = 1000000
     train_test = 0.90
 
 # load the data that specifies the dependencies
@@ -28,12 +28,12 @@
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKOPT   = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK      = [0], # quadratic-multiple knapsack heuristic with SBB as solver
+                      QMK      = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHI      = [1], # chi-square heuristic 
                       CHILOC   = [1], # chi-square heuristic + local search based on the QMK objective function
                       KLINK    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       KLINKQMK = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      GP       = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GP       = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS       = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS       = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       OPT      = [0], # optimisation model to determine the optimal solution with CPLEX
@@ -76,6 +76,7 @@
     
 # Run the benchmark
     print("\n\n### Benchmark of dependency ",dependency," on experiment ",experiment," ###")
+    print("\n     benchmark started at ",now(),".\n")
     parcels_benchmark, 
     time_benchmark, 
     cap_used, 
@@ -98,12 +99,5 @@
                                     max_nodes::Int64,
                                     sig::Float64)
                                                                         
-
-    # Export the results
-    CSV.write("results/$(experiment)_a_parcels_sent_$dependency.csv",       parcels_benchmark)
-    CSV.write("results/$(experiment)_b_duration_$dependency.csv",           time_benchmark)
-    CSV.write("results/$(experiment)_c_capacity_used_$dependency.csv",      cap_used)
-    CSV.write("results/$(experiment)_d_parcel_reduction_$dependency.csv",   parcel_reduction)
-    CSV.write("results/$(experiment)_e_split_reduction_$dependency.csv",    split_reduction)
-    CSV.write("results/$(experiment)_f_optimisation_gap_$dependency.csv",   gap_optimisation)
+    print("\nbenchmark finished at ",now(),".")
     

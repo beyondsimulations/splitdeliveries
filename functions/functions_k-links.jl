@@ -61,7 +61,7 @@ function PAYOFF(j::Int64,
     DL(j,w1,w2,L,X) + DL(q,w2,w1,L,X) - 2*L[j,q]
 end
 
-function LINKS(trans::SparseMatrixCSC{Float64, Int64},
+function LINKS(trans::SparseMatrixCSC{Bool, Int64},
                ov::Array{Float64,1})
     L = Array{Float64,2}(undef,size(trans,2),size(trans,2)) .= 0
     for j = 2:size(trans,2)
@@ -73,7 +73,7 @@ function LINKS(trans::SparseMatrixCSC{Float64, Int64},
     return L::Array{Float64,2}
 end
 
-function LINKADJUST(trans::SparseMatrixCSC{Float64, Int64})
+function LINKADJUST(trans::SparseMatrixCSC{Bool, Int64})
     ov = Array{Float64,1}(undef,size(trans,1))
     ov .= 0
     for i = 1:size(trans,1)

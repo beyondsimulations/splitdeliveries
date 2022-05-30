@@ -1,5 +1,5 @@
 # greedy seeds heuristic by A. Catalan and M. Fisher (2012) doi:10. 2139/ssrn.2166687
-function GREEDYSEEDS(trans::SparseMatrixCSC{Float64, Int64},
+function GREEDYSEEDS(trans::SparseMatrixCSC{Bool, Int64},
                      Q::Matrix{Int64},
                      capacity::Array{Int64,1})
     if CHECKCAPACITY(Q,capacity) == 1

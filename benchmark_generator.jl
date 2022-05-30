@@ -1,11 +1,11 @@
 ## import packages
 include("load_packages.jl")
 
-experiment = "1_gap"
-capa = 20:20:20
+experiment = "4_10000skus"
+capa = 10000:5000:50000
 ware = 2:1:4
-diff = 0.0:0.20:0.20
-buff = 0.0:0.20:0.20
+diff = 0.0:0.10:0.20
+buff = 0.0:0.10:0.20
 
 total_rows = length(capa)*length(ware)*length(diff)*length(buff)
 total_cols = length(ware)+1

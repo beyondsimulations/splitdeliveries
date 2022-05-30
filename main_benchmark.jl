@@ -51,19 +51,19 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     gap_optimisation  = copy(parcels_benchmark)
 
     ## import the transactional data and display the strength of the correlation within the transactional dataset
-    if isfile("transactions/transactions_$experiment.csv") == true
-        trans = readdlm("transactions/transactions_$experiment.csv", ',', Int64)
-        corrtrans = cor(trans, dims=1)
-        display(heatmap(corrtrans, 
-                    yaxis=("SKU"), 
-                    xaxis=("SKU"), 
-                    dpi = 300, 
-                    c = cgrad(:bone_1), 
-                    clim = (-1,1)))
-                    savefig("graphs/cor_$experiment.pdf")
-        trans = trans .* 1.0
-        trans = sparse(trans)
-    end
+    #if isfile("transactions/transactions_$experiment.csv") == true
+    #    trans = readdlm("transactions/transactions_$experiment.csv", ',', Int64)
+    #    corrtrans = cor(trans, dims=1)
+    #    display(heatmap(corrtrans, 
+    #                yaxis=("SKU"), 
+    #                xaxis=("SKU"), 
+    #                dpi = 300, 
+    #                c = cgrad(:bone_1), 
+    #                clim = (-1,1)))
+    #                savefig("graphs/cor_$experiment.pdf")
+    #    trans = trans .* 1.0
+    #    trans = sparse(trans)
+    #end
 
     # Iterate all capacity constellations
     for a = 1:size(capacity_benchmark,1)        
@@ -311,21 +311,26 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Calculate number of split deliveries
         split_reduction[a:a,4:end] .= parcels_benchmark[a:a,4:end] .- (size(trans_test,1))
         print("\n\n")
-    end
 
-    ## Caclculate the improvements of the heuristics compared to the random allocations
-    for i = 1:size(parcels_benchmark,1)
+        ## Calculate the improvements of the heuristic compared to a random allocation
         for j = 4:size(parcels_benchmark,2)
-            if parcels_benchmark[i,j] > 0
-                parcel_reduction[i,j] = 1-(parcels_benchmark[i,j]/parcels_benchmark[i,:RND])
-                split_reduction[i,j]  = 1-(split_reduction[i,j]/split_reduction[i,:RND])
+            if parcels_benchmark[a,j] > 0
+                parcel_reduction[a,j] = 1-(parcels_benchmark[a,j]/parcels_benchmark[a,:RND])
+                split_reduction[a,j]  = 1-(split_reduction[a,j]/split_reduction[a,:RND])
             else
-                parcel_reduction[i,j] = 0
-                split_reduction[i,j] = 0
+                parcel_reduction[a,j] = 0
+                split_reduction[a,j] = 0
             end
         end
-    end
 
+        # Export the results after each stage
+        CSV.write("results/$(experiment)_a_parcels_sent_$dependency.csv",       parcels_benchmark)
+        CSV.write("results/$(experiment)_b_duration_$dependency.csv",           time_benchmark)
+        CSV.write("results/$(experiment)_c_capacity_used_$dependency.csv",      cap_used)
+        CSV.write("results/$(experiment)_d_parcel_reduction_$dependency.csv",   parcel_reduction)
+        CSV.write("results/$(experiment)_e_split_reduction_$dependency.csv",    split_reduction)
+        CSV.write("results/$(experiment)_f_optimisation_gap_$dependency.csv",   gap_optimisation)
+    end
     print("\n### Final Report ###",
           "\nparcels send: \n",parcels_benchmark,
           "\nTime needed: \n",time_benchmark,

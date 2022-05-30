@@ -1,4 +1,4 @@
-function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
+function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
                        capacity::Array{Int64,1},
                        Q::Array{Int64,2},
                        sig::Float64,
@@ -36,15 +36,15 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         ## Calculate the weight of each warehouse. It shows us the density of 
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
-        weight = WHWEIGHT(capacity::Array{Int64,1},sum_nor::Array{Float64,1})
+        weight = WHWEIGHT(capacity::Array{Int64,1},sum_nor::Array{Float32,1})
 
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left = copy(capacity)
 
         ## Create an array that saves the current dependencies for all unallocated
         ## SKUs to all warehouses and a vector that holds all unallocated skus
-        state_dep = Matrix{Float64}(undef,size(X,1),length(cap_left)) .= 0
-        state_nor = Matrix{Float64}(undef,size(X,1),length(cap_left)) .= 0
+        state_dep = Matrix{Float32}(undef,size(X,1),length(cap_left)) .= 0
+        state_nor = Matrix{Float32}(undef,size(X,1),length(cap_left)) .= 0
         allocated = Vector{Bool}(undef,size(X,1)) .= false
 
         ## In the heuristic we compare the split-delivery minimising potential 
@@ -72,20 +72,20 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
         ## Otherwise we allocate it to warehouse k to maximise the independent 
         ## coappearances in the allocation.
-            i,k  = SELECTIK(sum_dep::Array{Float64,1},
-                            sum_nor::Array{Float64,1},
+            i,k  = SELECTIK(sum_dep::Vector{Float32},
+                            sum_nor::Vector{Float32},
                             weight,
                             cap_left::Array{Int64,1},
                             X::Array{Bool,2},
-                            dep::Array{Float64,2},
+                            dep::Matrix{Float32},
                             allocated::Vector{Bool})
                ALLOCATEONE!(X::Array{Bool,2},
-                            dep::Matrix{Float64},
-                            nor::Matrix{Float64},
-                            sum_dep::Array{Float64,1},
-                            sum_nor::Array{Float64,1},
-                            state_dep::Matrix{Float64},
-                            state_nor::Matrix{Float64},
+                            dep::Matrix{Float32},
+                            nor::Matrix{Float32},
+                            sum_dep::Vector{Float32},
+                            sum_nor::Vector{Float32},
+                            state_dep::Matrix{Float32},
+                            state_nor::Matrix{Float32},
                             cap_left::Array{Int64,1},
                             allocated::Vector{Bool},
                             i::Int64,
@@ -98,14 +98,13 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Float64, Int64},
         ## the warehouse k.
             ADDDEPENDENT!(X::Array{Bool,2},
                           cap_left::Array{Int64,1},
-                          i::Int64,
                           k::Int64,
-                          dep::Array{Float64,2},
-                          nor::Array{Float64,2},
-                          sum_dep::Array{Float64,1},
-                          sum_nor::Array{Float64,1},
-                          state_dep::Matrix{Float64},
-                          state_nor::Matrix{Float64},
+                          dep::Matrix{Float32},
+                          nor::Matrix{Float32},
+                          sum_dep::Array{Float32,1},
+                          sum_nor::Array{Float32,1},
+                          state_dep::Matrix{Float32},
+                          state_nor::Matrix{Float32},
                           allocated::Vector{Bool})
             FILLLAST!(X::Array{Bool,2},
                       cap_left::Array{Int64,1},

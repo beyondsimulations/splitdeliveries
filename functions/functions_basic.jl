@@ -1,5 +1,5 @@
 # Function to calculate the Coappearance Matrix Q
-function COAPPEARENCE(trans::SparseMatrixCSC{Float64, Int64})
+function COAPPEARENCE(trans::SparseMatrixCSC{Bool, Int64})
     Q = trans'*trans
     for i = 1:size(Q,1)
         Q[i,i] = 0
@@ -19,7 +19,7 @@ function COMBINEWAREHOUSES(capacity::Array{Int64,1})
 end
 
 ## PARCELSSEND: number of parcels necessary to fulfill all orders
-function PARCELSSEND(trans::SparseMatrixCSC{Float64, Int64}, 
+function PARCELSSEND(trans::SparseMatrixCSC{Bool, Int64}, 
                      X::Array{Int64,2}, 
                      capacity::Array{Int64,1}, 
                      combination::Array{Array{Array{Int64,1},1},1})
@@ -66,7 +66,7 @@ end
 
 # Functions for the random allocation of SKUs to warehouses
 ## RANDOMALLOCONCE: allocate SKUs randomly in case each SKU can only be assigned once
-function RANDOMALLOCONCE(trans::SparseMatrixCSC{Float64, Int64},
+function RANDOMALLOCONCE(trans::SparseMatrixCSC{Bool, Int64},
                          capacity::Array{Int64,1})
     X = Array{Bool,2}(undef,size(trans,2),size(capacity,1))
     X .= 0
@@ -83,7 +83,7 @@ function RANDOMALLOCONCE(trans::SparseMatrixCSC{Float64, Int64},
 end
 
 ## RANDOMALLOCMULTI: allocate SKUs randomly in case each SKU can be allocated multiple times
-function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Float64, Int64},
+function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Bool, Int64},
                           capacity::Array{Int64,1})
     X = RANDOMALLOCONCE(trans,capacity)
     for d = 1:size(capacity,1)
@@ -98,7 +98,7 @@ function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Float64, Int64},
 end
 
 ## RANDOMBENCH: benchmark function to evaluate multiple random allocations
-function RANDOMBENCH(trans::SparseMatrixCSC{Float64, Int64}, 
+function RANDOMBENCH(trans::SparseMatrixCSC{Bool, Int64}, 
                      capacity::Array{Int64,1}, 
                      iterations::Int64, 
                      combination::Array{Array{Array{Int64,1},1},1})

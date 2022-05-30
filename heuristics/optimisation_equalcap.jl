@@ -1,4 +1,4 @@
-function FULLOPTEQ(trans::SparseMatrixCSC{Float64, Int64},
+function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
                    capacity::Array{Int64,1},
                    abort::Int64,
                    show_opt::Int64,

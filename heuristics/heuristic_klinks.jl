@@ -1,5 +1,5 @@
 # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) doi:10.1016/j.ejor.2019.07.004
-function KLINKS(trans::SparseMatrixCSC{Float64, Int64},
+function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
                 capacity::Array{Int64,1},
                 trials::Int64,
                 stagnant::Int64,
@@ -7,8 +7,8 @@ function KLINKS(trans::SparseMatrixCSC{Float64, Int64},
                 klinkstatus::Int64)      
     if CHECKCAPACITY(trans,capacity) == 1
         ## Calculation of links based on orders
-        ov = LINKADJUST(trans::SparseMatrixCSC{Float64, Int64})
-        L  = LINKS(trans::SparseMatrixCSC{Float64, Int64}, ov::Array{Float64,1})
+        ov = LINKADJUST(trans::SparseMatrixCSC{Bool, Int64})
+        L  = LINKS(trans::SparseMatrixCSC{Bool, Int64}, ov::Array{Float64,1})
         ## Set trial = 0
         besttrial = 0
         lw_trial = Array{Float64,1}(undef,trials) .= 0
@@ -21,7 +21,7 @@ function KLINKS(trans::SparseMatrixCSC{Float64, Int64},
         time_elapsed = Minute(0)
         for y = 1:trials
             ## Random initialisation of the category distribution
-            X = RANDOMALLOCONCE(trans::SparseMatrixCSC{Float64, Int64},capacity::Array{Int64,1})
+            X = RANDOMALLOCONCE(trans::SparseMatrixCSC{Bool, Int64},capacity::Array{Int64,1})
             ## Get the matrix CW trial, Calculate the LW trial
             lw_trial[y] = LW(L::Array{Float64,2},X::Array{Bool,2})
             if klinkstatus == 1
