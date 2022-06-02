@@ -1,7 +1,6 @@
 using TimerOutputs
-begin 
-    tmr = TimerOutput()
-
+tmr = TimerOutput()
+let
     ## import packages
     include("load_packages.jl")
 
@@ -22,6 +21,10 @@ begin
 
     ## benchmark the parcels sent out
     combination = COMBINEWAREHOUSES(capacity)
-    parcels = PARCELSSEND(trans, W, capacity, combination)
+    parcels = PARCELSSEND(trans,W,capacity,combination)
     show(tmr)
+    print("\n Parcels: ",parcels,"\n")
 end
+
+sleep(10)
+GC.gc()
