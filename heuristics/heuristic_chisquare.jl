@@ -19,14 +19,12 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
         ## and a matrix nor with all "independent contributions" of the unique 
         ## SKU-combinations. More details in our article.
         sum_cond_sku = Int.(vec(sum(trans,dims=1)))
-        dep, nor = HYOPTHESISCHI(Q::Array{Int64,2},
-                                 I::Int64,
-                                 J::Int64,
-                                 sig::Float64,
-                                 sum_cond_sku::Array{Int64,1})
+        nor    = zeros(Float64,I,I)
+        dep    = zeros(Float64,I,I)
+        HYOPTHESISCHI!(nor,dep,Q,I,J,sig,sum_cond_sku)
 
         ## Create the sku-warehouse allocation matrix
-        X = Array{Bool,2}(undef,I,size(capacity,1)) .= false
+        X = zeros(Bool,I,size(capacity,1))
 
         ## Determine the sum of the coappearances for each SKU on the base of
         ## the matrices dep and nor
@@ -36,16 +34,16 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
         ## Calculate the weight of each warehouse. It shows us the density of 
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
-        weight = WHWEIGHT(capacity::Array{Int64,1},sum_nor::Array{Float64,1})
+        weight = WHWEIGHT(capacity,sum_nor)
 
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left = copy(capacity)
 
         ## Create an array that saves the current dependencies for all unallocated
         ## SKUs to all warehouses and a vector that holds all unallocated skus
-        state_dep = Matrix{Float64}(undef,size(X,1),length(cap_left)) .= 0
-        state_nor = Matrix{Float64}(undef,size(X,1),length(cap_left)) .= 0
-        allocated = Vector{Bool}(undef,size(X,1)) .= false
+        state_dep = zeros(Float64,size(X,1),length(cap_left))
+        state_nor = zeros(Float64,size(X,1),length(cap_left))
+        allocated = zeros(Bool,size(X,1))
 
         ## In the heuristic we compare the split-delivery minimising potential 
         ## of SKU allocations to maximise dependent coappearances (SKUs with 
@@ -72,43 +70,16 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
         ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
         ## Otherwise we allocate it to warehouse k to maximise the independent 
         ## coappearances in the allocation.
-        i,k  = SELECTIK(sum_dep::Vector{Float64},
-                            sum_nor::Vector{Float64},
-                            weight,
-                            cap_left::Array{Int64,1},
-                            X::Array{Bool,2},
-                            dep::Matrix{Float64},
-                            allocated::Vector{Bool})
-        ALLOCATEONE!(X::Array{Bool,2},
-                            dep::Matrix{Float64},
-                            nor::Matrix{Float64},
-                            sum_dep::Vector{Float64},
-                            sum_nor::Vector{Float64},
-                            state_dep::Matrix{Float64},
-                            state_nor::Matrix{Float64},
-                            cap_left::Array{Int64,1},
-                            allocated::Vector{Bool},
-                            i::Int64,
-                            k::Int64)
+        i,k  = SELECTIK(sum_dep,sum_nor,weight,cap_left,X,dep,allocated)
+        ALLOCATEONE!(X,dep,nor,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,i,k)
 
         ## Check for all unallocated SKUs whether they have positive 
         ## dependencies to the SKUs in the warehouse k the last SKU was allocated 
         ## to. If so, check whether the dependencies are expected to dominate the 
         ## independent coapperances. If yes, allocate the corresponding SKUs to 
         ## the warehouse k.
-        ADDDEPENDENT!(X::Array{Bool,2},
-                          cap_left::Array{Int64,1},
-                          k::Int64,
-                          dep::Matrix{Float64},
-                          nor::Matrix{Float64},
-                          sum_dep::Array{Float64,1},
-                          sum_nor::Array{Float64,1},
-                          state_dep::Matrix{Float64},
-                          state_nor::Matrix{Float64},
-                          allocated::Vector{Bool})
-        FILLLAST!(X::Array{Bool,2},
-                      cap_left::Array{Int64,1},
-                      allocated::Vector{Bool})
+        ADDDEPENDENT!(X,cap_left,k,dep,nor,sum_dep,sum_nor,state_dep,state_nor,allocated)
+        FILLLAST!(X,cap_left,allocated)
         end
         if sum(cap_left) > 0
             ## First, remove every so far assigned dependent SKU-pair from the coappearance 
@@ -122,14 +93,11 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
             ## each warehouse with leftover storage space until it is full. If no SKU 
             ## with coappearances is found and there is still storage space left, terminate the 
             ## algorithm as further allocations pose no benefit. 
-            FILLUP!(X::Array{Bool,2},
-                    Q::Array{Int64,2},
-                    cap_left::Array{Int64,1})
+            FILLUP!(X,Q,cap_left)
         end
     end
     if localsearch == true
-        X = LOCALSEARCHCHI(X::Matrix{Bool},
-                           Q::Array{Int64,2})
+        LOCALSEARCHCHI!(X,Q)
     end
     X = convert(Matrix{Int64},X)
     ## return the resulting allocation matrix

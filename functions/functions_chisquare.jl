@@ -1,31 +1,30 @@
 # function used to perform the chi square test of independence upon 
 # the coappearance matrix Q
-function HYOPTHESISCHI(Q::Array{Int64,2},
-                       I::Int64,
-                       J::Int64,
-                       sig::Float64,
-                       sum_cond_sku::Array{Int64,1})
+function HYOPTHESISCHI!(norm::Matrix{Float64},
+                        dep::Matrix{Float64},
+                        Q::Array{Int64,2},
+                        I::Int64,
+                        J::Int64,
+                        sig::Float64,
+                        sum_cond_sku::Array{Int64,1})
     # Initialise chi square test
     M = convert(Int64,((I^2-I)/2))
 
     ## Determine the acceptance level of the test
     accept = cquantile(Chisq(1), sig/M)
 
-    ## Create the arrays for the export of the chi-square test
-    norm   = zeros(Float64,I,I)
-    dep    = zeros(Float64,I,I)
-    @inbounds for i = 2:I
+    ## Fill the arrays with the results of the chi-square test
+    CHITEST!(norm,dep,Q,sum_cond_sku,J,accept)
+end
+
+function CHITEST!(norm::Matrix{Float64},dep::Matrix{Float64},Q::Matrix{Int64},sum_cond_sku::Vector{Int64},J::Int64,accept::Float64)
+    @inbounds @simd for i = 2:size(Q,1)
         @inbounds for j = 1:i-1
-            dep_out, norm_out = chi_values(Q[i,j],sum_cond_sku[i],sum_cond_sku[j],J,accept)
-            norm[i,j] = norm[j,i] += norm_out
-            if dep_out > 0
-                dep[i,j] = dep[j,i] += dep_out
-            end
+            chi_values!(dep,norm,Q,sum_cond_sku,J,accept,i,j)
+            norm[j,i] += norm[i,j]
+            dep[j,i]  += dep[i,j]
         end
     end
-
-    return dep::Matrix{Float64}, 
-           norm::Matrix{Float64}
 end
 
 function chi_part(a::Float64,b::Float64)
@@ -36,34 +35,33 @@ function chi_part(a::Int64,b::Float64)
     (a-b)^2/b
 end
 
-function chi_values(chi_yy::Int64, 
-                    sum_cond_sku_i::Int64, 
-                    sum_cond_sku_j::Int64, 
-                    J::Int64,
-                    accept::Float64)
+function chi_values!(dep::Matrix{Float64},
+                     norm::Matrix{Float64},
+                     Q::Matrix{Int64}, 
+                     sum_cond_sku::Vector{Int64}, 
+                     J::Int64,
+                     accept::Float64,
+                     i::Int64,
+                     j::Int64)
     chi = 0.0
-    dep::Float64  = 0.0
-    norm::Float64 = (sum_cond_sku_i * sum_cond_sku_j)/J
-    if chi_yy > norm
-        chi_nr = J - sum_cond_sku_i
-        chi_nd = J - sum_cond_sku_j
-        chi_yn = sum_cond_sku_i - chi_yy
-        chi_ny = sum_cond_sku_j - chi_yy
+    norm[i,j] += (sum_cond_sku[i] * sum_cond_sku[j])/J
+    if Q[i,j] > norm[i,j]
+        chi_nr = J - sum_cond_sku[i]
+        chi_nd = J - sum_cond_sku[j]
+        chi_yn = sum_cond_sku[i] - Q[i,j]
+        chi_ny = sum_cond_sku[j] - Q[i,j]
         chi_nn = chi_nd - chi_yn
-        ind_yn = (sum_cond_sku_i * chi_nd)/J
-        ind_ny = (sum_cond_sku_j * chi_nr)/J
+        ind_yn = (sum_cond_sku[i] * chi_nd)/J
+        ind_ny = (sum_cond_sku[j] * chi_nr)/J
         ind_nn = (chi_nr * chi_nd)/J
-        chi += chi_part(chi_yy,norm)
+        chi += chi_part(Q[i,j],norm[i,j])
         chi += chi_part(chi_yn,ind_yn)
         chi += chi_part(chi_ny,ind_ny)
         chi += chi_part(chi_nn,ind_nn)
         if chi > accept
-            dep += chi_yy - norm
-        #else
-        #    norm = chi_yy
+            dep[i,j] += Q[i,j] - norm[i,j]
         end
     end
-    return dep::Float64, norm::Float64
 end
 
 # function to calculate the weight of each warehouse. It shows us the density of 
@@ -105,7 +103,7 @@ function SELECTIK(sum_dep::Array{Float64,1},
                   dep::Matrix{Float64},
                   allocated::Vector{Bool})
     i       = findmax(sum_nor)[2]
-    if sum(X[i,:]) > 0
+    if sum(@view(X[i,:])) > 0
         for j = 1:size(X,1)
             if allocated[j] == 0
                 i = j
@@ -186,13 +184,17 @@ function ADDDEPENDENT!(X::Array{Bool,2},
                        state_nor::Matrix{Float64},
                        allocated::Vector{Bool})
     add = 1
+    pot_dep = zeros(Float64,size(X,1))
+    pot_nor = zeros(Float64,size(X,1))
     while add == 1 && cap_left[k] > 0 && sum(X) < size(X,1)
         add = 0
-        pot_dep, pot_nor = FINDDEP(X::Array{Bool,2},
-                                    k::Int64,
-                                    state_dep::Matrix{Float64},
-                                    state_nor::Matrix{Float64},
-                                    allocated::Vector{Bool})
+        FINDDEP!(X::Array{Bool,2},
+                 k::Int64,
+                 state_dep::Matrix{Float64},
+                 state_nor::Matrix{Float64},
+                 pot_dep::Vector{Float64},
+                 pot_nor::Vector{Float64},
+                 allocated::Vector{Bool})
         i = findmax(pot_dep)[2]
         if findmax(pot_dep)[1] > 0
             if pot_dep[i] >= findmax(pot_nor)[1]
@@ -214,23 +216,25 @@ function ADDDEPENDENT!(X::Array{Bool,2},
 end
 
 # function to check the dependencies to already allocated SKUs
-function FINDDEP(X::Array{Bool,2},
+function FINDDEP!(X::Array{Bool,2},
                   k::Int64,
                   state_dep::Matrix{Float64},
                   state_nor::Matrix{Float64},
+                  pot_dep::Vector{Float64},
+                  pot_nor::Vector{Float64},
                   allocated::Vector{Bool})
-    pot_dep = Array{Float64,1}(undef,size(X,1)) .= 0
-    pot_nor = Array{Float64,1}(undef,size(X,1)) .= 0
-    for j in 1:size(X,1)
+    @fastmath @simd for j in 1:size(X,1)
         if allocated[j] == 0
             pot_dep[j]  = state_dep[j,k] 
             pot_nor[j]  = state_nor[j,k] 
             if pot_dep[j] > 0
                 pot_dep[j] += pot_nor[j]
             end
+        else
+            pot_dep[j]  = 0
+            pot_nor[j]  = 0
         end
     end
-    return pot_dep,pot_nor
 end
 
 # function to allocate a selcted product to a selected warehouse
@@ -253,7 +257,7 @@ function ALLOCATEONE!(X::Array{Bool,2},
         allocated[i] = true
         state_dep[i,k] = 0
         state_nor[i,k] = 0
-        for j in 1:size(X,1)
+        @fastmath for j in 1:size(X,1)
             if allocated[j] == 0
                 state_dep[j,k]  += dep[j,i]
                 state_nor[j,k]  += nor[j,i]
@@ -267,15 +271,7 @@ end
 ## check whether all warehouse except the last one are already full. If
 ## that is the case just allocate the remaining SKUs yet not allocated there.
 function FILLLAST!(X::Array{Bool,2},cap_left::Array{Int64,1},allocated::Vector{Bool})
-    go = 1
-    for i = 1:size(cap_left,1)-1
-        if cap_left[i] == 0 && go == 1
-            go = 1
-        else
-            go = 0
-        end
-    end
-    if go == 1
+    if sum(cap_left[1:size(cap_left,1)-1]) == 0
         for i = 1:length(allocated)
             if allocated[i] == false
                 X[i,size(cap_left,1)] = 1
@@ -337,7 +333,7 @@ end
 
 # function to apply a pair-wise exchange local search on the allocation
 # of the CHI heuristic
-function LOCALSEARCHCHI(X::Matrix{Bool}, Q::Matrix{Int64})
+function LOCALSEARCHCHI!(X::Matrix{Bool}, Q::Matrix{Int64})
     coapp_sort = vec(sum(Q,dims = 2))
     coapp_sort = sortperm(coapp_sort,rev=true)
     state = zeros(Int64,size(X,1),size(X,2))
@@ -353,6 +349,23 @@ function LOCALSEARCHCHI(X::Matrix{Bool}, Q::Matrix{Int64})
         impro_bef  = impro_now
         impro_now  = 0
         impro_max += 1
+        SEARCHLOOP!(X,Q,coapp_sort,state,impro_now)
+    end
+end
+
+function POTENTIAL(state::Matrix{Int64},i::Int64,j::Int64,k::Int64,g::Int64)
+    state[i,g] - state[i,k] + state[j,k] - state[j,g]
+end
+
+function REFRESHSTATE!(state::Matrix{Int64},Q::Matrix{Int64},k::Int64,g::Int64,i::Int64,j::Int64)
+    @avxt for y in 1:size(Q,1)
+        state[y,k]  += Q[y,j] - Q[y,i]
+        state[y,g]  += Q[y,i] - Q[y,j]
+    end
+end
+
+function SEARCHLOOP!(X::Matrix{Bool},Q::Matrix{Int64},coapp_sort::Vector{Int64},state::Matrix{Int64},impro_now::Int64)
+    @fastmath begin
         @inbounds for g = 2:size(X,2)
             @inbounds for k = 1:size(X,2)-1
                 @inbounds for i in coapp_sort
@@ -372,17 +385,5 @@ function LOCALSEARCHCHI(X::Matrix{Bool}, Q::Matrix{Int64})
                 end
             end
         end
-    end
-   return X::Array{Bool,2}
-end
-
-function POTENTIAL(state::Matrix{Int64},i::Int64,j::Int64,k::Int64,g::Int64)
-    state[i,g] - state[i,k] + state[j,k] - state[j,g]
-end
-
-function REFRESHSTATE!(state::Matrix{Int64},Q::Matrix{Int64},k::Int64,g::Int64,i::Int64,j::Int64)
-    @avxt for y in 1:size(Q,1)
-        state[y,k]  += Q[y,j] - Q[y,i]
-        state[y,g]  += Q[y,i] - Q[y,j]
     end
 end
