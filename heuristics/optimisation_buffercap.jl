@@ -1,7 +1,7 @@
 function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
                     capacity::Array{Int64,1},
                     abort::Int64,
-                    show_opt::Int64,
+                    show_opt::Bool,
                     cpu_cores::Int64,
                     allowed_gap::Float64,
                     max_nodes::Int64)
@@ -32,7 +32,7 @@ function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
         JuMP.optimize!(allocation)
         G = abs(objective_bound(allocation)-objective_value(allocation))/abs(objective_value(allocation)+0.00000000001)
         P = objective_value(allocation)
-        out = Array{Int64,2}(undef,size(trans,2),size(capacity,1)) .= 0
+        out = Array{Bool,2}(undef,size(trans,2),size(capacity,1)) .= 0
         for i = 1:size(out,1)
             for j = 1:size(out,2)
                 if value.(X[i,j]) > 0

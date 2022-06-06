@@ -1,14 +1,23 @@
-function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
-                       capacity::Array{Int64,1},
-                       Q::Array{Int64,2},
+function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
+                       capacity::Vector{Int64},
                        sig::Float64,
-                       localsearch::Bool)
-    if CHECKCAPACITY(Q,capacity) == 1
-        # Number of transactions
-        J = size(trans,1)
+                       localsearch::Bool,
+                       log_results::Bool)
+    # Number of transactions
+    J = size(trans,1)
 
-        # Number of products
-        I = size(Q,2)
+    # Number of products
+    I = size(trans,2)
+
+    # Create Coapperance Matrix
+    Q = COAPPEARENCE(trans)
+
+    if CHECKCAPACITY(Q,capacity) == 1
+        # Create Vector with number of transactions containing each SKU
+        ordered_skus = [Q[i,i] for i = 1:size(Q,1)]
+
+        # Clean the principle diagonal
+        CLEANPRINCIPLE!(Q)
 
         # Chi Square Test
         ## We start the chi-square heuristic by performing chi-square tests 
@@ -18,19 +27,18 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
         ## “net-benefit” of all unique positive dependent SKU-combinations 
         ## and a matrix nor with all "independent contributions" of the unique 
         ## SKU-combinations. More details in our article.
-        sum_cond_sku = Int.(vec(sum(trans,dims=1)))
-        nor    = zeros(Float64,I,I)
-        dep    = zeros(Float64,I,I)
-        HYOPTHESISCHI!(nor,dep,Q,I,J,sig,sum_cond_sku)
+        log_results == true ? print("\n  starting chi-square tests.") : nothing
+        dep          = zeros(Float64,I,I)
+        HYOPTHESISCHI!(dep,Q,I,J,sig,ordered_skus)
 
         ## Create the sku-warehouse allocation matrix
         X = zeros(Bool,I,size(capacity,1))
 
         ## Determine the sum of the coappearances for each SKU on the base of
         ## the matrices dep and nor
-        sum_dep = vec(sum(dep,dims = 1))
-        sum_nor = vec(sum(nor,dims = 1))
-
+        sum_dep = vec(sum(dep,dims = 2))
+        sum_nor = vec(sum(Q,dims = 2)) .- vec(sum(dep,dims = 2))
+        
         ## Calculate the weight of each warehouse. It shows us the density of 
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
@@ -52,6 +60,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
         ## coappearances are stored in warehouses with high capacities).
         ## Start the allocation:
         ## If all SKUs are allocated once, continue after the while loop, else
+        log_results == true ? print("\n  starting unique allocation of each sku.") : nothing
         while sum(X) < I
         ## select the SKU i with the highest coappearance not being allocated
         ## to the warehouses yet. In addition, select the first sorted 
@@ -71,37 +80,44 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool, Int64},
         ## Otherwise we allocate it to warehouse k to maximise the independent 
         ## coappearances in the allocation.
         i,k  = SELECTIK(sum_dep,sum_nor,weight,cap_left,X,dep,allocated)
-        ALLOCATEONE!(X,dep,nor,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,i,k)
+        ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,i,k)
 
         ## Check for all unallocated SKUs whether they have positive 
         ## dependencies to the SKUs in the warehouse k the last SKU was allocated 
         ## to. If so, check whether the dependencies are expected to dominate the 
         ## independent coapperances. If yes, allocate the corresponding SKUs to 
         ## the warehouse k.
-        ADDDEPENDENT!(X,cap_left,k,dep,nor,sum_dep,sum_nor,state_dep,state_nor,allocated)
+        ADDDEPENDENT!(X,Q,cap_left,k,dep,sum_dep,sum_nor,state_dep,state_nor,allocated)
         FILLLAST!(X,cap_left,allocated)
         end
+
         if sum(cap_left) > 0
             ## First, remove every so far assigned dependent SKU-pair from the coappearance 
-            ## matrix dep to prevent the allocation bias described in our article. 
-            #Qs = REMOVEALLOC(X::Array{Bool,2},
-            #                cap_left::Array{Int64,1},
-            #                nor::Array{Float64,2},
-            #                dep::Array{Float64,2})
-            
+            ## matrix dep to prevent the allocation bias described in our article.
+            log_results == true ? print("\n  starting allocation to leftover space.") : nothing
+            REMOVEALLOC!(X,Q,dep)
+
             ## Afterwards allocate the SKUs with the highest potential allocation value to 
             ## each warehouse with leftover storage space until it is full. If no SKU 
             ## with coappearances is found and there is still storage space left, terminate the 
             ## algorithm as further allocations pose no benefit. 
-            FILLUP!(X,Q,cap_left)
+            FILLUP!(X,dep,cap_left)
+        end
+
+        ## Free up RAM for last stage
+        state_dep = nothing
+        state_nor = nothing
+        dep = nothing
+        GC.gc()
+
+        if localsearch == true
+            log_results == true ? print("\n  starting local search.") : nothing
+            LOCALSEARCHCHI!(trans,X,Q,capacity,log_results)
         end
     end
-    if localsearch == true
-        LOCALSEARCHCHI!(X,Q)
-    end
-    X = convert(Matrix{Int64},X)
+    
     ## return the resulting allocation matrix
-    return X::Array{Int64,2}
+    return X
 end
 
 

@@ -1,7 +1,7 @@
 function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
                    capacity::Array{Int64,1},
                    abort::Int64,
-                   show_opt::Int64,
+                   show_opt::Bool,
                    cpu_cores::Int64,
                    allowed_gap::Float64,
                    max_nodes::Int64)
@@ -37,6 +37,6 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
                 end
             end
         end
-        return out::Array{Int64,2},G::Float64,P::Float64
+        return out::Array{Bool,2},G::Float64,P::Float64
     end
 end

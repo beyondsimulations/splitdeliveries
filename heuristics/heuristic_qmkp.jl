@@ -1,13 +1,28 @@
-function MQKP(capacity::Array{Int64,1},
-              Q::Array{Int64,2},
+function MQKP(trans::SparseMatrixCSC{Bool,Int64},
+              capacity::Array{Int64,1},
               abort::Int64,
               solv::String,
-              show_opt::Int64,
+              show_opt::Bool,
               cpu_cores::Int64,
               allowed_gap::Float64,
-              max_nodes::Int64)
+              max_nodes::Int64,
+              mode::String)
+    # Create the Matrix for the objective of the optimisation
+    if mode == "QMK"
+        Q = COAPPEARENCE(trans)
+    elseif mode == "KLINK"
+        Q = LINKS(trans_train,LINKADJUST(trans_train)).*(1)
+    else
+        error("Sorry, only the mode QMK or KLINK is allowed.")
+    end
 
+    # Clean the principle diagonal
+    CLEANPRINCIPLE!(Q)
+
+    # Start building the model
     if CHECKCAPACITY(Q,capacity) == 1
+
+
         mqkp = Model(GAMS.Optimizer)
         if show_opt == 0
             set_silent(mqkp)
@@ -26,7 +41,7 @@ function MQKP(capacity::Array{Int64,1},
         @constraint(mqkp, minallocation[i in GI], sum(X[i,k] for k in GK) >= 1)
         JuMP.optimize!(mqkp)
         G = abs(objective_bound(mqkp)-objective_value(mqkp))/abs(objective_value(mqkp)+0.00000000001)
-        out = Array{Int64,2}(undef,size(Q,2),size(capacity,1)) .= 0
+        out = Array{Bool,2}(undef,size(Q,2),size(capacity,1)) .= 0
         for i = 1:size(out,1)
             for j = 1:size(out,2)
                 if value.(X[i,j]) > 0
@@ -34,6 +49,6 @@ function MQKP(capacity::Array{Int64,1},
                 end
             end
         end
-        return out::Array{Int64,2}, G::Float64
+        return out,G
     end
 end

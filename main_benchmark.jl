@@ -9,7 +9,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                    klinkstatus::Int64,
                    abort::Int64,
                    iterations::Int64,
-                   show_opt::Int64,
+                   show_opt::Bool,
                    cpu_cores::Int64,
                    allowed_gap::Float64,
                    max_nodes::Int64,
@@ -49,21 +49,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     parcel_reduction  = copy(parcels_benchmark)
     split_reduction   = copy(parcels_benchmark)
     gap_optimisation  = copy(parcels_benchmark)
-
-    ## import the transactional data and display the strength of the correlation within the transactional dataset
-    #if isfile("transactions/transactions_$experiment.csv") == true
-    #    trans = readdlm("transactions/transactions_$experiment.csv", ',', Int64)
-    #    corrtrans = cor(trans, dims=1)
-    #    display(heatmap(corrtrans, 
-    #                yaxis=("SKU"), 
-    #                xaxis=("SKU"), 
-    #                dpi = 300, 
-    #                c = cgrad(:bone_1), 
-    #                clim = (-1,1)))
-    #                savefig("graphs/cor_$experiment.pdf")
-    #    trans = trans .* 1.0
-    #    trans = sparse(trans)
-    #end
 
     # Iterate all capacity constellations
     for a = 1:size(capacity_benchmark,1)        
@@ -113,7 +98,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         split_reduction[a,:buffer] =
         gap_optimisation[a,:buffer] = sum(capacity) - size(trans,2)
 
-        #  Calculate the coappearance matrix
+        #  Split the data into training and test data
         if train_test > 0.00
             cut = round(Int64,size(trans,1) * train_test)
             trans_train = trans[1:cut,:]
@@ -124,32 +109,13 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         print("\nNumber of transactions for training ", size(trans_train,1),".") 
         print("\nNumber of transactions for validation ",size(trans_test,1),".")
 
-        time_benchmark[a,4:end] .= coapp_time =  @elapsed Q = COAPPEARENCE(trans_train)
-        if start[1,:KLINK] == 1
-            time_benchmark[a,:KLINK] = 0
-        end
-        if start[1,:KLINKQMK] == 1
-            time_benchmark[a,:KLINKQMK] = 0
-        end
-        if start[1,:OPT] == 1
-            time_benchmark[a,:OPT] = 0
-        end
-        if start[1,:RND] == 1
-            time_benchmark[a,:RND] = 0
-        end
-        print("\ncoappearance matrix: ",round(coapp_time, digits = 3)," seconds\n")
-
         #  Start the heuristics and optmisations
         ## Start QMK heuristic to find the optimal solution with the solver CPLEX
         if start[1,:QMKOPT] == 1
-            time_benchmark[a,:QMKOPT] += @elapsed W,gap_optimisation[a,:QMKOPT] = MQKP(capacity::Array{Int64,1},
-                                                                                       Q::Array{Int64,2},
-                                                                                       abort::Int64,
-                                                                                       "CPLEX",
-                                                                                       show_opt::Int64,
-                                                                                       cpu_cores::Int64,
-                                                                                       allowed_gap::Float64,
-                                                                                       max_nodes::Int64)
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:QMKOPT] += @elapsed W,gap_optimisation[a,:QMKOPT] = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
+                                                                                       cpu_cores,allowed_gap,max_nodes,"QMK")
             cap_used[a,:QMKOPT] = sum(W)
             parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n      mqkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
@@ -159,14 +125,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Start QMK heuristic with SBB as solver
         if start[1,:QMK] == 1
-            time_benchmark[a,:QMK] += @elapsed W,gap_optimisation[a,:QMK] = MQKP(capacity::Array{Int64,1},
-                                                                                 Q::Array{Int64,2},
-                                                                                 abort::Int64,
-                                                                                 "SBB",
-                                                                                 show_opt::Int64,
-                                                                                 cpu_cores::Int64,
-                                                                                 allowed_gap::Float64,
-                                                                                 max_nodes::Int64)
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:QMK] += @elapsed W,gap_optimisation[a,:QMK] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
+                                                                                 cpu_cores,allowed_gap,max_nodes,"QMK")
             cap_used[a,:QMK] = sum(W)
             parcels_benchmark[a,:QMK] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n         mqk: parcels after optimisation: ", parcels_benchmark[a,:QMK], 
@@ -176,11 +138,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Start CHI square heuristic without local search
         if start[1,:CHI] == 1
-            time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train, 
-                                                                 capacity::Array{Int64,1},
-                                                                 Q::Array{Int64,2},
-                                                                 sig::Float64,
-                                                                 false)
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,false,show_opt)
             cap_used[a,:CHI] = sum(W)
             parcels_benchmark[a,:CHI] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n         chi: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
@@ -190,10 +150,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Start CHI square heuristic with local search
         if start[1,:CHILOC] == 1
-            time_benchmark[a,:CHILOC] += @elapsed W = CHISQUAREHEUR(trans_train, capacity::Array{Int64,1},
-                                                                        Q::Array{Int64,2},
-                                                                        sig::Float64,
-                                                                        true)
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:CHILOC] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,true,show_opt)
             cap_used[a,:CHILOC] = sum(W)
             parcels_benchmark[a,:CHILOC] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHILOC], 
@@ -204,12 +163,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Start our reproduction of the  K-LINKS heuristic by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
         if  start[1,:KLINK] == 1 && sum(capacity) == size(trans,2)
-            time_benchmark[a,:KLINK] += @elapsed W = KLINKS(trans_train,
-                                                            capacity::Array{Int64,1},
-                                                            trials::Int64,
-                                                            stagnant::Int64,
-                                                            strategy::Int64,
-                                                            klinkstatus::Int64)
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:KLINK] += @elapsed W = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
             cap_used[a,:KLINK] = sum(W)
             parcels_benchmark[a,:KLINK] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KLINK], 
@@ -220,15 +176,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Start our reproduction of the  K-LINKS optimization with SBB by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
         if  start[1,:KLINKQMK] == 1 && sum(capacity) == size(trans,2)
-            time_benchmark[a,:KLINKQMK] += @elapsed L  = round.(Int64, LINKS(trans_train,LINKADJUST(trans_train)).*(1))
-            time_benchmark[a,:KLINKQMK] += @elapsed W, gap_optimisation[a,:KLINKQMK] = MQKP(capacity::Array{Int64,1},
-                                                                                        L::Array{Int64,2},
-                                                                                        abort::Int64,
-                                                                                        "SBB",
-                                                                                        show_opt::Int64,
-                                                                                        cpu_cores::Int64,
-                                                                                        allowed_gap::Float64,
-                                                                                        max_nodes::Int64)
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:KLINKQMK] += @elapsed W, gap_optimisation[a,:KLINKQMK] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
+                                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
             cap_used[a,:KLINKQMK] = sum(W)
             parcels_benchmark[a,:KLINKQMK] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n k-links+mqk: parcels after optimisation: ", parcels_benchmark[a,:KLINKQMK], 
@@ -239,8 +190,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Start our reproduction of the greedy pairs heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if start[1,:GP] == 1
-            time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(Q::Matrix{Int64},
-                                                              capacity::Array{Int64,1})
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(trans_train,capacity)
             cap_used[a,:GP] = sum(W)
             parcels_benchmark[a,:GP] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n          gp: parcels after optimisation: ", parcels_benchmark[a,:GP], 
@@ -251,8 +203,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Start our reproduction of the greedy seeds heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if start[1,:GS] == 1
-            time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans_train, Q::Matrix{Int64},
-                                                             capacity::Array{Int64,1})
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans_train,capacity)
             cap_used[a,:GS] = sum(W)
             parcels_benchmark[a,:GS] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n          gs: parcels after optimisation: ", parcels_benchmark[a,:GS], 
@@ -263,8 +216,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Start our reproduction of the  bestselling heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if  start[1,:BS] == 1
-            time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans_train, Q::Matrix{Int64},
-                                                              capacity::Array{Int64,1})
+            sleep(0.5)
+            GC.gc()
+            time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans_train,capacity)
             cap_used[a,:BS] = sum(W)
             parcels_benchmark[a,:BS] = PARCELSSEND(trans_test, W, capacity, combination)
             print("\n          bs: parcels after optimisation: ", parcels_benchmark[a,:BS], 
@@ -276,22 +230,14 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Choose FULLOPTEQ if each SKUs can only be allocated once, else use
         ## FULLOPTUEQ if SKUs can be allocated multiple times
         if start[1,:OPT] == 1
+            sleep(0.5)
+            GC.gc()
             if sum(capacity) == size(trans,2)
-                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTEQ(trans_train,
-                                                                                           capacity::Array{Int64,1},
-                                                                                           abort::Int64,
-                                                                                           show_opt::Int64,
-                                                                                           cpu_cores::Int64,
-                                                                                           allowed_gap::Float64,
-                                                                                           max_nodes::Int64)
+                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
+                                                                                            cpu_cores,allowed_gap,max_nodes)
             else
-                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTUEQ(trans_train,
-                                                                                            capacity::Array{Int64,1},
-                                                                                            abort::Int64,
-                                                                                            show_opt::Int64,
-                                                                                            cpu_cores::Int64,
-                                                                                            allowed_gap::Float64,
-                                                                                            max_nodes::Int64)
+                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
+                                                                                             cpu_cores,allowed_gap,max_nodes)
             end
             cap_used[a,:OPT] = sum(W)
             parcels_benchmark[a,:OPT] = PARCELSSEND(trans_test, W, capacity, combination)
@@ -301,10 +247,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         end
 
         ## Benchmark the random allocation of SKUs
-        time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans_test,
-                                                                                   capacity,
-                                                                                   iterations,
-                                                                                   combination)
+        sleep(0.5)
+        GC.gc()
+        time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans_test,capacity,iterations,combination)
         print("\n      random: parcels after optimisation: ", parcels_benchmark[a,:RND])
         sleep(0.5)
 

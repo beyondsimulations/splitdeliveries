@@ -11,12 +11,12 @@
 ### IND
 ### MD
 ### HD
-    experiment = "3_1000skus"
-    dependency = "IND"
+    experiment = "2_100skus"
+    dependency = "MD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 1000000
+    orders     = 100000
     train_test = 0.90
 
 # load the data that specifies the dependencies
@@ -31,8 +31,8 @@
                       QMK      = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHI      = [1], # chi-square heuristic 
                       CHILOC   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KLINK    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      KLINKQMK = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLINK    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLINKQMK = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       GP       = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS       = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS       = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
@@ -57,7 +57,7 @@
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
     abort       = 108000
-    show_opt    = 0
+    show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000
 
@@ -67,7 +67,7 @@
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
-    iterations = 10
+    iterations = 100
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
@@ -93,7 +93,7 @@
                                     klinkstatus::Int64,
                                     abort::Int64,
                                     iterations::Int64,
-                                    show_opt::Int64,
+                                    show_opt::Bool,
                                     cpu_cores::Int64,
                                     allowed_gap::Float64,
                                     max_nodes::Int64,

@@ -1,12 +1,15 @@
 # Function to calculate the Coappearance Matrix Q
 function COAPPEARENCE(trans::SparseMatrixCSC{Bool, Int64})
-    Q = trans'*trans
+    Q::Matrix{Int32} = trans'*trans
+    Q = Matrix(Q)
+    return Q
+end
+
+# function to set all entries on the principle diagonal to zero
+function CLEANPRINCIPLE!(Q::Matrix{<:Real})
     for i = 1:size(Q,1)
         Q[i,i] = 0
     end
-    Q = Matrix(Q)
-    Q = Int.(Q)
-    return Q
 end
 
 # Functions to evaluate the number of parcels necessary to fullfil all orders
@@ -20,7 +23,7 @@ end
 
 ## PARCELSSEND: number of parcels necessary to fulfill all orders
 function PARCELSSEND(trans::SparseMatrixCSC{Bool, Int64}, 
-                     X::Array{Int64,2}, 
+                     X::Array{Bool,2}, 
                      capacity::Array{Int64,1}, 
                      combination::Array{Array{Array{Int64,1},1},1})
     if sum(capacity) == size(trans,2)
@@ -105,7 +108,6 @@ function RANDOMBENCH(trans::SparseMatrixCSC{Bool, Int64},
     randomcollection = Array{Int64,1}(undef,iterations) .= 0
     Threads.@threads for r = 1:iterations
         W = RANDOMALLOCMULTI(trans,capacity)
-        W = convert(Matrix{Int64},W)
         parcel = PARCELSSEND(trans,W,capacity,combination)
         Threads.lock(ren_lock) do
             randomcollection[r] = parcel
@@ -124,56 +126,4 @@ function CHECKCAPACITY(trans,
         valid = 0
     end
     return valid::Int64
-end
-
-# function to apply a pair-wise exchange local search on the allocation
-# of all other heuristics
-function LOCALSEARCH(W::Array{Int64,2},
-                     Q::Array{Int64,2})
-    # lock to avoid racing conditions during the local search
-    ren_lock = ReentrantLock()
-    iteration = 1
-    coapp_sort = vec(sum(Q,dims = 2))
-    coapp_sort = sortperm(coapp_sort,rev=true)
-    while iteration > 0
-        iteration = 0
-        for i in coapp_sort
-            for j in coapp_sort
-                if i != j
-                    for k = 2:size(W,2)
-                        for g = 1:size(W,2)-1
-                            if W[i,k] == 1 && W[j,g] == 1 && W[i,g] == 0 && W[j,k] == 0
-                                iteration += POTENTIAL!(i,j,k,g,W,Q)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-   return W::Array{Int64,2}
-end
-
-# function to calculate the potential improvement during
-# the local search procedure
-function POTENTIAL!(i::Int64,
-                        j::Int64,
-                        k::Int64,
-                        g::Int64,
-                        X::Array{Int64,2},
-                        Q::Array{Int64,2})
-    potential = 0
-    impr = 0
-    potential += dot(@view(X[:,g]),@view(Q[i,:]))
-    potential -= dot(@view(X[:,k]),@view(Q[i,:]))
-    potential += dot(@view(X[:,k]),@view(Q[j,:]))
-    potential -= dot(@view(X[:,g]),@view(Q[j,:]))
-    if potential > 0
-        impr = 1
-        X[i,k] = 0
-        X[j,g] = 0
-        X[i,g] = 1
-        X[j,k] = 1
-    end
-    return impr::Int64
 end

@@ -14,12 +14,12 @@ function SORTSALES(trans::SparseMatrixCSC{Bool, Int64})
     # 2 column: index of SKU in sorted sales
     # 3 column: number of total sold SKU
     # 4 column: indicator whether SKU is allocated
-    return sales::Array{Int64,2}
+    return sales::Matrix{Int64}
 end
 
 ## function to sort the SKU pairs after the highest number of coappearances
-function SORTPAIRS(Q::Array{Int64,2})
-    pairs = Array{Int64,2}(undef,round(Int64,(size(Q,1)*size(Q,1)-size(Q,1))/2),3)
+function SORTPAIRS(Q::Matrix{<:Real})
+    pairs = zeros(Int64,round(Int64,(size(Q,1)*size(Q,1)-size(Q,1))/2),3)
     iter = 1
     for i = 2:size(Q,1)
         for j = 1 : i-1
@@ -29,32 +29,32 @@ function SORTPAIRS(Q::Array{Int64,2})
             iter += 1
         end
     end
-    #pairs = sortslices(pairs,dims=1,by=x->x[3],rev=true)
-    pairs = pairs[sortperm(pairs[:,3],rev=true),:]
+    pairs = pairs[sortperm(@view(pairs[:,3]),rev=true),:]
+    #pairs = sort!(pairs,by=x->x[3],rev=true)
     return pairs::Array{Int64,2}
 end
 
 ## function to check the number of coappearances in the selected warehouse
 ## for the selected product
-function CURRENTCOAPP(X::Array{Bool,2},
+function CURRENTCOAPP(X::Matrix{Bool},
                       warehouse::Int64,
                       sku::Int64,
-                      Q::Array{Int64,2})
+                      Q::Matrix{<:Real})
     sum(X[:,warehouse] .* Q[sku,:])
 end
 
 ## function to start place the seeds in the greedy seeds heuristic
-function GREEDYSEEDSTART!(sales::Array{Int64,2},
-                          X::Array{Bool,2},
-                          Q::Array{Int64,2},
-                          capacity_left::Array{Int64,1})
+function GREEDYSEEDSTART!(sales::Matrix{Int64},
+                          X::Matrix{Bool},
+                          Q::Matrix{<:Real},
+                          capacity_left::Vector{Int64})
     for k = 2:size(capacity_left,1)
         # list all SKUs that have not been allocated yet and
         top_sales = sales[sales[:,4] .== 0,:] 
         # discard from the list those SKUs that are not in the top decile
         top_sales = top_sales[1:round(Int64, size(top_sales,1)/10),:]
         # find the SKU from the list with the least coappearances to the allocated SKUs
-        coapp = Array{Int64,1}(undef,size(top_sales,1)) .= 0
+        coapp = zeros(Int64,size(top_sales,1))
         for i in 1:size(top_sales,1)
             for j in 1:size(capacity_left,1)-1
                 coapp[i] = CURRENTCOAPP(X,j,i,Q)
@@ -64,18 +64,16 @@ function GREEDYSEEDSTART!(sales::Array{Int64,2},
         sales[top_sales[findmin(coapp)[2],2],4] = 1
         X[top_sales[findmin(coapp)[2],1],k] = 1
     end
-    return sales::Array{Int64,2},
-           X::Array{Bool,2}
 end
 
 ## function to allocate the SKU with the highest potential
-function GREEDYSEEDMAIN!(sales::Array{Int64,2},
-                         X::Array{Bool,2},
-                         Q::Array{Int64,2},
-                         capacity_left::Array{Int64,1})
+function GREEDYSEEDMAIN!(sales::Matrix{Int64},
+                         X::Matrix{Bool},
+                         Q::Matrix{<:Real},
+                         capacity_left::Vector{Int64})
     for i = 1:size(Q,1)
         if sales[i,4] == 0
-            best_allocation = Array{Int64,1}(undef,size(capacity_left,1)) .= 0
+            best_allocation = zeros(Int64,size(capacity_left,1))
             for d = 1:size(capacity_left,1)
                 if capacity_left[d] > 1
                     # retrieve the list of SKUs allocated to d so far
@@ -93,15 +91,12 @@ function GREEDYSEEDMAIN!(sales::Array{Int64,2},
             sales[i,4] = 1
         end
     end
-    return sales::Array{Int64,2},
-           X::Array{Bool,2},
-           capacity_left::Array{Int64,1}
 end
 
 ## function to allocate the SKUs in the greedy pairs heuristic
-function GREEDYPAIRSMAIN!(pairs::Array{Int64,2},
-                          X::Array{Bool,2},
-                          capacity_left::Array{Int64,1})
+function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
+                          X::Matrix{Bool},
+                          capacity_left::Vector{Int64})
     ## Sort the DCs by decreasing capacity
     for i = 1:size(pairs,1)
         ## For each pair of SKUs in sorted list of pairs do
@@ -120,47 +115,19 @@ function GREEDYPAIRSMAIN!(pairs::Array{Int64,2},
             break
         end
     end
-    return X::Array{Bool,2}, 
-           capacity_left::Array{Int64,1}
-end
-
-## function to fill up the warehouses with the potentially best SKUs
-## after each SKU has already been allocated once
-function FILLUP(X::Array{Bool,2},
-                Q::Array{Int64,2},
-                capacity_left::Array{Int64,1})
-    for d = 1:size(capacity_left,1)
-        while capacity_left[d] > 0
-            best_allocation = Array{Int64,1}(undef,size(Q,1)) .= 0
-            for i = 1:size(Q,1)
-                if X[i,d] == 0
-                    a = @view X[:,d]
-                    b = @view Q[:,i]
-                    best_allocation[i] = dot(a,b)
-                end
-            end
-            if findmax(best_allocation)[1] > 0
-                X[findmax(best_allocation)[2],d] = 1
-                capacity_left[d] -= 1
-            else
-                capacity_left[d] = 0
-            end
-        end
-    end
-    return X::Array{Bool,2}
 end
 
 ## function to calculate the number of SKUs that can be allocated
 ## multiple times
-function BESTSELLING_B(skus::Int64, capacity_left::Array{Int64,1})
+function BESTSELLING_B(skus::Int64, capacity_left::Vector{Int64})
     floor(Int64,(sum(capacity_left)-skus)/(size(capacity_left,1)-1))
 end
 
 ## function to initialise the bestselling heuristic
-function BESTSELLINGSTART!(sales::Array{Int64,2},
-                           capacity_left::Array{Int64,1},
+function BESTSELLINGSTART!(sales::Matrix{Int64},
+                           capacity_left::Vector{Int64},
                            B::Int64,
-                           X::Array{Bool,2})
+                           X::Matrix{Bool})
     for d = 1:size(capacity_left,1)
         if capacity_left[d] < B
             for i = 1:capacity_left[d]
@@ -171,18 +138,14 @@ function BESTSELLINGSTART!(sales::Array{Int64,2},
         end
         B = BESTSELLING_B(size(X,1),capacity_left)
     end
-    return sales::Array{Int64,2},
-           capacity_left::Array{Int64,1},
-           B::Int64,
-           X::Array{Bool,2}
 end
 
 ## function to allocate the SKUs that have been sold most in each
 ## warehouse until the remaining SKUs can only be allocated once
-function BESTSELLINGTOP!(sales::Array{Int64,2},
-                         capacity_left::Array{Int64,1},
+function BESTSELLINGTOP!(sales::Matrix{Int64},
+                         capacity_left::Vector{Int64},
                          B::Int64,
-                         X::Array{Bool,2})
+                         X::Matrix{Bool})
     for d = 1:size(capacity_left,1)
         if capacity_left[d] >= B
             for i = 1:B
@@ -192,9 +155,6 @@ function BESTSELLINGTOP!(sales::Array{Int64,2},
             end
         end
     end
-    return sales::Array{Int64,2},
-           capacity_left::Array{Int64,1},
-           X::Array{Bool,2}
 end
 
 

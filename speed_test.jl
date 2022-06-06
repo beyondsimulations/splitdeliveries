@@ -1,30 +1,40 @@
-using TimerOutputs
-tmr = TimerOutput()
-let
+
+    GC.gc()
+
     ## import packages
     include("load_packages.jl")
 
-    # state the capacites
-    capacity = [10000,10000,10000]
-
     ## generate transactions
     print("\nstarting generation of transactions.")
-    trans = RANDOMTRANS(30000,1000000,1000,0.00,0.01,0.00,0.50,0.10,0.10)
+    @time trans = RANDOMTRANS(40000,1000000,1000,0.00,0.01,0.00,0.50,0.10,0.10)
 
-    ## generate the coappearance matrix
-    @time @timeit tmr "coappearance matrix" Q = COAPPEARENCE(trans)
+let
+    ## import packages
+    include("load_packages.jl")
+    
+    # state the capacites
+    capacity = [15000,15000,10000]
 
-    ## call the heuristic
-    print("\nstarting the heuristic")
-    @time @timeit tmr "chisquare heuristic" W = CHISQUAREHEUR(trans, capacity, Q, 0.01, true)
-    print("\nheuristic finished")
+    ## call the heuristic chi
+    print("starting the heuristic chi")
+    @time W = CHISQUAREHEUR(trans,capacity,0.01,true,true)
+    print("heuristic finished")
 
     ## benchmark the parcels sent out
     combination = COMBINEWAREHOUSES(capacity)
     parcels = PARCELSSEND(trans,W,capacity,combination)
-    show(tmr)
-    print("\n Parcels: ",parcels,"\n")
+    print("\nParcels chi: ",parcels,"\n")
+
+    ## call the heuristic
+    print("starting the heuristic bs")
+    @time W = BESTSELLING(trans,capacity)
+    print("heuristic finished")
+
+    ## benchmark the parcels sent out
+    combination = COMBINEWAREHOUSES(capacity)
+    parcels = PARCELSSEND(trans,W,capacity,combination)
+    print("\nParcels gs: ",parcels,"\n")
 end
 
-sleep(10)
+sleep(1)
 GC.gc()
