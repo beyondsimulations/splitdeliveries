@@ -28,6 +28,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## and a matrix nor with all "independent contributions" of the unique 
         ## SKU-combinations. More details in our article.
         log_results == true ? print("\n  starting chi-square tests.") : nothing
+        
         dep          = zeros(Float64,I,I)
         HYOPTHESISCHI!(dep,Q,I,J,sig,ordered_skus)
 
@@ -52,6 +53,10 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         state_dep = zeros(Float64,size(X,1),length(cap_left))
         state_nor = zeros(Float64,size(X,1),length(cap_left))
         allocated = zeros(Bool,size(X,1))
+
+        ## Create further arrays to preallocate the memory for the heuristic
+
+
 
         ## In the heuristic we compare the split-delivery minimising potential 
         ## of SKU allocations to maximise dependent coappearances (SKUs with 

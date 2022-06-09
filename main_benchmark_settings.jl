@@ -11,8 +11,8 @@
 ### IND
 ### MD
 ### HD
-    experiment = "2_100skus"
-    dependency = "MD"
+    experiment = "3_1000skus"
+    dependency = "HD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
@@ -31,7 +31,7 @@
                       QMK      = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHI      = [1], # chi-square heuristic 
                       CHILOC   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KLINK    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLINK    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       KLINKQMK = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       GP       = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS       = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687

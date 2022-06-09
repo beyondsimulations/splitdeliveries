@@ -50,6 +50,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     split_reduction   = copy(parcels_benchmark)
     gap_optimisation  = copy(parcels_benchmark)
 
+    ### Preallocate a transactional data set container
+    trans = spzeros(Bool,0,0)
+
     # Iterate all capacity constellations
     for a = 1:size(capacity_benchmark,1)        
         ## Load the capacity of each individual run
@@ -66,8 +69,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Generate artificial random transactions without dependencies if there is no transactional dataset
         if isfile("transactions/transactions_$experiment.csv") == false
-            if @isdefined(trans) && size(trans,2) == skus_benchmark[a]
-                print("\nReused transactions from previous run.")
+            if  size(trans,2) == skus_benchmark[a]
+                    print("\nReused transactions from previous run.")
             else
                 print("\nstarting generation of transactions.")
                 time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,ceil(Int64,skus_benchmark[a]/10),
@@ -248,7 +251,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         ## Benchmark the random allocation of SKUs
         sleep(0.5)
-        GC.gc()
         time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans_test,capacity,iterations,combination)
         print("\n      random: parcels after optimisation: ", parcels_benchmark[a,:RND])
         sleep(0.5)
