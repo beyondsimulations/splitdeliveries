@@ -16,7 +16,7 @@
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 100000
+    orders     = 1000000
     train_test = 0.90
 
 # load the data that specifies the dependencies
@@ -56,7 +56,7 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 108000
+    abort       = 3600
     show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000
