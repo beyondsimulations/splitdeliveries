@@ -40,6 +40,6 @@ function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
                 end
             end
         end
-        return out::Array{Int64,2},G::Float64,P::Float64
+        return out::Array{Bool,2},G::Float64,P::Float64
     end
 end

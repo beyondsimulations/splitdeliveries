@@ -11,13 +11,13 @@
 ### IND
 ### MD
 ### HD
-    experiment = "3_1000skus"
+    experiment = "1_gap"
     dependency = "HD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 1000000
-    train_test = 0.90
+    orders     = 1000
+    train_test = 0.50
 
 # load the data that specifies the dependencies
     include("dependency/$dependency.jl")
@@ -27,16 +27,16 @@
     ren_lock = ReentrantLock()
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
-    start = DataFrame(QMKOPT   = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
+    start = DataFrame(QMKOPT   = [1], # quadratic-multiple knapsack heuristic with CPLEX as solver
                       QMK      = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHI      = [1], # chi-square heuristic 
                       CHILOC   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KLINK    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLINK    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       KLINKQMK = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
                       GP       = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS       = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS       = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      OPT      = [0], # optimisation model to determine the optimal solution with CPLEX
+                      OPT      = [1], # optimisation model to determine the optimal solution with CPLEX
                       RND      = [1]) # random allocation of SKUs (cannot be deactivated)
 
 # Parameters for the KLINK heuristic
@@ -56,8 +56,8 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 3600
-    show_opt    = false
+    abort       = 10800
+    show_opt    = true
     allowed_gap = 0.00000
     max_nodes   = 10000000
 
