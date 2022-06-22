@@ -10,6 +10,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
     I = size(trans,2)
 
     # Create Coapperance Matrix
+    log_results == true ? print("\n  creating coappearance matrix.") : nothing
     Q = COAPPEARENCE(trans)
 
     if CHECKCAPACITY(Q,capacity) == 1
