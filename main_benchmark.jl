@@ -23,12 +23,12 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     parcels_benchmark = DataFrame(parcels_benchmark, [:wareh, 
                                                       :capacity,
                                                       :buffer, 
-                                                      :QMKOPT,
+                                                      :QMKO,
                                                       :QMK, 
+                                                      :CHIM, 
                                                       :CHI, 
-                                                      :CHILOC, 
-                                                      :KLINK,
-                                                      :KLINKQMK,
+                                                      :KL,
+                                                      :KLQ,
                                                       :GP,
                                                       :GS,
                                                       :BS,
@@ -114,15 +114,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
         #  Start the heuristics and optmisations
         ## Start QMK heuristic to find the optimal solution with the solver CPLEX
-        if start[1,:QMKOPT] == 1
+        if start[1,:QMKO] == 1
             sleep(0.5)
             GC.gc()
-            time_benchmark[a,:QMKOPT] += @elapsed W,gap_optimisation[a,:QMKOPT] = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
+            time_benchmark[a,:QMKO] += @elapsed W,gap_optimisation[a,:QMKO] = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
                                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
-            cap_used[a,:QMKOPT] = sum(W)
-            parcels_benchmark[a,:QMKOPT] = PARCELSSEND(trans_test, W, capacity, combination)
-            print("\n      mqkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKOPT], 
-                  " / capacity_used: ", cap_used[a,:QMKOPT], " / time: ",round(time_benchmark[a,:QMKOPT],digits = 3))
+            cap_used[a,:QMKO] = sum(W)
+            parcels_benchmark[a,:QMKO] = PARCELSSEND(trans_test, W, capacity, combination)
+            print("\n      mqkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKO], 
+                  " / capacity_used: ", cap_used[a,:QMKO], " / time: ",round(time_benchmark[a,:QMKO],digits = 3))
             sleep(0.5)
         end
 
@@ -139,54 +139,54 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
         end
 
-        ## Start CHI square heuristic without local search
-        if start[1,:CHI] == 1
+        ## Start chi square heuristic without local search
+        if start[1,:CHIM] == 1
             sleep(0.5)
             GC.gc()
-            time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,false,show_opt)
-            cap_used[a,:CHI] = sum(W)
-            parcels_benchmark[a,:CHI] = PARCELSSEND(trans_test, W, capacity, combination)
-            print("\n         chi: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
-                  " / capacity_used: ", cap_used[a,:CHI],  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
+            time_benchmark[a,:CHIM] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,false,show_opt)
+            cap_used[a,:CHIM] = sum(W)
+            parcels_benchmark[a,:CHIM] = PARCELSSEND(trans_test, W, capacity, combination)
+            print("\n  chi-square: parcels after optimisation: ", parcels_benchmark[a,:CHIM], 
+                  " / capacity_used: ", cap_used[a,:CHIM],  " / time: ",round(time_benchmark[a,:CHIM], digits = 3))
             sleep(0.5)
         end
 
-        ## Start CHI square heuristic with local search
-        if start[1,:CHILOC] == 1
+        ## Start chi square heuristic with local search
+        if start[1,:CHI] == 1
             sleep(0.5)
             GC.gc()
-            time_benchmark[a,:CHILOC] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,true,show_opt)
-            cap_used[a,:CHILOC] = sum(W)
-            parcels_benchmark[a,:CHILOC] = PARCELSSEND(trans_test, W, capacity, combination)
-            print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHILOC], 
-                  " / capacity_used: ", cap_used[a,:CHILOC],  " / time: ",round(time_benchmark[a,:CHILOC], digits = 3))
+            time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,true,show_opt)
+            cap_used[a,:CHI] = sum(W)
+            parcels_benchmark[a,:CHI] = PARCELSSEND(trans_test, W, capacity, combination)
+            print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
+                  " / capacity_used: ", cap_used[a,:CHI],  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
             sleep(0.5)
         end
 
         ## Start our reproduction of the  K-LINKS heuristic by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-        if  start[1,:KLINK] == 1 && sum(capacity) == size(trans,2)
+        if  start[1,:KL] == 1 && sum(capacity) == size(trans,2)
             sleep(0.5)
             GC.gc()
-            time_benchmark[a,:KLINK] += @elapsed W = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
-            cap_used[a,:KLINK] = sum(W)
-            parcels_benchmark[a,:KLINK] = PARCELSSEND(trans_test, W, capacity, combination)
-            print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KLINK], 
-                  " / capacity_used: ", cap_used[a,:KLINK],  " / time: ",round(time_benchmark[a,:KLINK], digits = 3))
+            time_benchmark[a,:KL] += @elapsed W = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
+            cap_used[a,:KL] = sum(W)
+            parcels_benchmark[a,:KL] = PARCELSSEND(trans_test, W, capacity, combination)
+            print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KL], 
+                  " / capacity_used: ", cap_used[a,:KL],  " / time: ",round(time_benchmark[a,:KL], digits = 3))
             sleep(0.5)
         end
 
         ## Start our reproduction of the  K-LINKS optimization with SBB by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-        if  start[1,:KLINKQMK] == 1 && sum(capacity) == size(trans,2)
+        if  start[1,:KLQ] == 1 && sum(capacity) == size(trans,2)
             sleep(0.5)
             GC.gc()
-            time_benchmark[a,:KLINKQMK] += @elapsed W, gap_optimisation[a,:KLINKQMK] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
+            time_benchmark[a,:KLQ] += @elapsed W, gap_optimisation[a,:KLQ] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
                                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
-            cap_used[a,:KLINKQMK] = sum(W)
-            parcels_benchmark[a,:KLINKQMK] = PARCELSSEND(trans_test, W, capacity, combination)
-            print("\n k-links+mqk: parcels after optimisation: ", parcels_benchmark[a,:KLINKQMK], 
-                  " / capacity_used: ", cap_used[a,:KLINKQMK],  " / time: ",round(time_benchmark[a,:KLINKQMK], digits = 3))
+            cap_used[a,:KLQ] = sum(W)
+            parcels_benchmark[a,:KLQ] = PARCELSSEND(trans_test, W, capacity, combination)
+            print("\n k-links+qmk: parcels after optimisation: ", parcels_benchmark[a,:KLQ], 
+                  " / capacity_used: ", cap_used[a,:KLQ],  " / time: ",round(time_benchmark[a,:KLQ], digits = 3))
             sleep(0.5)
         end
 
