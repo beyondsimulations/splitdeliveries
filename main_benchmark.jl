@@ -45,9 +45,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
     ### Copy the correctly named dataframe for the export dataframes
     time_benchmark    = copy(parcels_benchmark)
-    cap_used          = copy(parcels_benchmark)
-    parcel_reduction  = copy(parcels_benchmark)
-    split_reduction   = copy(parcels_benchmark)
+    parcels_train     = copy(parcels_benchmark)
     gap_optimisation  = copy(parcels_benchmark)
 
     ### Preallocate a transactional data set container
@@ -84,21 +82,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ##  Note the numer of warehouses as well as the capacity in the export dataframes
         parcels_benchmark[a,:wareh] = 
         time_benchmark[a,:wareh] = 
-        cap_used[a,:wareh] =
-        parcel_reduction[a,:wareh] = 
-        split_reduction[a,:wareh] = 
+        parcels_train[a,:wareh] =
         gap_optimisation[a,:wareh] = size(capacity,1)
         parcels_benchmark[a,:capacity] = 
         time_benchmark[a,:capacity] = 
-        cap_used[a,:capacity] = 
-        parcel_reduction[a,:capacity] = 
-        split_reduction[a,:capacity] =
+        parcels_train[a,:capacity] = 
         gap_optimisation[a,:capacity] = sum(capacity)
         parcels_benchmark[a,:buffer] = 
         time_benchmark[a,:buffer] = 
-        cap_used[a,:buffer] = 
-        parcel_reduction[a,:buffer] = 
-        split_reduction[a,:buffer] =
+        parcels_train[a,:buffer] =
         gap_optimisation[a,:buffer] = sum(capacity) - size(trans,2)
 
         #  Split the data into training and test data
@@ -119,8 +111,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             GC.gc()
             time_benchmark[a,:QMKO] += @elapsed W,gap_optimisation[a,:QMKO] = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
                                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
-            cap_used[a,:QMKO] = sum(W)
             parcels_benchmark[a,:QMKO] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:QMKO] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n      mqkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKO], 
                   " / capacity_used: ", cap_used[a,:QMKO], " / time: ",round(time_benchmark[a,:QMKO],digits = 3))
             sleep(0.5)
@@ -130,10 +122,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         if start[1,:QMK] == 1
             sleep(0.5)
             GC.gc()
-            time_benchmark[a,:QMK] += @elapsed W,gap_optimisation[a,:QMK] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
+            time_benchmark[a,:QMK] += @elapsed W,gap_optimisation[a,:QMK] = MQKP(trans_train,capacity,abort, "SBB",show_opt,
                                                                                  cpu_cores,allowed_gap,max_nodes,"QMK")
-            cap_used[a,:QMK] = sum(W)
             parcels_benchmark[a,:QMK] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:QMK] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n         mqk: parcels after optimisation: ", parcels_benchmark[a,:QMK], 
                   " / capacity_used: ", cap_used[a,:QMK],  " / time: ", round(time_benchmark[a,:QMK], digits = 3))
             sleep(0.5)
@@ -144,8 +136,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             time_benchmark[a,:CHIM] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,false,show_opt)
-            cap_used[a,:CHIM] = sum(W)
             parcels_benchmark[a,:CHIM] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:CHIM] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n  chi-square: parcels after optimisation: ", parcels_benchmark[a,:CHIM], 
                   " / capacity_used: ", cap_used[a,:CHIM],  " / time: ",round(time_benchmark[a,:CHIM], digits = 3))
             sleep(0.5)
@@ -156,8 +148,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,true,show_opt)
-            cap_used[a,:CHI] = sum(W)
             parcels_benchmark[a,:CHI] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:CHI] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
                   " / capacity_used: ", cap_used[a,:CHI],  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
             sleep(0.5)
@@ -169,8 +161,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             time_benchmark[a,:KL] += @elapsed W = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
-            cap_used[a,:KL] = sum(W)
             parcels_benchmark[a,:KL] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:KL] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KL], 
                   " / capacity_used: ", cap_used[a,:KL],  " / time: ",round(time_benchmark[a,:KL], digits = 3))
             sleep(0.5)
@@ -183,8 +175,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             GC.gc()
             time_benchmark[a,:KLQ] += @elapsed W, gap_optimisation[a,:KLQ] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
                                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
-            cap_used[a,:KLQ] = sum(W)
             parcels_benchmark[a,:KLQ] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:KLQ] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n k-links+qmk: parcels after optimisation: ", parcels_benchmark[a,:KLQ], 
                   " / capacity_used: ", cap_used[a,:KLQ],  " / time: ",round(time_benchmark[a,:KLQ], digits = 3))
             sleep(0.5)
@@ -196,8 +188,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(trans_train,capacity)
-            cap_used[a,:GP] = sum(W)
             parcels_benchmark[a,:GP] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:GP] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n          gp: parcels after optimisation: ", parcels_benchmark[a,:GP], 
                   " / capacity_used: ", cap_used[a,:GP],  " / time: ",round(time_benchmark[a,:GP], digits = 3))
             sleep(0.5)
@@ -209,8 +201,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans_train,capacity)
-            cap_used[a,:GS] = sum(W)
             parcels_benchmark[a,:GS] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:GS] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n          gs: parcels after optimisation: ", parcels_benchmark[a,:GS], 
                   " / capacity_used: ", cap_used[a,:GS],  " / time: ",round(time_benchmark[a,:GS], digits = 3))
             sleep(0.5)
@@ -222,8 +214,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans_train,capacity)
-            cap_used[a,:BS] = sum(W)
             parcels_benchmark[a,:BS] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:BS] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n          bs: parcels after optimisation: ", parcels_benchmark[a,:BS], 
                   " / capacity_used: ", cap_used[a,:BS],  " / time: ",round(time_benchmark[a,:BS], digits = 3))
             sleep(0.5)
@@ -242,8 +234,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
                                                                                              cpu_cores,allowed_gap,max_nodes)
             end
-            cap_used[a,:OPT] = sum(W)
             parcels_benchmark[a,:OPT] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:OPT] = PARCELSSEND(trans_train, W, capacity, combination)
             print("\n         opt: parcels after optimisation: ", parcels_benchmark[a,:OPT], 
                   " / capacity_used: ", cap_used[a,:OPT],  " / time: ",round(time_benchmark[a,:OPT], digits = 3))
             sleep(0.5)
@@ -255,35 +247,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         print("\n      random: parcels after optimisation: ", parcels_benchmark[a,:RND])
         sleep(0.5)
 
-        ## Calculate number of split deliveries
-        split_reduction[a:a,4:end] .= parcels_benchmark[a:a,4:end] .- (size(trans_test,1))
-        print("\n\n")
-
-        ## Calculate the improvements of the heuristic compared to a random allocation
-        for j = 4:size(parcels_benchmark,2)
-            if parcels_benchmark[a,j] > 0
-                parcel_reduction[a,j] = 1-(parcels_benchmark[a,j]/parcels_benchmark[a,:RND])
-                split_reduction[a,j]  = 1-(split_reduction[a,j]/split_reduction[a,:RND])
-            else
-                parcel_reduction[a,j] = 0
-                split_reduction[a,j] = 0
-            end
-        end
-
         # Export the results after each stage
         CSV.write("results/$(experiment)_a_parcels_sent_$dependency.csv",       parcels_benchmark)
         CSV.write("results/$(experiment)_b_duration_$dependency.csv",           time_benchmark)
-        CSV.write("results/$(experiment)_c_capacity_used_$dependency.csv",      cap_used)
-        CSV.write("results/$(experiment)_d_parcel_reduction_$dependency.csv",   parcel_reduction)
-        CSV.write("results/$(experiment)_e_split_reduction_$dependency.csv",    split_reduction)
-        CSV.write("results/$(experiment)_f_optimisation_gap_$dependency.csv",   gap_optimisation)
+        CSV.write("results/$(experiment)_c_parcels_train_$dependency.csv",      parcels_train)
+        CSV.write("results/$(experiment)_d_optimisation_gap_$dependency.csv",   gap_optimisation)
     end
     print("\n### Final Report ###",
           "\nparcels send: \n",parcels_benchmark,
-          "\nTime needed: \n",time_benchmark,
-          "\nCap used: \n",cap_used,
-          "\nParcel Reduction: \n",parcel_reduction,
-          "\nSplit Reduction: \n",split_reduction)
+          "\nTime needed: \n",time_benchmark, "\n\n")
     
     return parcels_benchmark::DataFrame, 
            time_benchmark::DataFrame, 
