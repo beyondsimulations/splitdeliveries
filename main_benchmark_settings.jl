@@ -12,7 +12,7 @@
 ### MD
 ### HD
     experiment = "1_gap"
-    dependency = "HD"
+    dependency = "IND"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
@@ -56,7 +56,7 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 10800
+    abort       = 3600
     show_opt    = true
     allowed_gap = 0.00000
     max_nodes   = 10000000

@@ -48,6 +48,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     parcels_train     = copy(parcels_benchmark)
     gap_optimisation  = copy(parcels_benchmark)
 
+    select!(parcels_train, Not(:RND))
+    select!(gap_optimisation, Not(:RND))
+
     ### Preallocate a transactional data set container
     trans = spzeros(Bool,0,0)
 
@@ -113,8 +116,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
             parcels_benchmark[a,:QMKO] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:QMKO] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n      mqkopt: parcels after optimisation: ", parcels_benchmark[a,:QMKO], 
-                  " / capacity_used: ", cap_used[a,:QMKO], " / time: ",round(time_benchmark[a,:QMKO],digits = 3))
+            print("\n      mqkopt: parcels test data: ", parcels_benchmark[a,:QMKO], 
+                  " / parcels training data: ", parcels_train[a,:QMKO], 
+                  " / time: ",round(time_benchmark[a,:QMKO],digits = 3))
             sleep(0.5)
         end
 
@@ -126,8 +130,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                  cpu_cores,allowed_gap,max_nodes,"QMK")
             parcels_benchmark[a,:QMK] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:QMK] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n         mqk: parcels after optimisation: ", parcels_benchmark[a,:QMK], 
-                  " / capacity_used: ", cap_used[a,:QMK],  " / time: ", round(time_benchmark[a,:QMK], digits = 3))
+            print("\n         mqk: parcels test data: ", parcels_benchmark[a,:QMK], 
+                  " / parcels training data: ", parcels_train[a,:QMK],  
+                  " / time: ", round(time_benchmark[a,:QMK], digits = 3))
             sleep(0.5)
         end
 
@@ -138,8 +143,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:CHIM] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,false,show_opt)
             parcels_benchmark[a,:CHIM] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:CHIM] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n  chi-square: parcels after optimisation: ", parcels_benchmark[a,:CHIM], 
-                  " / capacity_used: ", cap_used[a,:CHIM],  " / time: ",round(time_benchmark[a,:CHIM], digits = 3))
+            print("\n  chi-square: parcels test data: ", parcels_benchmark[a,:CHIM], 
+                  " / parcels training data: ", parcels_train[a,:CHIM],  
+                  " / time: ",round(time_benchmark[a,:CHIM], digits = 3))
             sleep(0.5)
         end
 
@@ -150,8 +156,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,true,show_opt)
             parcels_benchmark[a,:CHI] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:CHI] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n     chi+loc: parcels after optimisation: ", parcels_benchmark[a,:CHI], 
-                  " / capacity_used: ", cap_used[a,:CHI],  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
+            print("\n     chi+loc: parcels test data: ", parcels_benchmark[a,:CHI], 
+                  " / parcels training data: ", parcels_train[a,:CHI],  
+                  " / time: ",round(time_benchmark[a,:CHI], digits = 3))
             sleep(0.5)
         end
 
@@ -163,8 +170,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:KL] += @elapsed W = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
             parcels_benchmark[a,:KL] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:KL] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n     k-links: parcels after optimisation: ", parcels_benchmark[a,:KL], 
-                  " / capacity_used: ", cap_used[a,:KL],  " / time: ",round(time_benchmark[a,:KL], digits = 3))
+            print("\n     k-links: parcels train data: ", parcels_benchmark[a,:KL], 
+                  " / parcels training data: ", parcels_train[a,:KL],  
+                  " / time: ",round(time_benchmark[a,:KL], digits = 3))
             sleep(0.5)
         end
 
@@ -177,8 +185,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
             parcels_benchmark[a,:KLQ] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:KLQ] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n k-links+qmk: parcels after optimisation: ", parcels_benchmark[a,:KLQ], 
-                  " / capacity_used: ", cap_used[a,:KLQ],  " / time: ",round(time_benchmark[a,:KLQ], digits = 3))
+            print("\n k-links+qmk: parcels test data: ", parcels_benchmark[a,:KLQ], 
+                  " / parcels training data: ", parcels_train[a,:KLQ],  
+                  " / time: ",round(time_benchmark[a,:KLQ], digits = 3))
             sleep(0.5)
         end
 
@@ -190,8 +199,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(trans_train,capacity)
             parcels_benchmark[a,:GP] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:GP] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n          gp: parcels after optimisation: ", parcels_benchmark[a,:GP], 
-                  " / capacity_used: ", cap_used[a,:GP],  " / time: ",round(time_benchmark[a,:GP], digits = 3))
+            print("\n          gp: parcels test data: ", parcels_benchmark[a,:GP], 
+                  " / parcels training data: ", parcels_train[a,:GP],  
+                  " / time: ",round(time_benchmark[a,:GP], digits = 3))
             sleep(0.5)
         end
 
@@ -203,8 +213,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans_train,capacity)
             parcels_benchmark[a,:GS] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:GS] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n          gs: parcels after optimisation: ", parcels_benchmark[a,:GS], 
-                  " / capacity_used: ", cap_used[a,:GS],  " / time: ",round(time_benchmark[a,:GS], digits = 3))
+            print("\n          gs: parcels test data: ", parcels_benchmark[a,:GS], 
+                  " / parcels training data: ", parcels_train[a,:GS],  
+                  " / time: ",round(time_benchmark[a,:GS], digits = 3))
             sleep(0.5)
         end
 
@@ -216,8 +227,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans_train,capacity)
             parcels_benchmark[a,:BS] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:BS] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n          bs: parcels after optimisation: ", parcels_benchmark[a,:BS], 
-                  " / capacity_used: ", cap_used[a,:BS],  " / time: ",round(time_benchmark[a,:BS], digits = 3))
+            print("\n          bs: parcels test data: ", parcels_benchmark[a,:BS], 
+                  " / parcels training data: ", parcels_train[a,:BS],  
+                  " / time: ",round(time_benchmark[a,:BS], digits = 3))
             sleep(0.5)
         end
 
@@ -236,15 +248,16 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             end
             parcels_benchmark[a,:OPT] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:OPT] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n         opt: parcels after optimisation: ", parcels_benchmark[a,:OPT], 
-                  " / capacity_used: ", cap_used[a,:OPT],  " / time: ",round(time_benchmark[a,:OPT], digits = 3))
+            print("\n         opt: parcels test data: ", parcels_benchmark[a,:OPT], 
+                  " / parcels training data: ", parcels_train[a,:OPT],  
+                  " / time: ",round(time_benchmark[a,:OPT], digits = 3))
             sleep(0.5)
         end
 
         ## Benchmark the random allocation of SKUs
         sleep(0.5)
         time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans_test,capacity,iterations,combination)
-        print("\n      random: parcels after optimisation: ", parcels_benchmark[a,:RND])
+        print("\n      random: parcels test data: ", parcels_benchmark[a,:RND])
         sleep(0.5)
 
         # Export the results after each stage
