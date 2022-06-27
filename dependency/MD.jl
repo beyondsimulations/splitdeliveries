@@ -23,8 +23,15 @@
 ##                  implementation skus_order = 1 + floor(abs(rand(Normal(0,3))))
 
     min_dependence = 0.00
-    max_dependence = 0.25
-    group_link     = 0.02
-    ind_chance     = 0.30
-    one_direction  = 0.80
-    multi_relatio  = 0.20
+    max_dependence = 0.20
+    group_link     = 0.01
+    ind_chance     = 0.40
+    one_direction  = 0.90
+    multi_relatio  = 0.10
+
+    #min_dependence = 0.00
+    #max_dependence = 0.25
+    #group_link     = 0.02
+    #ind_chance     = 0.30
+    #one_direction  = 0.80
+    #multi_relatio  = 0.20
