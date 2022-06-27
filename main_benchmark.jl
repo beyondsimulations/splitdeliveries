@@ -48,7 +48,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     parcels_train     = copy(parcels_benchmark)
     gap_optimisation  = copy(parcels_benchmark)
 
-    select!(parcels_train, Not(:RND))
     select!(gap_optimisation, Not(:RND))
 
     ### Preallocate a transactional data set container
@@ -240,10 +239,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             sleep(0.5)
             GC.gc()
             if sum(capacity) == size(trans,2)
-                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
+                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,:OPT],popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
                                                                                             cpu_cores,allowed_gap,max_nodes)
             else
-                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,5],popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
+                time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,:OPT],popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
                                                                                              cpu_cores,allowed_gap,max_nodes)
             end
             parcels_benchmark[a,:OPT] = PARCELSSEND(trans_test, W, capacity, combination)
@@ -257,7 +256,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         ## Benchmark the random allocation of SKUs
         sleep(0.5)
         time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans_test,capacity,iterations,combination)
-        print("\n      random: parcels test data: ", parcels_benchmark[a,:RND])
+        parcels_train[a,:RND] = RANDOMBENCH(trans_train,capacity,iterations,combination)
+        print("\n      random: parcels test data: ", parcels_benchmark[a,:RND],
+              " / parcels training data: ", parcels_train[a,:RND],)
         sleep(0.5)
 
         # Export the results after each stage
@@ -272,8 +273,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     
     return parcels_benchmark::DataFrame, 
            time_benchmark::DataFrame, 
-           cap_used::DataFrame, 
-           parcel_reduction::DataFrame, 
-           split_reduction::DataFrame, 
+           parcels_train::DataFrame, 
            gap_optimisation::DataFrame
 end

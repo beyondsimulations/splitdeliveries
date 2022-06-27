@@ -25,6 +25,6 @@
     min_dependence = 0.00
     max_dependence = 0.00
     group_link     = 0.00
-    ind_chance     = 0.00
+    ind_chance     = 1.00
     one_direction  = 0.00
     multi_relatio  = 0.00
