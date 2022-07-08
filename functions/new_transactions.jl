@@ -2,6 +2,8 @@
 #              SKUs based on the values of max_groupsize and max_dependence
 function RANDOMTRANS(skus::Int64,
                      orders::Int64,
+                     skus_in_order::Float64,
+                     sku_frequency::Float64,
                      max_group_size::Int64,
                      min_dependence::Float64,
                      max_dependence::Float64,
@@ -64,11 +66,15 @@ function RANDOMTRANS(skus::Int64,
         transactions = spzeros(Bool,round(Int64,orders/divide),skus)
         for i = 1:round(Int64,orders/divide)
             already_allocated = 0
-            skus_order = 1 + floor(abs(rand(Normal(0,3))))
-            while already_allocated < skus_order 
-                new_sku = skus + 1
-                while new_sku > skus
-                    new_sku = 1+ floor(Int64, abs(rand(Normal(0,skus/2.5))))
+            skus_order = 1 + floor(abs(rand(Normal(0,skus_in_order))))
+            while already_allocated < skus_order
+                if sku_frequency == 0
+                    new_sku = rand(1:skus)
+                else
+                    new_sku = skus + 1
+                    while new_sku > skus
+                        new_sku = 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency))))
+                    end
                 end
                 already_allocated += 1
                 transactions[i,new_sku] = 1

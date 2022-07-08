@@ -5,7 +5,10 @@ function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
                     cpu_cores::Int64,
                     allowed_gap::Float64,
                     max_nodes::Int64)
+    # Convert sparse matrix to matrix
     trans = Matrix(trans)
+    # Sort the warehouses by decreasing capacity
+    capacity = sort(capacity, rev=true)
     if CHECKCAPACITY(trans,capacity) == 1
         allocation = Model(GAMS.Optimizer)
         if show_opt == 0

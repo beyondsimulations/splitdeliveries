@@ -117,6 +117,26 @@ function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
     end
 end
 
+# function to allocate the SKUs in the main part of the Greedy Orders Heuristic
+function GREEDYORDERSMAIN!(order_sort::Vector{Int64},trans::SparseMatrixCSC{Bool,Int64},capacity_left::Vector{Int64},X::Matrix{Bool})
+    for order in order_sort
+        for sku = 1:size(trans,2)
+            # Determine the warehouse d with the lowest index that has one unallocated space
+            if trans[order,sku] == 1
+                for d = 1:length(capacity_left)
+                    if capacity_left[d] > 0
+                        ## if the SKU is not allocated to the warehouses allocate it
+                        if sum(X[sku,:]) == 0
+                            X[sku,d] = 1
+                            capacity_left[d] -= 1
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
 ## function to calculate the number of SKUs that can be allocated
 ## multiple times
 function BESTSELLING_B(skus::Int64, capacity_left::Vector{Int64})

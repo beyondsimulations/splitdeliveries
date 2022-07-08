@@ -29,6 +29,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                       :CHI, 
                                                       :KL,
                                                       :KLQ,
+                                                      :GO,
                                                       :GP,
                                                       :GS,
                                                       :BS,
@@ -73,7 +74,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\nReused transactions from previous run.")
             else
                 print("\nstarting generation of transactions.")
-                time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,ceil(Int64,skus_benchmark[a]/10),
+                time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,skus_in_order,sku_frequency,
+                                                    ceil(Int64,max(skus_benchmark[a]/50,10)),
                                                     min_dependence,max_dependence,
                                                     group_link,ind_chance,one_direction,
                                                     multi_relatio)
@@ -109,134 +111,148 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         #  Start the heuristics and optmisations
         ## Start QMK heuristic to find the optimal solution with the solver CPLEX
         if start[1,:QMKO] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:QMKO] += @elapsed W,gap_optimisation[a,:QMKO] = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
                                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
             parcels_benchmark[a,:QMKO] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:QMKO] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n      mqkopt: parcels test data: ", parcels_benchmark[a,:QMKO], 
+            print("\n   QMKO: parcels test data: ", parcels_benchmark[a,:QMKO], 
                   " / parcels training data: ", parcels_train[a,:QMKO], 
                   " / time: ",round(time_benchmark[a,:QMKO],digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start QMK heuristic with SBB as solver
         if start[1,:QMK] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:QMK] += @elapsed W,gap_optimisation[a,:QMK] = MQKP(trans_train,capacity,abort, "SBB",show_opt,
                                                                                  cpu_cores,allowed_gap,max_nodes,"QMK")
             parcels_benchmark[a,:QMK] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:QMK] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n         mqk: parcels test data: ", parcels_benchmark[a,:QMK], 
+            print("\n    QMK: parcels test data: ", parcels_benchmark[a,:QMK], 
                   " / parcels training data: ", parcels_train[a,:QMK],  
                   " / time: ", round(time_benchmark[a,:QMK], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start chi square heuristic without local search
         if start[1,:CHIM] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:CHIM] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,false,show_opt)
             parcels_benchmark[a,:CHIM] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:CHIM] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n  chi-square: parcels test data: ", parcels_benchmark[a,:CHIM], 
+            print("\n   CHIM: parcels test data: ", parcels_benchmark[a,:CHIM], 
                   " / parcels training data: ", parcels_train[a,:CHIM],  
                   " / time: ",round(time_benchmark[a,:CHIM], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start chi square heuristic with local search
         if start[1,:CHI] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:CHI] += @elapsed W = CHISQUAREHEUR(trans_train,capacity,sig,true,show_opt)
             parcels_benchmark[a,:CHI] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:CHI] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n     chi+loc: parcels test data: ", parcels_benchmark[a,:CHI], 
+            print("\n    CHI: parcels test data: ", parcels_benchmark[a,:CHI], 
                   " / parcels training data: ", parcels_train[a,:CHI],  
                   " / time: ",round(time_benchmark[a,:CHI], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start our reproduction of the  K-LINKS heuristic by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-        if  start[1,:KL] == 1 && sum(capacity) == size(trans,2)
-            sleep(0.5)
+        if  start[1,:KL] == 1 #&& sum(capacity) == size(trans,2)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:KL] += @elapsed W = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
             parcels_benchmark[a,:KL] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:KL] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n     k-links: parcels train data: ", parcels_benchmark[a,:KL], 
+            print("\n     KL: parcels train data: ", parcels_benchmark[a,:KL], 
                   " / parcels training data: ", parcels_train[a,:KL],  
                   " / time: ",round(time_benchmark[a,:KL], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start our reproduction of the  K-LINKS optimization with SBB by
         ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-        if  start[1,:KLQ] == 1 && sum(capacity) == size(trans,2)
-            sleep(0.5)
+        if  start[1,:KLQ] == 1 #&& sum(capacity) == size(trans,2)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:KLQ] += @elapsed W, gap_optimisation[a,:KLQ] = MQKP(trans_train,capacity,abort,"SBB",show_opt,
                                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
             parcels_benchmark[a,:KLQ] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:KLQ] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n k-links+qmk: parcels test data: ", parcels_benchmark[a,:KLQ], 
+            print("\n    KLQ: parcels test data: ", parcels_benchmark[a,:KLQ], 
                   " / parcels training data: ", parcels_train[a,:KLQ],  
                   " / time: ",round(time_benchmark[a,:KLQ], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
+        end
+
+        ## Start our reproduction of the greedy orders heuristic by
+        ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
+        if start[1,:GO] == 1
+            sleep(0.1)
+            GC.gc()
+            time_benchmark[a,:GO] += @elapsed W = GREEDYORDERS(trans_train,capacity)
+            parcels_benchmark[a,:GO] = PARCELSSEND(trans_test, W, capacity, combination)
+            parcels_train[a,:GO] = PARCELSSEND(trans_train, W, capacity, combination)
+            print("\n     GO: parcels test data: ", parcels_benchmark[a,:GO], 
+                  " / parcels training data: ", parcels_train[a,:GO],  
+                  " / time: ",round(time_benchmark[a,:GO], digits = 3))
+            sleep(0.1)
         end
 
         ## Start our reproduction of the greedy pairs heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if start[1,:GP] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:GP] += @elapsed W = GREEDYPAIRS(trans_train,capacity)
             parcels_benchmark[a,:GP] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:GP] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n          gp: parcels test data: ", parcels_benchmark[a,:GP], 
+            print("\n     GP: parcels test data: ", parcels_benchmark[a,:GP], 
                   " / parcels training data: ", parcels_train[a,:GP],  
                   " / time: ",round(time_benchmark[a,:GP], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start our reproduction of the greedy seeds heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if start[1,:GS] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:GS] += @elapsed W = GREEDYSEEDS(trans_train,capacity)
             parcels_benchmark[a,:GS] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:GS] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n          gs: parcels test data: ", parcels_benchmark[a,:GS], 
+            print("\n     GS: parcels test data: ", parcels_benchmark[a,:GS], 
                   " / parcels training data: ", parcels_train[a,:GS],  
                   " / time: ",round(time_benchmark[a,:GS], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start our reproduction of the  bestselling heuristic by
         ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
         if  start[1,:BS] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             time_benchmark[a,:BS] += @elapsed W = BESTSELLING(trans_train,capacity)
             parcels_benchmark[a,:BS] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:BS] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n          bs: parcels test data: ", parcels_benchmark[a,:BS], 
+            print("\n     BS: parcels test data: ", parcels_benchmark[a,:BS], 
                   " / parcels training data: ", parcels_train[a,:BS],  
                   " / time: ",round(time_benchmark[a,:BS], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Start the search for optimal solution with the solver CPLEX
         ## Choose FULLOPTEQ if each SKUs can only be allocated once, else use
         ## FULLOPTUEQ if SKUs can be allocated multiple times
         if start[1,:OPT] == 1
-            sleep(0.5)
+            sleep(0.1)
             GC.gc()
             if sum(capacity) == size(trans,2)
                 time_benchmark[a,:OPT] += @elapsed W,gap_optimisation[a,:OPT],popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
@@ -247,19 +263,19 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             end
             parcels_benchmark[a,:OPT] = PARCELSSEND(trans_test, W, capacity, combination)
             parcels_train[a,:OPT] = PARCELSSEND(trans_train, W, capacity, combination)
-            print("\n         opt: parcels test data: ", parcels_benchmark[a,:OPT], 
+            print("\n    OPT: parcels test data: ", parcels_benchmark[a,:OPT], 
                   " / parcels training data: ", parcels_train[a,:OPT],  
                   " / time: ",round(time_benchmark[a,:OPT], digits = 3))
-            sleep(0.5)
+            sleep(0.1)
         end
 
         ## Benchmark the random allocation of SKUs
-        sleep(0.5)
+        sleep(0.1)
         time_benchmark[a,:RND] += @elapsed parcels_benchmark[a,:RND] = RANDOMBENCH(trans_test,capacity,iterations,combination)
         parcels_train[a,:RND] = RANDOMBENCH(trans_train,capacity,iterations,combination)
-        print("\n      random: parcels test data: ", parcels_benchmark[a,:RND],
-              " / parcels training data: ", parcels_train[a,:RND],)
-        sleep(0.5)
+        print("\n    RND: parcels test data: ", parcels_benchmark[a,:RND],
+              " / parcels training data: ", parcels_train[a,:RND],"\n")
+        sleep(0.1)
 
         # Export the results after each stage
         CSV.write("results/$(experiment)_a_parcels_sent_$dependency.csv",       parcels_benchmark)

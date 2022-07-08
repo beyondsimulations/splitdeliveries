@@ -34,6 +34,7 @@ include("heuristics/optimisation_buffercap.jl")
 include("heuristics/heuristic_klinks.jl")
 include("heuristics/heuristic_greedyseeds.jl")
 include("heuristics/heuristic_greedypairs.jl")
+include("heuristics/heuristic_greedyorders.jl")
 include("heuristics/heuristic_bestselling.jl")
 include("heuristics/heuristic_chisquare.jl")
 

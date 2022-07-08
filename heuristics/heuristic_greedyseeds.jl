@@ -1,11 +1,12 @@
 # greedy seeds heuristic by A. Catalan and M. Fisher (2012) doi:10. 2139/ssrn.2166687
 function GREEDYSEEDS(trans::SparseMatrixCSC{Bool, Int64},
                      capacity::Array{Int64,1})
+    # Sort the warehouses by decreasing capacity
+    capacity = sort(capacity, rev=true)
     # Create Coapperance Matrix
     Q = COAPPEARENCE(trans)
     # Clean the principle diagonal
     CLEANPRINCIPLE!(Q)
-
     if CHECKCAPACITY(Q,capacity) == 1
         ## Calculate the coapperance matrix
         capacity_left = copy(capacity) .- 1

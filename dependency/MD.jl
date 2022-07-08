@@ -19,9 +19,13 @@
 ## multi_relatio:   for the SKUs in a product group the parameter multi_relatio specifies the depth of the relations
 ##                  between the SKUs dependening on the overall number of SKUs in the corresponding group_size. Thus,
 ##                  the dependencies are not only pair-wise but multi-dimensional
-## skus_order:      the number of SKUs per order is currently drawn from a normal distribution with the following
-##                  implementation skus_order = 1 + floor(abs(rand(Normal(0,3))))
-
+## skus_in_order:   the number of SKUs per order is currently drawn from a normal distribution with the following
+##                  implementation for each order: skus_order = 1 + floor(abs(rand(Normal(0,skus_in_order))))
+## sku_frequency:   the frequency of an SKU appearing in an order independently is currently determined by
+##                  the following implementation: new_sku = 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency)))).
+##                  The exception is sku_frequency = 0 -> in this case new_sku = rand(1:skus).
+    skus_in_order  = 3.00
+    sku_frequency  = 3.00
     min_dependence = 0.00
     max_dependence = 0.20
     group_link     = 0.02

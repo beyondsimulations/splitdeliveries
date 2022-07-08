@@ -4,7 +4,9 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
                 trials::Int64,
                 stagnant::Int64,
                 strategy::Int64,
-                klinkstatus::Int64)      
+                klinkstatus::Int64)
+    # Sort the warehouses by decreasing capacity
+    capacity = sort(capacity, rev=true)   
     if CHECKCAPACITY(trans,capacity) == 1
         ## Calculation of links based on orders
         L  = LINKS(trans,LINKADJUST(trans))

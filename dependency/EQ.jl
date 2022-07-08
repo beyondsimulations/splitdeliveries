@@ -24,11 +24,11 @@
 ## sku_frequency:   the frequency of an SKU appearing in an order independently is currently determined by
 ##                  the following implementation: new_sku = 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency)))).
 ##                  The exception is sku_frequency = 0 -> in this case new_sku = rand(1:skus).
-    skus_in_order  = 3.00
-    sku_frequency  = 3.00
-    min_dependence = 0.00
-    max_dependence = 0.00
-    group_link     = 0.00
-    ind_chance     = 1.00
-    one_direction  = 0.00
-    multi_relatio  = 0.00
+skus_in_order  = 3.00
+sku_frequency  = 0.00
+min_dependence = 0.00
+max_dependence = 0.00
+group_link     = 0.00
+ind_chance     = 1.00
+one_direction  = 0.00
+multi_relatio  = 0.00

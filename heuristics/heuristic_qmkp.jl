@@ -15,10 +15,10 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     else
         error("Sorry, only the mode QMK or KLINK is allowed.")
     end
-
+    # Sort the warehouses by decreasing capacity
+    capacity = sort(capacity, rev=true)
     # Clean the principle diagonal
     CLEANPRINCIPLE!(Q)
-
     # Start building the model
     if CHECKCAPACITY(Q,capacity) == 1
 
@@ -38,7 +38,11 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         @variable(mqkp, X[GI,GK], Bin)
         @objective(mqkp, Max, sum(X[i,k] .* X[j,k] .* Q[i,j] for i in GI, j in 1:i-1, k in GK))
         @constraint(mqkp, capconstraint[k in GK], sum(X[i,k] for i in GI) == capacity[k])
-        @constraint(mqkp, minallocation[i in GI], sum(X[i,k] for k in GK) >= 1)
+        if mode == "QMK"
+            @constraint(mqkp, minallocation[i in GI], sum(X[i,k] for k in GK) >= 1)
+        elseif mode == "KLINK"
+            @constraint(mqkp, minallocation[i in GI], sum(X[i,k] for k in GK) == 1)
+        end
         JuMP.optimize!(mqkp)
         G = abs(objective_bound(mqkp)-objective_value(mqkp))/abs(objective_value(mqkp)+0.00000000001)
         out = Array{Bool,2}(undef,size(Q,2),size(capacity,1)) .= 0
