@@ -1,11 +1,11 @@
 ## import packages
 include("load_packages.jl")
 
-experiment = "b1_25skus"
-capa = 25:25:25
-ware = 2:1:3
+experiment = "b1_40skus"
+capa = 40:40:40
+ware = 2:1:4
 diff = 0.0:0.10:0.20
-buff = 0.0:0.20
+buff = 0.0:0.20:0.20
 
 total_rows = length(capa)*length(ware)*length(diff)*length(buff)
 total_cols = length(ware)+1
