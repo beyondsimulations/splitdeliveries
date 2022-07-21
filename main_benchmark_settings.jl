@@ -65,12 +65,17 @@
     max_nodes   = 10000000
 
 # Parameters for CHISQUARE
-## sig: significance level alpha for the chi-square tests
-    sig = 0.001
+## sig_levels: significance levels alpha to apply with the chi-square tests
+## max_ls: maximum number of local search runs before termination
+    sig_levels = [0.001]
+    max_ls = 100
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
     iterations = 100
+
+# Parameters for the whole Benchmark
+    benchiterations = 1
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
@@ -80,10 +85,7 @@
 # Run the benchmark
     print("\n\n### Benchmark of dependency ",dependency," on experiment ",experiment," ###")
     print("\n     benchmark started at ",now(),".\n")
-    parcels_benchmark, 
-    time_benchmark, 
-    parcels_train, 
-    gap_optimisation = BENCHMARK(capacity_benchmark::Array{Int64,2},
+    parcels_benchmark = BENCHMARK(capacity_benchmark::Array{Int64,2},
                                     skus_benchmark::Vector{Int64},
                                     start::DataFrame,
                                     orders::Int64,
@@ -98,7 +100,9 @@
                                     cpu_cores::Int64,
                                     allowed_gap::Float64,
                                     max_nodes::Int64,
-                                    sig::Float64)
+                                    significance_level::Vector{Float64},
+                                    max_ls::Int64,
+                                    benchiterations::Int64)
                                                                         
     print("\nbenchmark finished at ",now(),".")
     
