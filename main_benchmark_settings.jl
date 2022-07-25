@@ -13,11 +13,11 @@
 ### MD
 ### HD
     experiment = "s1_1000skus"
-    dependency = "MD"
+    dependency = "EF"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 200000
+    orders     = 20000
     train_test = 0.50
 
 # load the data that specifies the dependencies
@@ -68,7 +68,7 @@
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
     #sig_levels = [0.001]
-    sig_levels = [1/(10^x) for x = 1:10]
+    sig_levels = [1/(10^x) for x = 0:10]
     max_ls = 100
     chistatus = false
 
@@ -77,7 +77,7 @@
     iterations = 100
 
 # Parameters for the whole Benchmark
-    benchiterations = 100
+    benchiterations = 10
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
