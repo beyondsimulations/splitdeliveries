@@ -249,7 +249,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 sleep(0.01)
                 GC.gc()
                 time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,abort,"SBB",show_opt,
-                                                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+                                                                     cpu_cores,allowed_gap,max_nodes,"QMK")
                 parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                 parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                 print("\n    KLQ: parcels test data: ", parcels_benchmark, 
