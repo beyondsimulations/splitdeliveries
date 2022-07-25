@@ -20,6 +20,7 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
         time_limit = Minute(abort/60)
         start = Dates.now()
         time_elapsed = Minute(0)
+        local_search_trials = 0
         for y = 1:trials
             ## Random initialisation of the category distribution
             X = RANDOMALLOCONCE(trans,capacity)
@@ -56,6 +57,7 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
             # Save the results from the trial
             lw_trial[y] = LW(L,X)
             cw_trial[:,:,y] = X
+            local_search_trials = y
             time_elapsed = Dates.now() - start
             if time_elapsed > Minute(time_limit)
                 print("\nHeuristic stopped due to time elapsed > $time_limit")
@@ -65,6 +67,6 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
         # Save the best result from all trails for export
         besttrial = findmax(lw_trial)[2]
         cw_best   = cw_trial[:,:,besttrial]
-        return cw_best
+        return cw_best, local_search_trials
     end
 end

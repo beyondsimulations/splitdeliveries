@@ -316,7 +316,9 @@ function LOCALSEARCHCHI!(trans::SparseMatrixCSC{Bool,Int64},
                          X::Matrix{Bool}, 
                          Q::Matrix{<:Real},
                          capacity::Vector{Int64},
-                         log_results::Bool)
+                         log_results::Bool,
+                         ls::Int64,
+                         max_ls::Int64)
     coapp_sort = vec(sum(Q,dims = 1))
     coapp_sort = sortperm(coapp_sort,rev=true)
     combination = COMBINEWAREHOUSES(capacity)
@@ -325,11 +327,12 @@ function LOCALSEARCHCHI!(trans::SparseMatrixCSC{Bool,Int64},
     impro_bef = PARCELSSEND(trans,X,capacity,combination)
     X_backup = zeros(Bool,size(X,1),size(X,2))
     log_results == true ? print("\n  Iter: 0 - parcels: ",impro_bef,"\n") : nothing
-    for improvement = 1:10
+    while ls < max_ls
+        ls += 1
         X_backup .= X
         SEARCHLOOP!(X,Q,coapp_sort,state)
         impro_now = PARCELSSEND(trans,X,capacity,combination)
-        log_results == true ? print("  Iter: ",improvement," - parcels: ",impro_now,"\n") : nothing
+        log_results == true ? print("  Iter: ",ls," - parcels: ",impro_now,"\n") : nothing
         if impro_now < impro_bef
             impro_bef = impro_now
         else
@@ -337,6 +340,7 @@ function LOCALSEARCHCHI!(trans::SparseMatrixCSC{Bool,Int64},
             break
         end
     end
+    return ls
 end
 
 function POTENTIAL(state::Matrix{<:Real},

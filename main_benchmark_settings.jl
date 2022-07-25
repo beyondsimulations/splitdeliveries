@@ -12,12 +12,12 @@
 ### ID
 ### MD
 ### HD
-    experiment = "b3_1000skus"
-    dependency = "EF"
+    experiment = "s1_1000skus"
+    dependency = "MD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 20000
+    orders     = 200000
     train_test = 0.50
 
 # load the data that specifies the dependencies
@@ -28,18 +28,17 @@
     ren_lock = ReentrantLock()
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
-    start = DataFrame(QMKO  = [1], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK   = [1], # quadratic-multiple knapsack heuristic with SBB as solver
+    start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
+                      QMK   = [0], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      KLQ   = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      GO    = [0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      OPT   = [1], # optimisation model to determine the optimal solution with CPLEX
-                      RND   = [1]) # random allocation of SKUs (cannot be deactivated)
+                      OPT   = [0]) # optimisation model to determine the optimal solution with CPLEX
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -65,12 +64,20 @@
     max_nodes   = 10000000
 
 # Parameters for CHISQUARE
-## sig: significance level alpha for the chi-square tests
-    sig = 0.001
+## sig_levels:  significance levels alpha to apply with the chi-square tests
+## max_ls:      maximum number of local search runs before termination
+## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
+    #sig_levels = [0.001]
+    sig_levels = [1/(10^x) for x = 1:10]
+    max_ls = 100
+    chistatus = false
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
     iterations = 100
+
+# Parameters for the whole Benchmark
+    benchiterations = 100
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
@@ -80,25 +87,25 @@
 # Run the benchmark
     print("\n\n### Benchmark of dependency ",dependency," on experiment ",experiment," ###")
     print("\n     benchmark started at ",now(),".\n")
-    parcels_benchmark, 
-    time_benchmark, 
-    parcels_train, 
-    gap_optimisation = BENCHMARK(capacity_benchmark::Array{Int64,2},
-                                    skus_benchmark::Vector{Int64},
-                                    start::DataFrame,
-                                    orders::Int64,
-                                    max_dependence::Float64,
-                                    trials::Int64,
-                                    stagnant::Int64,
-                                    strategy::Int64,
-                                    klinkstatus::Int64,
-                                    abort::Int64,
-                                    iterations::Int64,
-                                    show_opt::Bool,
-                                    cpu_cores::Int64,
-                                    allowed_gap::Float64,
-                                    max_nodes::Int64,
-                                    sig::Float64)
+    benchmark = BENCHMARK(capacity_benchmark::Array{Int64,2},
+                            skus_benchmark::Vector{Int64},
+                            start::DataFrame,
+                            orders::Int64,
+                            max_dependence::Float64,
+                            trials::Int64,
+                            stagnant::Int64,
+                            strategy::Int64,
+                            klinkstatus::Int64,
+                            abort::Int64,
+                            iterations::Int64,
+                            show_opt::Bool,
+                            cpu_cores::Int64,
+                            allowed_gap::Float64,
+                            max_nodes::Int64,
+                            sig_levels::Vector{Float64},
+                            max_ls::Int64,
+                            chistatus::Bool,
+                            benchiterations::Int64)
                                                                         
     print("\nbenchmark finished at ",now(),".")
     

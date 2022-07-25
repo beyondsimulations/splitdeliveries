@@ -1,7 +1,7 @@
 function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
                        capacity::Vector{Int64},
                        sig::Float64,
-                       localsearch::Bool,
+                       max_ls::Int64,
                        log_results::Bool)
     # Number of transactions
     J = size(trans,1)
@@ -97,13 +97,14 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         state_nor = nothing
         dep = nothing
         GC.gc()
-        if localsearch == true
+        ls = 0
+        if max_ls > 0
             log_results == true ? print("\n  starting local search.") : nothing
-            LOCALSEARCHCHI!(trans,X,Q,capacity,log_results)
+            ls = LOCALSEARCHCHI!(trans,X,Q,capacity,log_results,ls,max_ls)
         end
     end
     ## return the resulting allocation matrix
-    return X
+    return X,ls
 end
 
 
