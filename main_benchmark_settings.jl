@@ -13,11 +13,11 @@
 ### MD
 ### HD
     experiment = "s1_1000skus"
-    dependency = "MD"
+    dependency = "ED"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    orders     = 200000
+    orders     = 20000
     train_test = 0.50
 
 # load the data that specifies the dependencies
@@ -74,10 +74,10 @@
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
-    iterations = 100
+    iterations = 10
 
 # Parameters for the whole Benchmark
-    benchiterations = 100
+    benchiterations = 10
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
