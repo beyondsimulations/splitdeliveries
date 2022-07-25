@@ -3,7 +3,7 @@ function INL(j::Int64,
             L::Array{Float64,2},
             X::Array{Bool,2})
     out = 0.0
-    for q = 1:size(L,1)
+    for q in axes(L,1)
         if  X[q,w1] == 1 &&  X[j,w1] == 1 && q != j
             out += L[j,q]
         end
@@ -17,7 +17,7 @@ function OUTL(j::Int64,
               L::Array{Float64,2},
               X::Array{Bool,2})
     out = 0.0
-    for q = 1:size(L,1)
+    for q in axes(L,1)
         if  X[q,w2] == 1 &&  X[j,w1] == 1 && q != j
             out += L[j,q]
         end
@@ -45,10 +45,12 @@ end
 function LINKS(trans::SparseMatrixCSC{Bool, Int64},
                ov::Vector{Float64})
     L = zeros(Float64,size(trans,2),size(trans,2))
-    for j = 2:size(trans,2)
-        for q = 1:j-1
-            L[j,q] = sum(@view(trans[:,j]) .* @view(trans[:,q]) .* @view(ov[:]))
-            L[q,j] = L[j,q]
+    for j in axes(trans,2)
+        if j > 1
+            for q = 1:j-1
+                L[j,q] = sum(@view(trans[:,j]) .* @view(trans[:,q]) .* @view(ov[:]))
+                L[q,j] = L[j,q]
+            end
         end
     end
     return L::Matrix{Float64}
@@ -57,7 +59,7 @@ end
 function LINKADJUST(trans::SparseMatrixCSC{Bool, Int64})
     ov = zeros(Float64,size(trans,1))
     transposed = trans'
-    for i = 1:size(trans,1)
+    for i in axes(trans,1)
         if sum(transposed[:,i]) > 1
             ov[i] = sum(transposed[:,i])-1/(factorial(big(sum(transposed[:,i])))/factorial(2)*factorial(big(sum(transposed[:,i])-2)))
         end
@@ -67,7 +69,7 @@ end
 
 function LWbest(L::Matrix{Float64})
     LW_best = 0
-    for j = 1:size(L,2)
+    for j in axes(L,2)
         for q = j+1:size(L,2)
             LW_best += L[j,q]
         end
@@ -79,7 +81,7 @@ function LW(L::Matrix{Float64},
             X::Array{Bool,2})
     out = 0
     for k = 1:(size(X,2))
-        for j = 1:size(X,1)
+        for j in axes(X,1)
             for q = j+1:size(X,1)
                 out += L[j,q] * X[j,k] * X[q,k]
             end
@@ -96,7 +98,7 @@ function STRATEGY1!(X::Matrix{Bool},
     dl_arr = zeros(Float64,size(X,1),size(X,2))
     for i in 1:size(X,1)
         if X[i,m] == 1
-            for g = 1:size(X,2)
+            for g in axes(X,2)
                 if sum(X[:,g]) < capacity[g] && m!=g
                     dl_arr[i,g] = DL(i,m,g,L,X)
                 end
@@ -120,7 +122,7 @@ function STRATEGY2!(X::Matrix{Bool},
         if X[i,m] == 1 
             for j in 1:size(X,1)
                 if X[j,m] == 0
-                    for g = 1:size(X,2)
+                    for g in axes(X,2)
                         if X[j,g] == 1 && X[i,g] == 0
                             pay_arr[i,j,g] = PAYOFF(i,j,m,g,L,X)
                         end

@@ -20,9 +20,9 @@ function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
         set_optimizer_attribute(allocation, "ResLim",  abort)
         set_optimizer_attribute(allocation, "Threads", cpu_cores)
         set_optimizer_attribute(allocation, "NodLim",  max_nodes)
-        GJ = 1:size(trans,1)
-        GI = 1:size(trans,2)
-        GK = 1:size(capacity,1)
+        GJ in axes(trans,1)
+        GI in axes(trans,2)
+        GK in axes(capacity,1)
         @variable(allocation, X[GI,GK], Bin)    ## sku-warehouse allocation
         @variable(allocation, Y[GJ,GK], Bin)    ## send-parcels
         @variable(allocation, Z[GJ,GI,GK], Bin) ## transactions-parcel-allocation
@@ -36,8 +36,8 @@ function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
         G = abs(objective_bound(allocation)-objective_value(allocation))/abs(objective_value(allocation)+0.00000000001)
         P = objective_value(allocation)
         out = Array{Bool,2}(undef,size(trans,2),size(capacity,1)) .= 0
-        for i = 1:size(out,1)
-            for j = 1:size(out,2)
+        for i in axes(out,1)
+            for j in axes(out,2)
                 if value.(X[i,j]) > 0
                     out[i,j] = 1
                 end

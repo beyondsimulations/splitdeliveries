@@ -56,11 +56,11 @@ frame = load_data()
 CSV.write("results/aggregated.csv",frame)
 
 for experiment in experiments
-    parcels, duration = load_data(experiment, dependencies)
+    parcels, duration = load_data()
 
     duration_skus = groupby(dropmissing(duration),[:dependency,:capacity_base,:variable])
     duration_skus = combine(duration_skus, :value => mean => :value)
-    for x = 1:length(dependencies)
+    for x = 1:eachindex(dependencies)
         dependency = dependencies[x]
         frame = filter(:dependency => n -> n == "$(dependency)", duration_skus)
         plot(frame.capacity_base, frame.value, group = frame.variable, xlabel = "SKUs", ylabel = "Computation time", legend = :topleft, ylims = (0,500))

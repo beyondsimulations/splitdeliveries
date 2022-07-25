@@ -33,8 +33,8 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         set_optimizer_attribute(mqkp, "ResLim",  abort)
         set_optimizer_attribute(mqkp, "Threads", cpu_cores)
         set_optimizer_attribute(mqkp, "NodLim",  max_nodes)
-        GI = 1:size(Q,2)
-        GK = 1:size(capacity,1)
+        GI in axes(Q,2)
+        GK in axes(capacity,1)
         @variable(mqkp, X[GI,GK], Bin)
         @objective(mqkp, Max, sum(X[i,k] .* X[j,k] .* Q[i,j] for i in GI, j in 1:i-1, k in GK))
         @constraint(mqkp, capconstraint[k in GK], sum(X[i,k] for i in GI) == capacity[k])
@@ -46,8 +46,8 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         JuMP.optimize!(mqkp)
         G = abs(objective_bound(mqkp)-objective_value(mqkp))/abs(objective_value(mqkp)+0.00000000001)
         out = Array{Bool,2}(undef,size(Q,2),size(capacity,1)) .= 0
-        for i = 1:size(out,1)
-            for j = 1:size(out,2)
+        for i in axes(out,1)
+            for j in axes(out,2)
                 if value.(X[i,j]) > 0
                     out[i,j] = 1
                 end

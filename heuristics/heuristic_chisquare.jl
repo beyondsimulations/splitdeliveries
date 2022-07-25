@@ -14,7 +14,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
     Q = COAPPEARENCE(trans)
     if CHECKCAPACITY(Q,capacity) == 1
         # Create Vector with number of transactions containing each SKU
-        ordered_skus = [Q[i,i] for i = 1:size(Q,1)]
+        ordered_skus = [Q[i,i] for i in axes(Q,1)]
         # Clean the principle diagonal
         CLEANPRINCIPLE!(Q)
         # Chi Square Test

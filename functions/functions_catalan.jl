@@ -3,11 +3,11 @@ function SORTSALES(trans::SparseMatrixCSC{Bool, Int64})
     sales = Array{Int64,2}(undef,size(trans,2),4) .= 0
     sales[:,3] = sum(trans,dims=1)
     sales[:,4] .= 0
-    for i = 1:size(trans,2)
+    for i in axes(trans,2)
         sales[i,1] = i
     end
     sales = sortslices(sales,dims=1,by=x->x[3],rev=true)
-    for i = 1:size(trans,2)
+    for i in axes(trans,2)
         sales[i,2] = i
     end
     # 1 column: index of SKU in allocation matrix
@@ -71,10 +71,10 @@ function GREEDYSEEDMAIN!(sales::Matrix{Int64},
                          X::Matrix{Bool},
                          Q::Matrix{<:Real},
                          capacity_left::Vector{Int64})
-    for i = 1:size(Q,1)
+    for i in axes(Q,1)
         if sales[i,4] == 0
             best_allocation = zeros(Int64,size(capacity_left,1))
-            for d = 1:size(capacity_left,1)
+            for d in axes(capacity_left,1)
                 if capacity_left[d] > 1
                     # retrieve the list of SKUs allocated to d so far
                     # calculate the average of coapperances with the SKUs in d
@@ -98,7 +98,7 @@ function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
                           X::Matrix{Bool},
                           capacity_left::Vector{Int64})
     ## Sort the DCs by decreasing capacity
-    for i = 1:size(pairs,1)
+    for i in axes(pairs,1)
         ## For each pair of SKUs in sorted list of pairs do
         for j = 1:2
             for d in 1:size(capacity_left,1)
@@ -120,7 +120,7 @@ end
 # function to allocate the SKUs in the main part of the Greedy Orders Heuristic
 function GREEDYORDERSMAIN!(order_sort::Vector{Int64},trans::SparseMatrixCSC{Bool,Int64},capacity_left::Vector{Int64},X::Matrix{Bool})
     for order in order_sort
-        for sku = 1:size(trans,2)
+        for sku in axes(trans,2)
             # Determine the warehouse d with the lowest index that has one unallocated space
             if trans[order,sku] == 1
                 for d = 1:length(capacity_left)
@@ -148,7 +148,7 @@ function BESTSELLINGSTART!(sales::Matrix{Int64},
                            capacity_left::Vector{Int64},
                            B::Int64,
                            X::Matrix{Bool})
-    for d = 1:size(capacity_left,1)
+    for d in axes(capacity_left,1)
         if capacity_left[d] < B
             for i = 1:capacity_left[d]
                 X[sales[i,1],d] = 1
@@ -166,7 +166,7 @@ function BESTSELLINGTOP!(sales::Matrix{Int64},
                          capacity_left::Vector{Int64},
                          B::Int64,
                          X::Matrix{Bool})
-    for d = 1:size(capacity_left,1)
+    for d in axes(capacity_left,1)
         if capacity_left[d] >= B
             for i = 1:B
                 X[sales[i,1],d] = 1

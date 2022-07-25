@@ -17,7 +17,7 @@ function BESTSELLING(trans::SparseMatrixCSC{Bool, Int64},
         # for such each DC d do
         BESTSELLINGSTART!(sales,capacity_left,B,X)
         if B == 0
-            for j = 1:size(capacity_left,1)
+            for j in axes(capacity_left,1)
                 if capacity_left[j] > 0
                     capacity_left[j] -= 1
                 end

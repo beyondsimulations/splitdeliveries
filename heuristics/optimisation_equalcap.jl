@@ -33,8 +33,8 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
         G = abs(objective_bound(allocation)-objective_value(allocation))/abs(objective_value(allocation)+0.00000000001)
         P = objective_value(allocation)
         out = Array{Bool,2}(undef,size(trans,2),size(capacity,1)) .= 0
-        for i = 1:size(out,1)
-            for j = 1:size(out,2)
+        for i in axes(out,1)
+            for j in axes(out,2)
                 if value.(X[i,j]) > 0
                     out[i,j] = 1
                 end
