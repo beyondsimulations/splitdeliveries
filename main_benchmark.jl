@@ -156,7 +156,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n   CHIM: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ",round(time_benchmark, digits = 3),
-                        " / local search: ", ls)
+                        " / local search: ", ls,
+                        " / sig: ", sig)
 
                     push!(benchmark, (dependency = dependency, 
                                     skus = skus_benchmark[a],  
@@ -187,7 +188,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n    CHI: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ",round(time_benchmark, digits = 3),
-                        " / local search: ", ls)
+                        " / local search: ", ls,
+                        " / sig: ", sig)
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  

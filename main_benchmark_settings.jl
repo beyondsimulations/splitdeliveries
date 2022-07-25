@@ -13,7 +13,7 @@
 ### MD
 ### HD
     experiment = "s1_1000skus"
-    dependency = "ED"
+    dependency = "EF"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
@@ -68,13 +68,13 @@
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
     #sig_levels = [0.001]
-    sig_levels = [1/(10^x) for x = 1:10]
+    sig_levels = [1/(10^x) for x = 0:10]
     max_ls = 100
     chistatus = false
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
-    iterations = 10
+    iterations = 100
 
 # Parameters for the whole Benchmark
     benchiterations = 10
