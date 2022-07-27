@@ -129,7 +129,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n    QMK: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ", round(time_benchmark, digits = 3),
-                        " / gap: ",round(gap_optimisation,6))
+                        " / gap: ",round(gap_optimisation, digits = 6))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -254,7 +254,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n    KLQ: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ", round(time_benchmark, digits = 3),
-                        " / gap: ", round(gap_optimisation,6))
+                        " / gap: ", round(gap_optimisation, digits = 6))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  

@@ -3,7 +3,7 @@ using DataFrames
 using Plots
 using StatsPlots
 using Statistics
-using LaTeXStrings
+#using LaTeXStrings
 
 experiments     = ["s1_1000skus"]
 dependencies    = ["ED","EF","ID","MD","HD"]
@@ -25,7 +25,7 @@ end
 frame = load_data()
 CSV.write("results/aggregated.csv",frame)
 
-for experiment in experiments
+#=for experiment in experiments
     parcels, duration = load_data()
 
     duration_skus = groupby(dropmissing(duration),[:dependency,:capacity_base,:variable])

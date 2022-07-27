@@ -12,13 +12,14 @@
 ### ID
 ### MD
 ### HD
-    experiment = "s1_1000skus"
-    dependency = "ED"
+    experiment = "b2_100skus"
+    dependency = "MD"
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    order_sets  = [10000:10000:50000]
     train_test = 0.50
+    #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
+    order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:10]
 
 # load the data that specifies the dependencies
     include("dependency/$dependency.jl")
@@ -29,12 +30,12 @@
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK   = [0], # quadratic-multiple knapsack heuristic with SBB as solver
+                      QMK   = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      GO    = [0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      KL    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KLQ   = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
@@ -67,8 +68,8 @@
 ## sig_levels:  significance levels alpha to apply with the chi-square tests
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
-    #sig_levels = [0.001]
-    sig_levels = [1/(10^x) for x = 0:9]
+    sig_levels = [1.0e-8]
+    #sig_levels = [1.0e-x for x = 0:9]
     max_ls = 100
     chistatus = false
 
@@ -77,7 +78,7 @@
     iterations = 10
 
 # Parameters for the whole Benchmark
-    benchiterations = 5
+    benchiterations = 1
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
