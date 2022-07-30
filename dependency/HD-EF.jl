@@ -25,10 +25,10 @@
 ##                  the following implementation: new_sku = 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency)))).
 ##                  The exception is sku_frequency = 0 -> in this case new_sku = rand(1:skus).
     skus_in_order  = 3.00
-    sku_frequency  = 3.00
+    sku_frequency  = 0.00
     min_dependence = 0.00
-    max_dependence = 0.20
-    group_link     = 0.02
-    ind_chance     = 0.30
-    one_direction  = 0.80
-    multi_relatio  = 0.20
+    max_dependence = 0.50
+    group_link     = 0.04
+    ind_chance     = 0.15
+    one_direction  = 0.60
+    multi_relatio  = 0.40
