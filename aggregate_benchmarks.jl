@@ -1,3 +1,6 @@
+## import packages
+include("load_packages.jl")
+
 using CSV
 using DataFrames
 using Plots
@@ -6,7 +9,7 @@ using Statistics
 #using LaTeXStrings
 
 experiments     = ["s1_1000skus"]
-dependencies    = ["ED","EF","ID","MD","HD"]
+dependencies    = ["HD-EF","HD-VF","ID-EF","ID-VF","MD-EF","MD-VF"]
 datasets        = ["benchmark"]
 
 function load_data()
@@ -23,7 +26,7 @@ function load_data()
 end
 
 frame = load_data()
-CSV.write("results/aggregated.csv",frame)
+CSV.write("results/s1_1000skus_aggregated.csv",frame)
 
 #=for experiment in experiments
     parcels, duration = load_data()

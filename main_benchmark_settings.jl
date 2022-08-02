@@ -14,7 +14,7 @@
 ### ID-VF
 ### MD-VF
 ### HD-VF
-    experiment = "s1_1000skus"
+    experiment = "s2_1000skus"
     dependency = "MD-VF"
 
 #  Specify the number of orders and the ratio between test
@@ -32,11 +32,11 @@
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK   = [1], # quadratic-multiple knapsack heuristic with SBB as solver
+                      QMK   = [0], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
-                      KLQ   = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2019.07.004
+                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
                       GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687

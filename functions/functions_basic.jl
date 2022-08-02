@@ -21,7 +21,7 @@ function COMBINEWAREHOUSES(capacity::Array{Int64,1})
     return combination::Array{Array{Array{Int64,1},1},1}
 end
 
-## PARCELSSEND: number of parcels necessary to fulfill all orders
+## PARCELSSEND: number of parcels due to ordersplitting necessary to fulfill all orders
 function PARCELSSEND(trans::SparseMatrixCSC{Bool, Int64}, 
                      X::Array{Bool,2}, 
                      capacity::Array{Int64,1}, 
@@ -64,6 +64,7 @@ function PARCELSSEND(trans::SparseMatrixCSC{Bool, Int64},
             end
         end
     end
+    parcel -= size(trans,1)
     return parcel
 end
 

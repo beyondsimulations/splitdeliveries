@@ -27,7 +27,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## SKU-combinations. More details in our article.
         log_results == true ? print("\n  starting chi-square tests.") : nothing
         dep          = zeros(Float64,I,I)
-        HYOPTHESISCHI!(dep,Q,I,J,sig,ordered_skus)
+        HYOPTHESISTEST!(dep,Q,I,J,sig,ordered_skus)
         ## Create the sku-warehouse allocation matrix
         X = zeros(Bool,I,size(capacity,1))
         ## Determine the sum of the coappearances for each SKU on the base of

@@ -1,6 +1,6 @@
 # function used to perform the chi square test of independence upon 
 # the coappearance matrix Q
-function HYOPTHESISCHI!(dep::Matrix{<:Real},
+function HYOPTHESISTEST!(dep::Matrix{<:Real},
                         Q::Matrix{<:Real},
                         I::Int64,
                         J::Int64,
@@ -11,10 +11,10 @@ function HYOPTHESISCHI!(dep::Matrix{<:Real},
     ## Determine the acceptance level of the test
     accept = cquantile(Chisq(1), sig/M)
     ## Fill the arrays with the results of the chi-square test
-    CHITEST!(dep,Q,sum_cond_sku,J,accept)
+    DEPTEST!(dep,Q,sum_cond_sku,J,accept)
 end
 
-function CHITEST!(dep::Matrix{<:Real},
+function DEPTEST!(dep::Matrix{<:Real},
                   Q::Matrix{<:Real},
                   sum_cond_sku::Vector{<:Real},
                   J::Int64,
@@ -41,6 +41,34 @@ function chi_values!(dep::Matrix{<:Real},
     chi = 0.0
     independent = INDEPENDENT(sum_cond_sku,J,i,j)
     if Q[i,j] > independent
+        chi_nr = J - sum_cond_sku[i]
+        chi_nd = J - sum_cond_sku[j]
+        chi_yn = sum_cond_sku[i] - Q[i,j]
+        chi_ny = sum_cond_sku[j] - Q[i,j]
+        chi_nn = chi_nd - chi_yn
+        ind_yn = (sum_cond_sku[i] * chi_nd)/J
+        ind_ny = (sum_cond_sku[j] * chi_nr)/J
+        ind_nn = (chi_nr * chi_nd)/J
+        chi += chi_part(Q[i,j],independent)
+        chi += chi_part(chi_yn,ind_yn)
+        chi += chi_part(chi_ny,ind_ny)
+        chi += chi_part(chi_nn,ind_nn)
+        if chi > accept
+            dep[i,j] = dep[j,i] = Q[i,j] - independent
+        end
+    end
+end
+
+function fish_values!(dep::Matrix{<:Real},
+                     Q::Matrix{<:Real}, 
+                     sum_cond_sku::Vector{<:Real}, 
+                     J::Int64,
+                     accept::Float64,
+                     i::Int64,
+                     j::Int64)
+    chi = 0.0
+    independent = INDEPENDENT(sum_cond_sku,J,i,j)
+    if Q[i,j] > independent && independent > 10
         chi_nr = J - sum_cond_sku[i]
         chi_nd = J - sum_cond_sku[j]
         chi_yn = sum_cond_sku[i] - Q[i,j]
