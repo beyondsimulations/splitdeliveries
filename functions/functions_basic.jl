@@ -22,6 +22,71 @@ function COMBINEWAREHOUSES(capacity::Array{Int64,1})
 end
 
 ## PARCELSSEND: number of parcels due to ordersplitting necessary to fulfill all orders
+function PARCELSSEND_WEIGHT(trans::SparseMatrixCSC{Bool, Int64}, 
+                     X::Array{Bool,2}, 
+                     capacity::Array{Int64,1}, 
+                     combination::Array{Array{Array{Int64,1},1},1},
+                     max_warehouse_1::Bool)
+    if sum(capacity) == size(trans,2)
+        parcel = trans * X
+        for j in axes(parcel,1)
+            for k in axes(parcel,2)
+                if parcel[j,k] > 0
+                    parcel[j,k] = 1
+                else
+                    parcel[j,k] = 0
+                end
+            end
+        end
+        parcel = round.(Int64, sum(parcel,dims = 2))
+    else
+        warehouse_combination = Array{Int64,2}(undef,size(X,1),size(combination,1)) .= 0
+        parcels_out = zeros(size(X,2),size(combination,1))
+        for i in axes(combination,1)
+            for j in axes(combination[i],1)
+                for k in axes(X,1)
+                    if X[k,combination[i][j]] == [1]
+                        warehouse_combination[k,i] = 1
+                    end
+                end
+                parcels_out[combination[i][j][1],i] = 1
+            end
+        end
+        warehouse_combination = dropzeros(sparse(warehouse_combination))
+        parcel_evalu = trans * warehouse_combination
+        parcel_check = sum(trans, dims = 2)
+        parcel = zeros(Int64,size(X,2))
+        for i in axes(parcel_evalu,1)
+            if max_warehouse_1 == true
+                for j in [2,1,3] #axes(parcel_evalu,2)
+                    if parcel_evalu[i,j] == parcel_check[i]
+                        parcel[:] .+= parcels_out[:,j]
+                        break
+                    else
+                        if j == maximum([2,1,3])
+                            parcel[:] .+= parcels_out[:,j]
+                        end
+                    end
+                end
+            else
+                for j in axes(parcel_evalu,2)
+                    if parcel_evalu[i,j] == parcel_check[i]
+                        parcel[:] .+= parcels_out[:,j]
+                        break
+                    else
+                        if j == maximum(axes(parcel_evalu,2))
+                            parcel[:] .+= parcels_out[:,j]
+                        end
+                    end
+                end
+            end
+        end
+        parcel = transpose(parcel)
+    end
+    split = sum(parcel) - size(trans,1)
+    return split, parcel
+end
+
 function PARCELSSEND(trans::SparseMatrixCSC{Bool, Int64}, 
                      X::Array{Bool,2}, 
                      capacity::Array{Int64,1}, 

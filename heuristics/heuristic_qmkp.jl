@@ -16,7 +16,7 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         error("Sorry, only the mode QMK or KLINK is allowed.")
     end
     # Sort the warehouses by decreasing capacity
-    capacity = sort(capacity, rev=true)
+    #capacity = sort(capacity, rev=true)
     # Clean the principle diagonal
     CLEANPRINCIPLE!(Q)
     # Start building the model
