@@ -112,11 +112,11 @@ end
 
 # function to find the largest warehouse that still has
 # space left
-function WHSPACE(cap_left::Vector{<:Real},
+function WHSPACE(capacity_left::Vector{<:Real},
                  space::Int64)
     k_ind = 0
-    for k in 1:size(cap_left,1)
-        if cap_left[k] >= space
+    for k in 1:size(capacity_left,1)
+        if capacity_left[k] >= space
             k_ind = k
             break
         end
@@ -128,7 +128,7 @@ end
 function SELECTIK(sum_dep::Vector{<:Real},
                   sum_nor::Vector{<:Real},
                   weight::Vector{Float64},
-                  cap_left::Vector{<:Real},
+                  capacity_left::Vector{<:Real},
                   X::Array{Bool,2},
                   dep::Matrix{<:Real},
                   allocated::Vector{Bool},
@@ -142,9 +142,9 @@ function SELECTIK(sum_dep::Vector{<:Real},
             end
         end
     end
-    k_ind   = WHSPACE(cap_left,round(Int64,sum(sku_weight)/length(sku_weight)))
-    k_max   = findmax(cap_left)[2]
-    pot_dep = WHPOTDEP(cap_left,i,X,dep,sku_weight)
+    k_ind   = WHSPACE(capacity_left,ceil(Int64,sum(sku_weight)/length(sku_weight)))
+    k_max   = findmax(capacity_left)[2]
+    pot_dep = WHPOTDEP(capacity_left,i,X,dep,sku_weight)
     k_dep   = findmax(pot_dep)[2]
     if pot_dep[k_dep] > 0 && k_ind != k_ind
         sum_dep[i] + sum_nor[i] * weight[k_dep] > 
@@ -162,15 +162,15 @@ end
 
 # function to check for each warehouse with free space whether 
 # SKU i has significant dependencies to other already allocated SKUs
-function WHPOTDEP(cap_left::Vector{<:Real},
+function WHPOTDEP(capacity_left::Vector{<:Real},
                   i::Int64,
                   X::Array{Bool,2},
                   dep::Matrix{<:Real},
                   sku_weight::Vector{<:Real}
     )
-    pot_dep = zeros(Float64,size(cap_left,1))
-    for k in 1:size(cap_left,1)
-        if cap_left[k] >= sku_weight[i]
+    pot_dep = zeros(Float64,size(capacity_left,1))
+    for k in 1:size(capacity_left,1)
+        if capacity_left[k] >= sku_weight[i]
             pot_dep[k] = CALCVAL(X,dep,i,k)
         end
     end
@@ -203,7 +203,7 @@ end
 # the warehouse k.
 function ADDDEPENDENT!(X::Matrix{Bool},
     Q::Matrix{<:Real},
-    cap_left::Vector{<:Real},
+    capacity_left::Vector{<:Real},
     k::Int64,
     dep::Matrix{<:Real},
     sum_dep::Vector{<:Real},
@@ -216,14 +216,14 @@ function ADDDEPENDENT!(X::Matrix{Bool},
     add = 1
     pot_dep = zeros(Float64,size(X,1))
     pot_nor = zeros(Float64,size(X,1))
-    while add == 1 && cap_left[k] > 0 && sum(X) < size(X,1)
+    while add == 1 && capacity_left[k] > 0 && sum(X) < size(X,1)
         add = 0
-        FINDDEP!(X,k,state_dep,state_nor,pot_dep,pot_nor,allocated,sku_weight,cap_left)
+        FINDDEP!(X,k,state_dep,state_nor,pot_dep,pot_nor,allocated,sku_weight,capacity_left)
         i = findmax(pot_dep)[2]
         if findmax(pot_dep)[1] > 0
-            if pot_dep[i] >= findmax(pot_nor)[1] && cap_left[k] >= sku_weight[i]
+            if pot_dep[i] >= findmax(pot_nor)[1] && capacity_left[k] >= sku_weight[i]
                 ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,
-                             state_nor,cap_left,allocated,sku_weight,i,k)
+                             state_nor,capacity_left,allocated,sku_weight,i,k)
                 add = 1
             end
         end
@@ -239,9 +239,9 @@ function FINDDEP!(X::Array{Bool,2},
                   pot_nor::Vector{<:Real},
                   allocated::Vector{Bool},
                   sku_weight::Vector{<:Real},
-                  cap_left::Vector{<:Real})
+                  capacity_left::Vector{<:Real})
     @fastmath @simd for j in 1:size(X,1)
-        if allocated[j] == 0 && cap_left[k] >= sku_weight[j]
+        if allocated[j] == 0 && capacity_left[k] >= sku_weight[j]
             pot_dep[j]  = state_dep[j,k] 
             pot_nor[j]  = state_nor[j,k] 
             if pot_dep[j] > 0
@@ -262,7 +262,7 @@ function ALLOCATEONE!(X::Array{Bool,2},
                       sum_nor::Vector{<:Real},
                       state_dep::Matrix{<:Real},
                       state_nor::Matrix{<:Real},
-                      cap_left::Vector{<:Real},
+                      capacity_left::Vector{<:Real},
                       allocated::Vector{Bool},
                       sku_weight::Vector{<:Real},
                       i::Int64,
@@ -271,7 +271,7 @@ function ALLOCATEONE!(X::Array{Bool,2},
         X[i,k] = 1
         sum_dep[i] = 0
         sum_nor[i] = 0
-        cap_left[k] -= sku_weight[i]
+        capacity_left[k] -= sku_weight[i]
         allocated[i] = true
         state_dep[i,k] = 0
         state_nor[i,k] = 0
@@ -289,14 +289,14 @@ end
 ## check whether all warehouse except the last one are already full. If
 ## that is the case just allocate the remaining SKUs yet not allocated there.
 function FILLLAST!(X::Array{Bool,2},
-                   cap_left::Vector{<:Real},
+                   capacity_left::Vector{<:Real},
                    allocated::Vector{Bool},
                    sku_weight::Vector{<:Real})
-    if sum(cap_left[1:size(cap_left,1)-1]) <= 0
+    if sum(capacity_left[1:size(capacity_left,1)-1]) <= 0
         for i = 1:length(allocated)
             if allocated[i] == false
-                X[i,size(cap_left,1)] = 1
-                cap_left[size(cap_left,1)] -= sku_weight[i]
+                X[i,size(capacity_left,1)] = 1
+                capacity_left[size(capacity_left,1)] -= sku_weight[i]
             end
         end
     end
