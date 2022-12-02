@@ -1,20 +1,40 @@
 # Function to calculate the Coappearance Matrix Q
-function COAPPEARENCE(trans::SparseMatrixCSC{Bool, Int64})
-    Q::Matrix{Int32} = trans'*trans
+function COAPPEARENCE(
+    trans::SparseMatrixCSC{Bool, Int64}, 
+    sku_weight::Vector{<:Real}
+    )
+    Q::Matrix{Float64} = trans'*trans
     Q = Matrix(Q)
+    WEIGHT_SKUS!(Q,sku_weight)
     return Q
 end
 
 # function to set all entries on the principle diagonal to zero
-function CLEANPRINCIPLE!(Q::Matrix{<:Real})
+function CLEANPRINCIPLE!(
+    Q::Matrix{<:Real}
+    )
     for i in axes(Q,1)
         Q[i,i] = 0
     end
 end
 
+# function to weight the SKUs
+function WEIGHT_SKUS!(
+    Q::Matrix{<:Real},
+    sku_weight::Vector{<:Real}
+    )
+    @inbounds @simd for j = 2:size(Q,1)
+        @inbounds for i = 1:j-1
+                Q[i,j] = Q[i,j]/(sku_weight[i]+sku_weight[j])/2
+        end
+    end
+end
+
 # Functions to evaluate the number of parcels necessary to fullfil all orders
 ## COMBINEWAREHOUSES: create all possible warehouse combinations 
-function COMBINEWAREHOUSES(capacity::Array{Int64,1})
+function COMBINEWAREHOUSES(
+    capacity::Array{Int64,1}
+    )
     combination = [[k] for k in axes(capacity,1)]
     combinations_X = combinations(combination)
     combination = [c for c in combinations_X]
@@ -22,11 +42,13 @@ function COMBINEWAREHOUSES(capacity::Array{Int64,1})
 end
 
 ## PARCELSSEND: number of parcels due to ordersplitting necessary to fulfill all orders
-function PARCELSSEND_WEIGHT(trans::SparseMatrixCSC{Bool, Int64}, 
-                     X::Array{Bool,2}, 
-                     capacity::Array{Int64,1}, 
-                     combination::Array{Array{Array{Int64,1},1},1},
-                     max_warehouse_1::Bool)
+function PARCELSSEND_WEIGHT(
+    trans::SparseMatrixCSC{Bool, Int64}, 
+    X::Array{Bool,2}, 
+    capacity::Array{Int64,1}, 
+    combination::Array{Array{Array{Int64,1},1},1},
+    max_warehouse_1::Bool
+    )
     if sum(capacity) == size(trans,2)
         parcel = trans * X
         for j in axes(parcel,1)
@@ -87,10 +109,12 @@ function PARCELSSEND_WEIGHT(trans::SparseMatrixCSC{Bool, Int64},
     return split, parcel
 end
 
-function PARCELSSEND(trans::SparseMatrixCSC{Bool, Int64}, 
-                     X::Array{Bool,2}, 
-                     capacity::Array{Int64,1}, 
-                     combination::Array{Array{Array{Int64,1},1},1})
+function PARCELSSEND(
+    trans::SparseMatrixCSC{Bool, Int64}, 
+    X::Array{Bool,2}, 
+    capacity::Array{Int64,1}, 
+    combination::Array{Array{Array{Int64,1},1},1}
+    )
     if sum(capacity) == size(trans,2)
         parcel = trans * X
         for j in axes(parcel,1)
@@ -135,15 +159,20 @@ end
 
 # Functions for the random allocation of SKUs to warehouses
 ## RANDOMALLOCONCE: allocate SKUs randomly in case each SKU can only be assigned once
-function RANDOMALLOCONCE(trans::SparseMatrixCSC{Bool, Int64},
-                         capacity::Array{Int64,1})
+function RANDOMALLOCONCE(
+    trans::SparseMatrixCSC{Bool, Int64},
+    capacity::Vector{<:Real},
+    sku_weight::Vector{<:Real},
+    )
+    cap_left::Vector{Float64} = copy(capacity);
     X = Array{Bool,2}(undef,size(trans,2),size(capacity,1))
     X .= 0
     for j in 1:size(X,1)
         while sum(X[j,:]) == 0
             randomnumber = rand(1:size(capacity,1))
-            if sum(X[:,randomnumber]) < capacity[randomnumber]
+            if cap_left[randomnumber] > 0
                 X[j,randomnumber] = 1
+                cap_left[randomnumber] -= sku_weight[j]
             end
         end
     end
@@ -152,14 +181,19 @@ function RANDOMALLOCONCE(trans::SparseMatrixCSC{Bool, Int64},
 end
 
 ## RANDOMALLOCMULTI: allocate SKUs randomly in case each SKU can be allocated multiple times
-function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Bool, Int64},
-                          capacity::Array{Int64,1})
-    X = RANDOMALLOCONCE(trans,capacity)
+function RANDOMALLOCMULTI(
+    trans::SparseMatrixCSC{Bool, Int64},
+    capacity::Vector{<:Real},
+    sku_weight::Vector{<:Real}
+    )
+    X = RANDOMALLOCONCE(trans,capacity,sku_weight::Vector{<:Real})
+    cap_used = sum(X.*sku_weight,dims=1)
     for d in axes(capacity,1)
-        while sum(X[:,d]) < sum(capacity[d])
+        while cap_used[d] < sum(capacity[d])
             randomproduct = rand(1:size(trans,2))
             if X[randomproduct,d] == 0
                 X[randomproduct,d] = 1
+                cap_used[d] += sku_weight[randomproduct]
             end
         end
     end
@@ -167,13 +201,16 @@ function RANDOMALLOCMULTI(trans::SparseMatrixCSC{Bool, Int64},
 end
 
 ## RANDOMBENCH: benchmark function to evaluate multiple random allocations
-function RANDOMBENCH(trans::SparseMatrixCSC{Bool, Int64}, 
-                     capacity::Array{Int64,1}, 
-                     iterations::Int64, 
-                     combination::Array{Array{Array{Int64,1},1},1})
+function RANDOMBENCH(
+    trans::SparseMatrixCSC{Bool, Int64}, 
+    capacity::Array{Int64,1}, 
+    iterations::Int64,
+    sku_weight::Vector{<:Real},
+    combination::Array{Array{Array{Int64,1},1},1}
+    )
     randomcollection = Array{Int64,1}(undef,iterations) .= 0
     Threads.@threads for r = 1:iterations
-        W = RANDOMALLOCMULTI(trans,capacity)
+        W = RANDOMALLOCMULTI(trans,capacity,sku_weight)
         parcel = PARCELSSEND(trans,W,capacity,combination)
         Threads.lock(ren_lock) do
             randomcollection[r] = parcel
@@ -184,12 +221,14 @@ function RANDOMBENCH(trans::SparseMatrixCSC{Bool, Int64},
 end
 
 ## CHECKCAPACITY: function to test whether the input capacity is viable for the transactional data
-function CHECKCAPACITY(trans,
-                       capacity::Array{Int64,1})
-    valid = 1
-    if sum(capacity) < size(trans,2)
+function CHECKCAPACITY(
+    capacity::Array{Int64,1},
+    sku_weight::Vector{<:Real},
+    )
+    valid = true
+    if sum(capacity) < sum(sku_weight)
         error("Abort due to insufficient capacity!")
-        valid = 0
+        valid = false
     end
-    return valid::Int64
+    return valid::Bool
 end

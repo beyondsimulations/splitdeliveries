@@ -20,7 +20,9 @@ function benchmark!(
     trials,
     stagnant,
     strategy,
-    klinkstatus)
+    klinkstatus,
+    sku_weight,
+    )
 
 ## Determine the possible warehouse combinations
     combination = COMBINEWAREHOUSES(capacity)
@@ -30,44 +32,97 @@ function benchmark!(
 
 ## Start QMK heuristic to find the optimal solution with the solver CPLEX
 if start[1,:QMKO] == 1
-    sleep(0.01)
-    GC.gc()
-    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
-                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
-    parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
-    parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
-    parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
-    weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps, X = reorders(X,W,dict_algorithm,categorybrands,"QMKO")
-    print("\n   QMKO: parcels test data: ", parcels_benchmark, 
-        " / parcels training data: ", round(Int64, parcels_train/training_days), 
-        " / time: ",round(time_benchmark,digits = 3),
-        " / gap: ",round(gap_optimisation,6),
-        " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
-        " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
-        )
-    
-    push!(benchmark, (data = datasource, 
+    if all(y->y == 1,sku_weight)
+        sleep(0.01)
+        GC.gc()
+        time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"CPLEX",show_opt,
+                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+        parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
+        parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
+        parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
+        weight = warehouse_weight(W,categorybrands)
+        ReorderCategorybrands, ReorderApps, X = reorders(X,W,dict_algorithm,categorybrands,"QMKO")
+        print("\n   QMKO: parcels test data: ", parcels_benchmark, 
+            " / parcels training data: ", round(Int64, parcels_train/training_days), 
+            " / time: ",round(time_benchmark,digits = 3),
+            " / gap: ",round(gap_optimisation,6),
+            " \n        ",
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
+            " / ReorderCB: ", ReorderCategorybrands,
+            " / ReorderApp: ", ReorderApps,
+            )
+        
+        push!(benchmark, (data = datasource, 
+                            skus = size(trans_train,2),
+                            orders_train = size(trans_train,1),
+                            orders_test = size(trans_test,1),
+                            date=date,
+                            traindays=training_days,
+                            capacity_47=capacity[1],
+                            capacity_50=capacity[2],
+                            min_dispatch_47=split_bench_max[1],
+                            min_dispatch_50=split_bench_min[2],
+                            max_dispatch_47=split_bench_min[1],
+                            max_dispatch_50=split_bench_max[2],
+                            weight_app_47=weight[1],
+                            weight_app_50=weight[2],
+                            diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
+                            buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
+                            mode = "QMKO",
+                            parcel_train = round(Int64, parcels_train/training_days), 
+                            parcel_test = parcels_benchmark,
+                            reordercategorybrands = ReorderCategorybrands,
+                            reorderapps = ReorderApps,
+                            duration = time_benchmark,
+                            cap_used = sum(W),
+                            local_search = 0,
+                            gap = gap_optimisation))
+    end
+end
+
+## Start QMK heuristic with SBB as solver
+if start[1,:QMK] == 1
+    if all(y->y == 1,sku_weight)
+        sleep(0.01)
+        GC.gc()
+        time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort, "SBB",show_opt,
+                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+        parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
+        parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
+        parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
+        weight = warehouse_weight(W,categorybrands)
+        ReorderCategorybrands, ReorderApps, X = reorders(X,W,dict_algorithm,categorybrands,"QMK")
+        print("\n    QMK: parcels week test data: ", parcels_benchmark, 
+            " / parcels week training data: ", round(Int64,parcels_train/training_days),  
+            " / time: ", round(time_benchmark, digits = 3),
+            " / gap: ",round(gap_optimisation, digits = 6),
+            " \n        ",
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
+            " / ReorderCB: ", ReorderCategorybrands,
+            " / ReorderApp: ", ReorderApps,
+            )
+
+        push!(benchmark, (data = datasource, 
                         skus = size(trans_train,2),
                         orders_train = size(trans_train,1),
                         orders_test = size(trans_test,1),
                         date=date,
                         traindays=training_days,
-                        capacity_B=capacity[1],
-                        capacity_B=capacity[2],
-                        min_dispatch_B=split_bench_max[1],
-                        min_dispatch_B=split_bench_min[2],
-                        max_dispatch_B=split_bench_min[1],
-                        max_dispatch_B=split_bench_max[2],
-                        weight_app_B=weight[1],
-                        weight_app_B=weight[2],
+                        capacity_47=capacity[1],
+                        capacity_50=capacity[2],
+                        min_dispatch_47=split_bench_max[1],
+                        min_dispatch_50=split_bench_min[2],
+                        max_dispatch_47=split_bench_min[1],
+                        max_dispatch_50=split_bench_max[2],
+                        weight_app_47=weight[1],
+                        weight_app_50=weight[2],
                         diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                         buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
-                        mode = "QMKO",
+                        mode = "QMK",
                         parcel_train = round(Int64, parcels_train/training_days), 
                         parcel_test = parcels_benchmark,
                         reordercategorybrands = ReorderCategorybrands,
@@ -76,63 +131,14 @@ if start[1,:QMKO] == 1
                         cap_used = sum(W),
                         local_search = 0,
                         gap = gap_optimisation))
-end
-
-## Start QMK heuristic with SBB as solver
-if start[1,:QMK] == 1
-    sleep(0.01)
-    GC.gc()
-    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,abort, "SBB",show_opt,
-                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
-    parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
-    parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
-    parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
-    weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps, X = reorders(X,W,dict_algorithm,categorybrands,"QMK")
-    print("\n    QMK: parcels week test data: ", parcels_benchmark, 
-        " / parcels week training data: ", round(Int64,parcels_train/training_days),  
-        " / time: ", round(time_benchmark, digits = 3),
-        " / gap: ",round(gap_optimisation, digits = 6),
-        " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
-        " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
-        )
-
-    push!(benchmark, (data = datasource, 
-                    skus = size(trans_train,2),
-                    orders_train = size(trans_train,1),
-                    orders_test = size(trans_test,1),
-                    date=date,
-                    traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
-                    diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                    buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
-                    mode = "QMK",
-                    parcel_train = round(Int64, parcels_train/training_days), 
-                    parcel_test = parcels_benchmark,
-                    reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
-                    duration = time_benchmark,
-                    cap_used = sum(W),
-                    local_search = 0,
-                    gap = gap_optimisation))
+    end
 end
 
 ## Start chi square heuristic without local search
 if start[1,:CHIM] == 1
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train,capacity,sig,0,chistatus)
+        time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train,capacity,sig,0,sku_weight,chistatus)
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -144,9 +150,9 @@ if start[1,:CHIM] == 1
             " / local search: ", ls,
             " / sig: ", sig,
             " \n        ",
-            " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-            " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-            " / APP: B - ", weight[1]," and B -  ",weight[2],
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
             " / ReorderApp: ", ReorderApps,
             )
@@ -158,14 +164,14 @@ if start[1,:CHIM] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
+                    capacity_47=capacity[1],
+                    capacity_50=capacity[2],
+                    min_dispatch_47=split_bench_max[1],
+                    min_dispatch_50=split_bench_min[2],
+                    max_dispatch_47=split_bench_min[1],
+                    max_dispatch_50=split_bench_max[2],
+                    weight_app_47=weight[1],
+                    weight_app_50=weight[2],
                     diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                     buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                     mode = "CHIM_$sig",
@@ -181,9 +187,10 @@ end
 
 ## Start chi square heuristic with local search
 if start[1,:CHI] == 1
+    if all(y->y==sku_weight[1],sku_weight)
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,chistatus)
+        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,sku_weight,chistatus)
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -195,9 +202,9 @@ if start[1,:CHI] == 1
             " / local search: ", ls,
             " / sig: ", sig,
             " \n        ",
-            " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-            " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-            " / APP: B - ", weight[1]," and B -  ",weight[2],
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
             " / ReorderApp: ", ReorderApps,
             )
@@ -208,14 +215,14 @@ if start[1,:CHI] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
+                    capacity_47=capacity[1],
+                    capacity_50=capacity[2],
+                    min_dispatch_47=split_bench_max[1],
+                    min_dispatch_50=split_bench_min[2],
+                    max_dispatch_47=split_bench_min[1],
+                    max_dispatch_50=split_bench_max[2],
+                    weight_app_47=weight[1],
+                    weight_app_50=weight[2],
                     diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                     buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                     mode = "CHI_$sig",
@@ -227,107 +234,112 @@ if start[1,:CHI] == 1
                     cap_used = sum(W),
                     local_search = ls,
                     gap = 0))
+    end
 end
 
 ## Start our reproduction of the  K-LINKS heuristic by
 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
 if  start[1,:KL] == 1
-    sleep(0.01)
-    GC.gc()
-    time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
-    parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
-    parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
-    parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
-    weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"KL")
-    print("\n     KL: parcels train data: ", parcels_benchmark, 
-        " / parcels training data: ", round(Int64, parcels_train/training_days),  
-        " / time: ", round(time_benchmark, digits = 3),
-        " / local search: ", ls,
-        " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
-        " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
-        )
+    if all(y->y==1,sku_weight)
+        sleep(0.01)
+        GC.gc()
+        time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
+        parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
+        parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
+        parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
+        weight = warehouse_weight(W,categorybrands)
+        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"KL")
+        print("\n     KL: parcels train data: ", parcels_benchmark, 
+            " / parcels training data: ", round(Int64, parcels_train/training_days),  
+            " / time: ", round(time_benchmark, digits = 3),
+            " / local search: ", ls,
+            " \n        ",
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
+            " / ReorderCB: ", ReorderCategorybrands,
+            " / ReorderApp: ", ReorderApps,
+            )
 
-    push!(benchmark, (data = datasource, 
-                    skus = size(trans_train,2),
-                    orders_train = size(trans_train,1),
-                    orders_test = size(trans_test,1),
-                    date=date,
-                    traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
-                    diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                    buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
-                    mode = "KL",
-                    parcel_train = round(Int64, parcels_train/training_days), 
-                    parcel_test = parcels_benchmark,
-                    reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
-                    duration = time_benchmark,
-                    cap_used = sum(W),
-                    local_search = ls,
-                    gap = 0))
+        push!(benchmark, (data = datasource, 
+                        skus = size(trans_train,2),
+                        orders_train = size(trans_train,1),
+                        orders_test = size(trans_test,1),
+                        date=date,
+                        traindays=training_days,
+                        capacity_47=capacity[1],
+                        capacity_50=capacity[2],
+                        min_dispatch_47=split_bench_max[1],
+                        min_dispatch_50=split_bench_min[2],
+                        max_dispatch_47=split_bench_min[1],
+                        max_dispatch_50=split_bench_max[2],
+                        weight_app_47=weight[1],
+                        weight_app_50=weight[2],
+                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
+                        buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
+                        mode = "KL",
+                        parcel_train = round(Int64, parcels_train/training_days), 
+                        parcel_test = parcels_benchmark,
+                        reordercategorybrands = ReorderCategorybrands,
+                        reorderapps = ReorderApps,
+                        duration = time_benchmark,
+                        cap_used = sum(W),
+                        local_search = ls,
+                        gap = 0))
+    end
 end
 
 ## Start our reproduction of the  K-LINKS optimization with SBB by
 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
 if  start[1,:KLQ] == 1
-    sleep(0.01)
-    GC.gc()
-    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,abort,"SBB",show_opt,
-                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
-    parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
-    parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
-    parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
-    weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"KLQ")
-    print("\n    KLQ: parcels test data: ", parcels_benchmark, 
-        " / parcels training data: ", round(Int64, parcels_train/training_days),  
-        " / time: ", round(time_benchmark, digits = 3),
-        " / gap: ", round(gap_optimisation, digits = 6),
-        " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
-        " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
-        )
+    if all(y->y==1,sku_weight)
+        sleep(0.01)
+        GC.gc()
+        time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
+                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+        parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
+        parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
+        parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
+        weight = warehouse_weight(W,categorybrands)
+        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"KLQ")
+        print("\n    KLQ: parcels test data: ", parcels_benchmark, 
+            " / parcels training data: ", round(Int64, parcels_train/training_days),  
+            " / time: ", round(time_benchmark, digits = 3),
+            " / gap: ", round(gap_optimisation, digits = 6),
+            " \n        ",
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
+            " / ReorderCB: ", ReorderCategorybrands,
+            " / ReorderApp: ", ReorderApps,
+            )
 
-    push!(benchmark, (data = datasource, 
-                    skus = size(trans_train,2),
-                    orders_train = size(trans_train,1),
-                    orders_test = size(trans_test,1),
-                    date=date,
-                    traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
-                    diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                    buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
-                    mode = "KLQ",
-                    parcel_train = round(Int64, parcels_train/training_days), 
-                    parcel_test = parcels_benchmark, 
-                    reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
-                    duration = time_benchmark,
-                    cap_used = sum(W),
-                    local_search = 0,
-                    gap = gap_optimisation))
+        push!(benchmark, (data = datasource, 
+                        skus = size(trans_train,2),
+                        orders_train = size(trans_train,1),
+                        orders_test = size(trans_test,1),
+                        date=date,
+                        traindays=training_days,
+                        capacity_47=capacity[1],
+                        capacity_50=capacity[2],
+                        min_dispatch_47=split_bench_max[1],
+                        min_dispatch_50=split_bench_min[2],
+                        max_dispatch_47=split_bench_min[1],
+                        max_dispatch_50=split_bench_max[2],
+                        weight_app_47=weight[1],
+                        weight_app_50=weight[2],
+                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
+                        buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
+                        mode = "KLQ",
+                        parcel_train = round(Int64, parcels_train/training_days), 
+                        parcel_test = parcels_benchmark, 
+                        reordercategorybrands = ReorderCategorybrands,
+                        reorderapps = ReorderApps,
+                        duration = time_benchmark,
+                        cap_used = sum(W),
+                        local_search = 0,
+                        gap = gap_optimisation))
+    end
 end
 
 ## Start our reproduction of the greedy orders heuristic by
@@ -335,7 +347,7 @@ end
 if start[1,:GO] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity)
+    time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity,sku_weight)
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -345,9 +357,9 @@ if start[1,:GO] == 1
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
         " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
+        " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+        " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+        " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
         " / ReorderApp: ", ReorderApps,
         )
@@ -359,14 +371,14 @@ if start[1,:GO] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
+                    capacity_47=capacity[1],
+                    capacity_50=capacity[2],
+                    min_dispatch_47=split_bench_max[1],
+                    min_dispatch_50=split_bench_min[2],
+                    max_dispatch_47=split_bench_min[1],
+                    max_dispatch_50=split_bench_max[2],
+                    weight_app_47=weight[1],
+                    weight_app_50=weight[2],
                     diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                     buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                     mode = "GO",
@@ -385,7 +397,7 @@ end
 if start[1,:GP] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity)
+    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity,sku_weight)
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -395,9 +407,9 @@ if start[1,:GP] == 1
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
         " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
+        " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+        " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+        " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
         " / ReorderApp: ", ReorderApps,
         )
@@ -408,14 +420,14 @@ if start[1,:GP] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
+                    capacity_47=capacity[1],
+                    capacity_50=capacity[2],
+                    min_dispatch_47=split_bench_max[1],
+                    min_dispatch_50=split_bench_min[2],
+                    max_dispatch_47=split_bench_min[1],
+                    max_dispatch_50=split_bench_max[2],
+                    weight_app_47=weight[1],
+                    weight_app_50=weight[2],
                     diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                     buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                     mode = "GP",
@@ -434,7 +446,7 @@ end
 if start[1,:GS] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity)
+    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity,sku_weight)
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -444,9 +456,9 @@ if start[1,:GS] == 1
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
         " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
+        " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+        " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+        " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
         " / ReorderApp: ", ReorderApps,
         )
@@ -457,14 +469,14 @@ if start[1,:GS] == 1
                 orders_test = size(trans_test,1),
                 date=date,
                 traindays=training_days,
-                capacity_B=capacity[1],
-                capacity_B=capacity[2],
-                min_dispatch_B=split_bench_max[1],
-                min_dispatch_B=split_bench_min[2],
-                max_dispatch_B=split_bench_min[1],
-                max_dispatch_B=split_bench_max[2],
-                weight_app_B=weight[1],
-                weight_app_B=weight[2],
+                capacity_47=capacity[1],
+                capacity_50=capacity[2],
+                min_dispatch_47=split_bench_max[1],
+                min_dispatch_50=split_bench_min[2],
+                max_dispatch_47=split_bench_min[1],
+                max_dispatch_50=split_bench_max[2],
+                weight_app_47=weight[1],
+                weight_app_50=weight[2],
                 diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                 buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                 mode = "GS",
@@ -483,7 +495,7 @@ end
 if  start[1,:BS] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity)
+    time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity,sku_weight)
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -493,9 +505,9 @@ if  start[1,:BS] == 1
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
         " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
+        " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+        " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+        " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
         " / ReorderApp: ", ReorderApps,
         )
@@ -506,14 +518,14 @@ if  start[1,:BS] == 1
                 orders_test = size(trans_test,1),
                 date=date,
                 traindays=training_days,
-                capacity_B=capacity[1],
-                capacity_B=capacity[2],
-                min_dispatch_B=split_bench_max[1],
-                min_dispatch_B=split_bench_min[2],
-                max_dispatch_B=split_bench_min[1],
-                max_dispatch_B=split_bench_max[2],
-                weight_app_B=weight[1],
-                weight_app_B=weight[2],
+                capacity_47=capacity[1],
+                capacity_50=capacity[2],
+                min_dispatch_47=split_bench_max[1],
+                min_dispatch_50=split_bench_min[2],
+                max_dispatch_47=split_bench_min[1],
+                max_dispatch_50=split_bench_max[2],
+                weight_app_47=weight[1],
+                weight_app_50=weight[2],
                 diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                 buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                 mode = "BS",
@@ -531,83 +543,85 @@ end
 ## Choose FULLOPTEQ if each SKUs can only be allocated once, else use
 ## FULLOPTUEQ if SKUs can be allocated multiple times
 if start[1,:OPT] == 1
-    sleep(0.01)
-    GC.gc()
-    if sum(capacity) == size(trans,2)
-        time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
-                                                                        cpu_cores,allowed_gap,max_nodes)
-    else
-        time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
-                                                                        cpu_cores,allowed_gap,max_nodes)
+    if all(y->y==1,sku_weight)
+        sleep(0.01)
+        GC.gc()
+        if sum(capacity) == size(trans,2)
+            time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
+                                                                            cpu_cores,allowed_gap,max_nodes)
+        else
+            time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
+                                                                            cpu_cores,allowed_gap,max_nodes)
+        end
+        parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
+        parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
+        parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
+        weight = warehouse_weight(W,categorybrands)
+        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"OPT")
+        print("\n    OPT: parcels test data: ", parcels_benchmark, 
+            " / parcels training data: ", round(Int64, parcels_train/training_days),  
+            " / time: ",round(time_benchmark, digits = 3),
+            " \n        ",
+            " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+            " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+            " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
+            " / ReorderCB: ", ReorderCategorybrands,
+            " / ReorderApp: ", ReorderApps,
+            )
+        
+        push!(benchmark, (data = datasource, 
+                        skus = size(trans_train,2),
+                        orders_train = size(trans_train,1),
+                        orders_test = size(trans_test,1),
+                        date=date,
+                        traindays=training_days,
+                        capacity_47=capacity[1],
+                        capacity_50=capacity[2],
+                        min_dispatch_47=split_bench_max[1],
+                        min_dispatch_50=split_bench_min[2],
+                        max_dispatch_47=split_bench_min[1],
+                        max_dispatch_50=split_bench_max[2],
+                        weight_app_47=weight[1],
+                        weight_app_50=weight[2],
+                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
+                        buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
+                        mode = "OPT",
+                        parcel_train = round(Int64, parcels_train/training_days), 
+                        parcel_test = parcels_benchmark,
+                        reordercategorybrands = ReorderCategorybrands,
+                        reorderapps = ReorderApps,
+                        duration = time_benchmark,
+                        cap_used = sum(W),
+                        local_search = 0,
+                        gap = gap_optimisation))
     end
-    parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
-    parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
-    parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
-    weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"OPT")
-    print("\n    OPT: parcels test data: ", parcels_benchmark, 
-        " / parcels training data: ", round(Int64, parcels_train/training_days),  
-        " / time: ",round(time_benchmark, digits = 3),
-        " \n        ",
-        " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-        " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-        " / APP: B - ", weight[1]," and B -  ",weight[2],
-        " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
-        )
-    
-    push!(benchmark, (data = datasource, 
-                    skus = size(trans_train,2),
-                    orders_train = size(trans_train,1),
-                    orders_test = size(trans_test,1),
-                    date=date,
-                    traindays=training_days,
-                    capacity_B=capacity[1],
-                    capacity_B=capacity[2],
-                    min_dispatch_B=split_bench_max[1],
-                    min_dispatch_B=split_bench_min[2],
-                    max_dispatch_B=split_bench_min[1],
-                    max_dispatch_B=split_bench_max[2],
-                    weight_app_B=weight[1],
-                    weight_app_B=weight[2],
-                    diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                    buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
-                    mode = "OPT",
-                    parcel_train = round(Int64, parcels_train/training_days), 
-                    parcel_test = parcels_benchmark,
-                    reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
-                    duration = time_benchmark,
-                    cap_used = sum(W),
-                    local_search = 0,
-                    gap = gap_optimisation))
 end
 
 ## Benchmark the random allocation of SKUs
 sleep(0.01)
-parcels_benchmark_rand = 0
-split_bench_max_rand = (0,0)
-split_bench_min_rand = (0,0)
-weight_rand = [0,0]
+parcels_benchmark_rand = 0.0
+split_bench_max_rand = [0.0,0.0]
+split_bench_min_rand = [0.0,0.0]
+weight_rand = [0.0,0.0]
 time_benchmark = 0.0
 for cycle in 1:10
-    time_benchmark += @elapsed W = RANDOMALLOCMULTI(trans_test, capacity)
+    time_benchmark += @elapsed W = RANDOMALLOCMULTI(trans_test,capacity,sku_weight)
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
     weight = warehouse_weight(W,categorybrands)
-    parcels_benchmark_rand += parcels_benchmark .*/(1/10)
-    split_bench_max_rand .+= split_bench_max .*/(1/10)
-    split_bench_min_rand .+= split_bench_min .*/(1/10)
-    weight_rand .= weight .*/(1/10)
+    parcels_benchmark_rand += parcels_benchmark * (1/10)
+    split_bench_max_rand .+= [split_bench_max[1] .*(1/10), split_bench_max[2] .*(1/10)]
+    split_bench_min_rand .+= [split_bench_min[1] .*(1/10), split_bench_min[2] .*(1/10)]
+    weight_rand .= [weight[1] .*(1/10), weight[2] .*(1/10)]
 end
 print("\n    RND: parcels test data: ", parcels_benchmark,
     " / parcels training data: ", round(Int64, parcels_train/training_days),
     " / time: ", round(time_benchmark, digits = 3),
     " \n        ",
-    " / B: ", split_bench_max[1]," to ",split_bench_min[1],
-    " / B: ", split_bench_min[2]," to ",split_bench_max[2],
-    " / APP: B - ", weight[1]," and B -  ",weight[2],
+    " / 47: ", split_bench_max[1]," to ",split_bench_min[1],
+    " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
+    " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
     )
 
 push!(benchmark, (data = datasource, 
@@ -616,19 +630,19 @@ push!(benchmark, (data = datasource,
                 orders_test = size(trans_test,1),
                 date=date,
                 traindays=training_days,
-                capacity_B=capacity[1],
-                capacity_B=capacity[2],
-                min_dispatch_B=split_bench_max_rand[1],
-                min_dispatch_B=split_bench_min_rand[2],
-                max_dispatch_B=split_bench_min_rand[1],
-                max_dispatch_B=split_bench_max_rand[2],
-                weight_app_B=weight_rand[1],
-                weight_app_B=weight_rand[2],
+                capacity_47=capacity[1],
+                capacity_50=capacity[2],
+                min_dispatch_47=round(Int64,split_bench_max_rand[1]),
+                min_dispatch_50=round(Int64,split_bench_min_rand[2]),
+                max_dispatch_47=round(Int64,split_bench_min_rand[1]),
+                max_dispatch_50=round(Int64,split_bench_max_rand[2]),
+                weight_app_47=round(Int64,weight[1]),
+                weight_app_50=round(Int64,weight[2]),
                 diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
                 buffer = round((sum(capacity)/size(trans_train,2))-1,digits = 2),
                 mode = "RND",
-                parcel_train = round(Int64, parcels_train_rand/training_days), 
-                parcel_test = parcels_benchmark_rand,
+                parcel_train = round(Int64, parcels_train/training_days), 
+                parcel_test = parcels_benchmark,
                 reordercategorybrands = 0,
                 reorderapps = 0.0,
                 duration = time_benchmark,

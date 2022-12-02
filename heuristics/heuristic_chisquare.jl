@@ -2,6 +2,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
                        capacity::Vector{Int64},
                        sig::Float64,
                        max_ls::Int64,
+                       sku_weight::Vector{<:Real},
                        log_results::Bool)
     # Number of transactions
     J = size(trans,1)
@@ -11,8 +12,9 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
     #capacity = sort(capacity, rev=true)
     # Create Coapperance Matrix
     log_results == true ? print("\n  creating coappearance matrix.") : nothing
-    Q = COAPPEARENCE(trans)
-    if CHECKCAPACITY(Q,capacity) == 1
+    Q = COAPPEARENCE(trans,sku_weight)
+    # Start the main part
+    if CHECKCAPACITY(capacity,sku_weight)
         # Create Vector with number of transactions containing each SKU
         ordered_skus = [Q[i,i] for i in axes(Q,1)]
         # Clean the principle diagonal
@@ -39,7 +41,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## all SKUs simply according to the highest independent coappearances.
         weight = WHWEIGHT(capacity,sum_nor)
         ## Copy the capacity to have an array that keeps the left-over capacity
-        cap_left = copy(capacity)
+        cap_left::Vector{Float64} = copy(capacity)
         ## Create arrays that save the current dependencies for all unallocated
         ## SKUs to all warehouses and a vector that holds all unallocated skus
         state_dep = zeros(Float64,size(X,1),length(cap_left))
@@ -71,15 +73,15 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## allocate all significant SKUs from a SKU-cluster into one warehouse. 
         ## Otherwise we allocate it to warehouse k to maximise the independent 
         ## coappearances in the allocation.
-        i,k  = SELECTIK(sum_dep,sum_nor,weight,cap_left,X,dep,allocated)
-        ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,i,k)
+        i,k  = SELECTIK(sum_dep,sum_nor,weight,cap_left,X,dep,allocated,sku_weight)
+        ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight,i,k)
         ## Check for all unallocated SKUs whether they have positive 
         ## dependencies to the SKUs in the warehouse k the last SKU was allocated 
         ## to. If so, check whether the dependencies are expected to dominate the 
         ## independent coapperances. If yes, allocate the corresponding SKUs to 
         ## the warehouse k.
-        ADDDEPENDENT!(X,Q,cap_left,k,dep,sum_dep,sum_nor,state_dep,state_nor,allocated)
-        FILLLAST!(X,cap_left,allocated)
+        ADDDEPENDENT!(X,Q,cap_left,k,dep,sum_dep,sum_nor,state_dep,state_nor,allocated,sku_weight)
+        FILLLAST!(X,cap_left,allocated,sku_weight)
         end
         if sum(cap_left) > 0
             ## First, remove every so far assigned dependent SKU-pair from the coappearance 
@@ -90,7 +92,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
             ## each warehouse with leftover storage space until it is full. If no SKU 
             ## with coappearances is found and there is still storage space left, terminate the 
             ## algorithm as further allocations pose no benefit. 
-            FILLUP!(X,dep,cap_left)
+            FILLUP!(X,dep,cap_left,sku_weight)
         end
         ## Free up RAM for last stage
         state_dep = nothing
@@ -99,22 +101,19 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         GC.gc()
         ls = 0
         if max_ls > 0
-            log_results == true ? print("\n  starting local search.") : nothing
-            ls = LOCALSEARCHCHI!(trans,X,Q,capacity,log_results,ls,max_ls)
+            if all(y->y==sku_weight[1],sku_weight)
+                log_results == true ? print("\n  starting local search.") : nothing
+                ls = LOCALSEARCHCHI!(trans,X,Q,capacity,log_results,ls,max_ls)
+            else
+                print("\n\n!!! Sorry, local search is only available if all SKUs have the same capacity.")
+                print("\n!!! The following results will thus only reflect the CHIM heuristic.\n")
+            end
+        end
+        # Check whether all SKUs are allocated
+        if any(y->y < 1,sum(X,dims=2))
+            "\n Error: Not all SKUs are allocated."
         end
     end
     ## return the resulting allocation matrix
     return X,ls
 end
-
-
-
-
-
-
-
-    
-        
-
-
-
