@@ -133,7 +133,7 @@ function real_splits(warehouse,orders,capacity)
     print("\n\nStarting Simulation of Order Dispatching based on Warehouse Data.")
     simparcels = DataFrame(data=String[], articles=Int64[], skus=Int64[], orders_test=Int64[], day=Date[],
             min_dispatch_47=Int64[], min_dispatch_50=Int64[], max_dispatch_47=Int64[], max_dispatch_50=Int64[],
-            weight_app_47=Int64[], weight_app_50=Int64[], mode=String[], parcel_test=Int64[], reorderskus = Float64[],
+            weight_app_47=Int64[], weight_app_50=Int64[], mode=String[], parcel_test=Int64[], parcel_real=Int64[], reorderskus = Float64[],
     )
     unique_articles = unique(warehouse[:,:article])
     unique_skus = unique(warehouse[:,:sku])
@@ -151,6 +151,10 @@ function real_splits(warehouse,orders,capacity)
         dict_test_orders_id = Dict(unique_test_ordernumbers[x] => x for x in axes(unique_test_ordernumbers,1))
         test_orders = sparse(dict_eval(dict_test_orders_id,orders_day[testday].order),dict_eval(dict_sku_id,orders_day[testday].sku),true)
         test_orders = [test_orders spzeros(Bool,length(unique_test_ordernumbers),length(unique_skus)-size(test_orders,2))]
+
+        order_prod = combine(groupby(orders_day[testday], [:order,:warehouse_id]), nrow => :products)
+        order_parcel = combine(groupby(order_prod, [:order]), nrow => :parcels)
+        casestudy_real_split = (sum(order_parcel[:,:parcels]) - nrow(order_parcel))
 
         W = zeros(Bool,length(unique_skus),2)
         warehouse_local = warehouse_day[testday]
@@ -186,7 +190,8 @@ function real_splits(warehouse,orders,capacity)
             weight_app_47=sum(W,dims=1)[1], 
             weight_app_50=sum(W,dims=1)[2], 
             mode="warehousesimulation", 
-            parcel_test=parcels_benchmark, 
+            parcel_test=parcels_benchmark,
+            parcel_real=casestudy_real_split,
             reorderskus = ReorderSKUs,
         ))
     end
