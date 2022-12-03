@@ -17,7 +17,7 @@ binary = false
 # to use a rolling horizon of all_training_days + 14 training_days
 rollingarticles = true
 # specify whether to simulate the parcel output based on warehouse data
-sim_ware = false
+sim_ware = true
 # specify whether to simulate the parcel output based on the order data
 sim_order = true
 
@@ -68,23 +68,26 @@ end
 
 function reorders(X,W,dict_algorithm,categorybrands,algorithm)
     ReorderCategorybrands = sum(X[:,:,dict_algorithm[algorithm]]) - sum(X[:,:,dict_algorithm[algorithm]] .* W[:,:])
-    ReorderApps = sum(sum(X[:,:,dict_algorithm[algorithm]], dims = 2) .* categorybrands[:,:articles])
-    ReorderApps = round(ReorderApps - sum(sum(X[:,:,dict_algorithm[algorithm]] .* W[:,:], dims = 2) .* categorybrands[:,:articles]))
+    ReorderSKUs = sum(sum(X[:,:,dict_algorithm[algorithm]], dims = 2) .* categorybrands[:,:articles])
+    ReorderSKUs = round(ReorderSKUs - sum(sum(X[:,:,dict_algorithm[algorithm]] .* W[:,:], dims = 2) .* categorybrands[:,:articles]))
     X[:,:,dict_algorithm[algorithm]] = copy(W[:,:])
-    return ReorderCategorybrands, ReorderApps, X
+    return ReorderCategorybrands, ReorderSKUs, X
 end
 
 function reorders(X,W)
-    ReorderApps = sum(X) - sum(X .* W)
+    ReorderSKUs = sum(X) - sum(X .* W)
     X = copy(W)
-    return ReorderApps, X
+    return ReorderSKUs, X
 end
 
 # import the warehouse data 
-warehouse   = CSV.read("casestudy_data/warehouse_detail.csv", DataFrame)
+warehouse = CSV.read("casestudy_data/warehouse_sku.csv", DataFrame)
 
 # import the order data
-orders     = CSV.read("casestudy_data/orders.csv", DataFrame)
+orders = CSV.read("casestudy_data/orders.csv", DataFrame)
+
+# import the order data
+orders_sku = CSV.read("casestudy_data/orders_sku.csv", DataFrame)
 
 # save the available yearweeks
 yearweeks = unique(warehouse.yearweek) == unique(orders.yearweek) ? unique(warehouse.yearweek) : error("Warehouse and Orders do not match for yearweeks!")
@@ -92,10 +95,10 @@ alldates = unique(warehouse.date)
 
 no_cat = length(unique(warehouse[:,:category]))
 no_brand = length(unique(warehouse[:,:brand]))
-no_size = length(unique(warehouse[:,:size]))
+no_size = length(unique(warehouse[:,:sku]))
 
 # prepare the available articles per category and brand
-articlecategorybrands = groupby(warehouse, [:article,:category,:brand,:size,:date])
+articlecategorybrands = groupby(warehouse, [:article,:category,:brand,:sku,:date])
 articlecategorybrands = combine(articlecategorybrands, :warehouse_47 => mean => :warehouse_47, :warehouse_50 => mean => :warehouse_50)
 articlecategorybrands[!,:warehouse_47] = [articlecategorybrands[x,:warehouse_47] > 0 ? 1 : 0 for x in axes(articlecategorybrands,1)]
 articlecategorybrands[!,:warehouse_50] = [articlecategorybrands[x,:warehouse_50] > 0 ? 1 : 0 for x in axes(articlecategorybrands,1)]
@@ -128,13 +131,15 @@ print("\n\nOverall Results from the Supplied Order Data",
 # estimate real split_delivery ratio based on dispatch simulation
 function real_splits(warehouse,orders,capacity)
     print("\n\nStarting Simulation of Order Dispatching based on Warehouse Data.")
-    simparcels = DataFrame(data=String[], articles=Int64[], orders_test=Int64[], day=Date[],
+    simparcels = DataFrame(data=String[], articles=Int64[], skus=Int64[], orders_test=Int64[], day=Date[],
             min_dispatch_47=Int64[], min_dispatch_50=Int64[], max_dispatch_47=Int64[], max_dispatch_50=Int64[],
-            weight_app_47=Int64[], weight_app_50=Int64[], mode=String[], parcel_test=Int64[], reorderapps = Float64[],
+            weight_app_47=Int64[], weight_app_50=Int64[], mode=String[], parcel_test=Int64[], reorderskus = Float64[],
     )
     unique_articles = unique(warehouse[:,:article])
+    unique_skus = unique(warehouse[:,:sku])
     dict_article_id = Dict(unique_articles[x] => x for x in axes(unique_articles,1))
-    orders_day = groupby(orders, [:date])
+    dict_sku_id = Dict(unique_skus[x] => x for x in axes(unique_skus,1))
+    orders_day = groupby(orders_sku, [:date])
     warehouse_day = groupby(warehouse, [:date])
     X = zeros(Bool, length(unique_articles), 2)
     split_deliveries = 0
@@ -142,18 +147,19 @@ function real_splits(warehouse,orders,capacity)
     for testday in 1:length(warehouse_day)
         unique_test_ordernumbers = unique(orders_day[testday][:,:order])
         unique_article_warehouse = nrow(unique(select(orders_day[testday], [:article, :warehouse_id])))
+        unique_sku_warehouse = nrow(unique(select(orders_day[testday], [:sku, :warehouse_id])))
         dict_test_orders_id = Dict(unique_test_ordernumbers[x] => x for x in axes(unique_test_ordernumbers,1))
-        test_orders = sparse(dict_eval(dict_test_orders_id,orders_day[testday].order),dict_eval(dict_article_id,orders_day[testday].article),true)
-        test_orders = [test_orders spzeros(Bool,length(unique_test_ordernumbers),length(unique_articles)-size(test_orders,2))]
+        test_orders = sparse(dict_eval(dict_test_orders_id,orders_day[testday].order),dict_eval(dict_sku_id,orders_day[testday].sku),true)
+        test_orders = [test_orders spzeros(Bool,length(unique_test_ordernumbers),length(unique_skus)-size(test_orders,2))]
 
-        W = zeros(Bool,length(unique_articles),2)
+        W = zeros(Bool,length(unique_skus),2)
         warehouse_local = warehouse_day[testday]
         for wh = 1:2
             for row = 1:nrow(warehouse_local)
                 if wh == 1
-                    W[dict_article_id[warehouse_local[row,:article]],wh] = warehouse_local[row,:warehouse_47]
+                    W[dict_article_id[warehouse_local[row,:sku]],wh] = warehouse_local[row,:warehouse_47]
                 else
-                    W[dict_article_id[warehouse_local[row,:article]],wh] = warehouse_local[row,:warehouse_50]
+                    W[dict_article_id[warehouse_local[row,:sku]],wh] = warehouse_local[row,:warehouse_50]
                 end
             end
         end
@@ -161,15 +167,16 @@ function real_splits(warehouse,orders,capacity)
         combination = COMBINEWAREHOUSES(capacity)
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(test_orders, W, articlecapacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(test_orders, W, articlecapacity, combination, false)
-        ReorderApps, X = reorders(X,W)
+        ReorderSKUs, X = reorders(X,W)
         split_deliveries += parcels_benchmark
-        changes += ReorderApps
-        print("\n Day: ",orders_day[testday][1,:date]," / Splitdeliveries: ",parcels_benchmark, " / Reorders: ", ReorderApps,
+        changes += ReorderSKUs
+        print("\n Day: ",orders_day[testday][1,:date]," / Splitdeliveries: ",parcels_benchmark, " / Reorders: ", ReorderSKUs,
             " / 47: ", split_bench_max[1]," to ",split_bench_min[1]," / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / W: ", sum(W), " / T: ", unique_article_warehouse)
         push!(simparcels, (
             data=datasource, 
-            articles=length(unique_article_warehouse), 
+            articles=length(unique_article_warehouse),
+            skus=length(unique_sku_warehouse),
             orders_test=length(unique_test_ordernumbers), 
             day=orders_day[testday][1,:date], 
             min_dispatch_47=split_bench_max[1],
@@ -180,7 +187,7 @@ function real_splits(warehouse,orders,capacity)
             weight_app_50=sum(W,dims=1)[2], 
             mode="warehousesimulation", 
             parcel_test=parcels_benchmark, 
-            reorderapps = ReorderApps,
+            reorderskus = ReorderSKUs,
         ))
     end
     casestudy_sim_split_day = split_deliveries / length(warehouse_day)
@@ -211,7 +218,7 @@ if sim_ware == true
     ))
 
     display(@df simparcels plot(:day, 
-        :reorderapps, ylabel="daily app movement", 
+        :reorderskus, ylabel="daily app movement", 
         label="Shipment Simulation",
         color_palette = sc3,
         title = "Transshipments: Shipment Simulation"
@@ -258,7 +265,7 @@ function benchmark_splits(start,binary,rollingarticles,all_training_days,alldate
         parcel_train=Int64[],
         parcel_test=Int64[],
         reordercategorybrands = Int64[],
-        reorderapps = Float64[],
+        reorderskus = Float64[],
         duration=Float64[],
         cap_used=Int64[],
         local_search=Int64[],
@@ -373,7 +380,7 @@ if sim_order == true
     ))
 
     display(@df filter(row -> row.mode in ["CHIM_0.01","BS"], simbench) plot(:date, 
-        :reorderapps ,groups=:mode,ylabel="daily app movement", 
+        :reorderskus ,groups=:mode,ylabel="daily app movement", 
         label=["Competing Heuristic" "Our Heuristic"],
         color_palette = sc3,
         title = "Transshipments: Compared Algorithms "

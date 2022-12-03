@@ -41,7 +41,7 @@ if start[1,:QMKO] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps, X = reorders(X,W,dict_algorithm,categorybrands,"QMKO")
+        ReorderCategorybrands, reorderskus, X = reorders(X,W,dict_algorithm,categorybrands,"QMKO")
         print("\n   QMKO: parcels test data: ", parcels_benchmark, 
             " / parcels training data: ", round(Int64, parcels_train/training_days), 
             " / time: ",round(time_benchmark,digits = 3),
@@ -51,7 +51,7 @@ if start[1,:QMKO] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
         
         push!(benchmark, (data = datasource, 
@@ -74,7 +74,7 @@ if start[1,:QMKO] == 1
                             parcel_train = round(Int64, parcels_train/training_days), 
                             parcel_test = parcels_benchmark,
                             reordercategorybrands = ReorderCategorybrands,
-                            reorderapps = ReorderApps,
+                            reorderskus = reorderskus,
                             duration = time_benchmark,
                             cap_used = sum(W),
                             local_search = 0,
@@ -93,7 +93,7 @@ if start[1,:QMK] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps, X = reorders(X,W,dict_algorithm,categorybrands,"QMK")
+        ReorderCategorybrands, reorderskus, X = reorders(X,W,dict_algorithm,categorybrands,"QMK")
         print("\n    QMK: parcels week test data: ", parcels_benchmark, 
             " / parcels week training data: ", round(Int64,parcels_train/training_days),  
             " / time: ", round(time_benchmark, digits = 3),
@@ -103,7 +103,7 @@ if start[1,:QMK] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
 
         push!(benchmark, (data = datasource, 
@@ -126,7 +126,7 @@ if start[1,:QMK] == 1
                         parcel_train = round(Int64, parcels_train/training_days), 
                         parcel_test = parcels_benchmark,
                         reordercategorybrands = ReorderCategorybrands,
-                        reorderapps = ReorderApps,
+                        reorderskus = reorderskus,
                         duration = time_benchmark,
                         cap_used = sum(W),
                         local_search = 0,
@@ -143,7 +143,7 @@ if start[1,:CHIM] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"CHIM")
+        ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"CHIM")
         print("\n   CHIM: parcels test data: ", parcels_benchmark, 
             " / parcels training data: ", round(Int64, parcels_train/training_days),  
             " / time: ",round(time_benchmark, digits = 3),
@@ -154,7 +154,7 @@ if start[1,:CHIM] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
 
         push!(benchmark, (
@@ -178,7 +178,7 @@ if start[1,:CHIM] == 1
                     parcel_train = round(Int64, parcels_train/training_days), 
                     parcel_test = parcels_benchmark,
                     reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
+                    reorderskus = reorderskus,
                     duration = time_benchmark,
                     cap_used = sum(W),
                     local_search = ls,
@@ -195,7 +195,7 @@ if start[1,:CHI] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"CHI")
+        ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"CHI")
         print("\n    CHI: parcels test data: ", parcels_benchmark, 
             " / parcels training data: ", round(Int64, parcels_train/training_days),  
             " / time: ",round(time_benchmark, digits = 3),
@@ -206,7 +206,7 @@ if start[1,:CHI] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
 
         push!(benchmark, (data = datasource, 
@@ -229,7 +229,7 @@ if start[1,:CHI] == 1
                     parcel_train = round(Int64, parcels_train/training_days), 
                     parcel_test = parcels_benchmark,
                     reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
+                    reorderskus = reorderskus,
                     duration = time_benchmark,
                     cap_used = sum(W),
                     local_search = ls,
@@ -248,7 +248,7 @@ if  start[1,:KL] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"KL")
+        ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"KL")
         print("\n     KL: parcels train data: ", parcels_benchmark, 
             " / parcels training data: ", round(Int64, parcels_train/training_days),  
             " / time: ", round(time_benchmark, digits = 3),
@@ -258,7 +258,7 @@ if  start[1,:KL] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
 
         push!(benchmark, (data = datasource, 
@@ -281,7 +281,7 @@ if  start[1,:KL] == 1
                         parcel_train = round(Int64, parcels_train/training_days), 
                         parcel_test = parcels_benchmark,
                         reordercategorybrands = ReorderCategorybrands,
-                        reorderapps = ReorderApps,
+                        reorderskus = reorderskus,
                         duration = time_benchmark,
                         cap_used = sum(W),
                         local_search = ls,
@@ -301,7 +301,7 @@ if  start[1,:KLQ] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"KLQ")
+        ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"KLQ")
         print("\n    KLQ: parcels test data: ", parcels_benchmark, 
             " / parcels training data: ", round(Int64, parcels_train/training_days),  
             " / time: ", round(time_benchmark, digits = 3),
@@ -311,7 +311,7 @@ if  start[1,:KLQ] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
 
         push!(benchmark, (data = datasource, 
@@ -334,7 +334,7 @@ if  start[1,:KLQ] == 1
                         parcel_train = round(Int64, parcels_train/training_days), 
                         parcel_test = parcels_benchmark, 
                         reordercategorybrands = ReorderCategorybrands,
-                        reorderapps = ReorderApps,
+                        reorderskus = reorderskus,
                         duration = time_benchmark,
                         cap_used = sum(W),
                         local_search = 0,
@@ -352,7 +352,7 @@ if start[1,:GO] == 1
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
     weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"GO")
+    ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"GO")
     print("\n     GO: parcels test data: ", parcels_benchmark, 
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
@@ -361,7 +361,7 @@ if start[1,:GO] == 1
         " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
         " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
+        " / ReorderSKUs: ", reorderskus,
         )
 
 
@@ -385,7 +385,7 @@ if start[1,:GO] == 1
                     parcel_train = round(Int64, parcels_train/training_days), 
                     parcel_test = parcels_benchmark,
                     reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
+                    reorderskus = reorderskus,
                     duration = time_benchmark,
                     cap_used = sum(W),
                     local_search = 0,
@@ -402,7 +402,7 @@ if start[1,:GP] == 1
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
     weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"GP")
+    ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"GP")
     print("\n     GP: parcels test data: ", parcels_benchmark, 
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
@@ -411,7 +411,7 @@ if start[1,:GP] == 1
         " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
         " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
+        " / ReorderSKUs: ", reorderskus,
         )
     
     push!(benchmark, (data = datasource, 
@@ -434,7 +434,7 @@ if start[1,:GP] == 1
                     parcel_train = round(Int64, parcels_train/training_days), 
                     parcel_test = parcels_benchmark,
                     reordercategorybrands = ReorderCategorybrands,
-                    reorderapps = ReorderApps,
+                    reorderskus = reorderskus,
                     duration = time_benchmark,
                     cap_used = sum(W),
                     local_search = 0,
@@ -451,7 +451,7 @@ if start[1,:GS] == 1
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
     weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"GS")
+    ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"GS")
     print("\n     GS: parcels test data: ", parcels_benchmark, 
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
@@ -460,7 +460,7 @@ if start[1,:GS] == 1
         " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
         " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
+        " / ReorderSKUs: ", reorderskus,
         )
 
     push!(benchmark, (data = datasource, 
@@ -483,7 +483,7 @@ if start[1,:GS] == 1
                 parcel_train = round(Int64, parcels_train/training_days), 
                 parcel_test = parcels_benchmark,
                 reordercategorybrands = ReorderCategorybrands,
-                reorderapps = ReorderApps,
+                reorderskus = reorderskus,
                 duration = time_benchmark,
                 cap_used = sum(W),
                 local_search = 0,
@@ -500,7 +500,7 @@ if  start[1,:BS] == 1
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
     weight = warehouse_weight(W,categorybrands)
-    ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"BS")
+    ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"BS")
     print("\n     BS: parcels test data: ", parcels_benchmark, 
         " / parcels training data: ", round(Int64, parcels_train/training_days),  
         " / time: ",round(time_benchmark, digits = 3),
@@ -509,7 +509,7 @@ if  start[1,:BS] == 1
         " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
         " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
         " / ReorderCB: ", ReorderCategorybrands,
-        " / ReorderApp: ", ReorderApps,
+        " / ReorderSKUs: ", reorderskus,
         )
     
     push!(benchmark, (data = datasource, 
@@ -532,7 +532,7 @@ if  start[1,:BS] == 1
                 parcel_train = round(Int64, parcels_train/training_days), 
                 parcel_test = parcels_benchmark,
                 reordercategorybrands = ReorderCategorybrands,
-                reorderapps = ReorderApps,
+                reorderskus = reorderskus,
                 duration = time_benchmark,
                 cap_used = sum(W),
                 local_search = 0,
@@ -557,7 +557,7 @@ if start[1,:OPT] == 1
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
         weight = warehouse_weight(W,categorybrands)
-        ReorderCategorybrands, ReorderApps = reorders(X,W,dict_algorithm,categorybrands,"OPT")
+        ReorderCategorybrands, reorderskus = reorders(X,W,dict_algorithm,categorybrands,"OPT")
         print("\n    OPT: parcels test data: ", parcels_benchmark, 
             " / parcels training data: ", round(Int64, parcels_train/training_days),  
             " / time: ",round(time_benchmark, digits = 3),
@@ -566,7 +566,7 @@ if start[1,:OPT] == 1
             " / 50: ", split_bench_min[2]," to ",split_bench_max[2],
             " / APP: 47 - ", weight[1]," and 50 -  ",weight[2],
             " / ReorderCB: ", ReorderCategorybrands,
-            " / ReorderApp: ", ReorderApps,
+            " / ReorderSKUs: ", reorderskus,
             )
         
         push!(benchmark, (data = datasource, 
@@ -589,7 +589,7 @@ if start[1,:OPT] == 1
                         parcel_train = round(Int64, parcels_train/training_days), 
                         parcel_test = parcels_benchmark,
                         reordercategorybrands = ReorderCategorybrands,
-                        reorderapps = ReorderApps,
+                        reorderskus = reorderskus,
                         duration = time_benchmark,
                         cap_used = sum(W),
                         local_search = 0,
@@ -644,7 +644,7 @@ push!(benchmark, (data = datasource,
                 parcel_train = round(Int64, parcels_train/training_days), 
                 parcel_test = parcels_benchmark,
                 reordercategorybrands = 0,
-                reorderapps = 0.0,
+                reorderskus = 0.0,
                 duration = time_benchmark,
                 cap_used = sum(W),
                 local_search = 0,

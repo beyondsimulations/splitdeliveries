@@ -177,6 +177,9 @@ function RANDOMALLOCONCE(
         end
     end
     X = X[shuffle(1:size(X,1)),:]
+    if any(y->y < 1,sum(X,dims=2))
+        "\n Error: Not all SKUs are allocated."
+    end
     return X::Array{Bool,2}
 end
 
