@@ -3,7 +3,7 @@ include("load_packages.jl")
 include("functions/call_benchmark.jl")
 
 # specify the weeks of training
-all_training_days = 35:35:35
+all_training_days = 28:28:28
 # specify the name of the datasource
 datasource = "casestudy"
 # specify the capacity of the warehouses in categorybrands
@@ -300,10 +300,10 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
             dict_train_orders_id = Dict(unique_train_ordernumbers[x] => x for x in axes(unique_train_ordernumbers,1))
             dict_test_orders_id = Dict(unique_test_ordernumbers[x] => x for x in axes(unique_test_ordernumbers,1))
 
-            train_orders = sparse(dict_eval(dict_train_orders_id,train_orders_raw.order),dict_eval(dict_categorybrand_id,dict_eval(dict_sku_categorybrand,train_orders_raw.article)),true)
+            train_orders = sparse(dict_eval(dict_train_orders_id,train_orders_raw.order),dict_eval(dict_categorybrand_id,dict_eval(dict_sku_categorybrand,train_orders_raw.sku)),true)
             train_orders = [train_orders spzeros(Bool,length(unique_train_ordernumbers),nrow(categorybrands)-size(train_orders,2))]
 
-            test_orders = sparse(dict_eval(dict_test_orders_id,test_orders_raw.order),dict_eval(dict_categorybrand_id,dict_eval(dict_sku_categorybrand,test_orders_raw.article)),true)
+            test_orders = sparse(dict_eval(dict_test_orders_id,test_orders_raw.order),dict_eval(dict_categorybrand_id,dict_eval(dict_sku_categorybrand,test_orders_raw.sku)),true)
             test_orders = [test_orders spzeros(Bool,length(unique_test_ordernumbers),nrow(categorybrands)-size(test_orders,2))]
 
             benchmark!(
