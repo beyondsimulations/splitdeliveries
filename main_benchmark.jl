@@ -87,12 +87,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 print("\n Number of transactions for training ", size(trans_train,1),".") 
                 print("\n Number of transactions for validation ",size(trans_test,1),".")
 
+                # SKU weight
+                sku_weight = zeros(Int64,size(trans_train,2)) .= 1
+
                 #  Start the heuristics and optmisations
                 ## Start QMK heuristic to find the optimal solution with the solver CPLEX
                 if start[1,:QMKO] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,abort,"CPLEX",show_opt,
+                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"CPLEX",show_opt,
                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
@@ -122,7 +125,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if start[1,:QMK] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,abort, "SBB",show_opt,
+                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort, "SBB",show_opt,
                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
@@ -153,7 +156,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     for sig in sig_levels
                         sleep(0.01)
                         GC.gc()
-                        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,0,chistatus)
+                        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,0,sku_weight,chistatus)
                         parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                         parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                         print("\n   CHIM: parcels test data: ", parcels_benchmark, 
@@ -185,7 +188,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     for sig in sig_levels
                         sleep(0.01)
                         GC.gc()
-                        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,chistatus)
+                        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,sku_weight,chistatus)
                         parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                         parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                         print("\n    CHI: parcels test data: ", parcels_benchmark, 
@@ -247,7 +250,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if  start[1,:KLQ] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,abort,"SBB",show_opt,
+                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
@@ -278,7 +281,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if start[1,:GO] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity)
+                    time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity,sku_weight)
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     GO: parcels test data: ", parcels_benchmark, 
@@ -307,7 +310,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if start[1,:GP] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity)
+                    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity,sku_weight)
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     GP: parcels test data: ", parcels_benchmark, 
@@ -336,7 +339,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if start[1,:GS] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity)
+                    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity,sku_weight)
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     GS: parcels test data: ", parcels_benchmark, 
@@ -365,7 +368,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if  start[1,:BS] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity)
+                    time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity,sku_weight)
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     BS: parcels test data: ", parcels_benchmark, 
@@ -427,8 +430,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
                 ## Benchmark the random allocation of SKUs
                 sleep(0.01)
-                time_benchmark = @elapsed parcels_benchmark = RANDOMBENCH(trans_test,capacity,iterations,combination)
-                parcels_train = RANDOMBENCH(trans_train,capacity,iterations,combination)
+                time_benchmark = @elapsed parcels_benchmark = RANDOMBENCH(trans_test,capacity,iterations,sku_weight,combination)
+                parcels_train = RANDOMBENCH(trans_train,capacity,iterations,sku_weight,combination)
                 print("\n    RND: parcels test data: ", parcels_benchmark,
                     " / parcels training data: ", parcels_train,
                     " / time: ", round(time_benchmark, digits = 3),

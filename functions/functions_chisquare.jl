@@ -327,7 +327,7 @@ function FILLUP!(X::Array{Bool,2},
         end
     end
     for d = 1:size(capacity_left,1)
-        while capacity_left[d] >= sum(sku_weight)/length(sku_weight)
+        while capacity_left[d] >= floor(sum(sku_weight)/length(sku_weight))
             best_allocation = Array{Float64,1}(undef,size(Q,1)) .= 0
             for i = 1:size(Q,1)
                 if X[i,d] == 0 && capacity_left[d] >= sku_weight[i]
