@@ -89,13 +89,6 @@ warehouse = CSV.read("casestudy_data/warehouse_sku.csv", DataFrame)
 # import the order data
 orders = CSV.read("casestudy_data/orders_sku.csv", DataFrame)
 
-orders = combine(groupby(orders,[:order,:article]), nrow => :count)
-
-# import the order data
-orders_old = CSV.read("casestudy_data/orders.csv", DataFrame)
-
-orders_old = combine(groupby(orders_old,[:order,:article]), nrow => :count)
-
 # save the available yearweeks
 alldates = unique(warehouse.date) == unique(orders.date) ? unique(warehouse.date) : error("Warehouse and Orders do not match for dates!")
 
