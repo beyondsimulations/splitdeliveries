@@ -97,7 +97,6 @@ orders_old = CSV.read("casestudy_data/orders.csv", DataFrame)
 orders_old = combine(groupby(orders_old,[:order,:article]), nrow => :count)
 
 # save the available yearweeks
-yearweeks = unique(warehouse.yearweek) == unique(orders.yearweek) ? unique(warehouse.yearweek) : error("Warehouse and Orders do not match for yearweeks!")
 alldates = unique(warehouse.date) == unique(orders.date) ? unique(warehouse.date) : error("Warehouse and Orders do not match for dates!")
 
 no_cat = length(unique(warehouse[:,:category]))
