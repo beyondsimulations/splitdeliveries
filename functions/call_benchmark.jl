@@ -22,6 +22,7 @@ function benchmark!(
     strategy,
     klinkstatus,
     sku_weight,
+    optimization_cycle::Bool,
     )
 
 ## Determine the possible warehouse combinations
@@ -35,8 +36,14 @@ if start[1,:QMKO] == 1
     if all(y->y == 1,sku_weight)
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"CPLEX",show_opt,
-                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+        if optimization_cycle == true
+            time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"CPLEX",show_opt,
+                                                                cpu_cores,allowed_gap,max_nodes,"QMK")
+        else
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            gap_optimisation = 0.0
+        end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -87,8 +94,14 @@ if start[1,:QMK] == 1
     if all(y->y == 1,sku_weight)
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort, "SBB",show_opt,
-                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+        if optimization_cycle == true
+            time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort, "SBB",show_opt,
+                                                                cpu_cores,allowed_gap,max_nodes,"QMK")
+        else
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            gap_optimisation = 0.0
+        end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -138,7 +151,13 @@ end
 if start[1,:CHIM] == 1
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train,capacity,sig,0,sku_weight,chistatus)
+        if optimization_cycle == true
+            time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train,capacity,sig,0,sku_weight,chistatus)
+        else
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            ls = 0
+        end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -190,7 +209,13 @@ if start[1,:CHI] == 1
     if all(y->y==sku_weight[1],sku_weight)
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,sku_weight,chistatus)
+        if optimization_cycle == true
+            time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,sku_weight,chistatus)
+        else
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            ls = 0
+        end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -243,7 +268,13 @@ if  start[1,:KL] == 1
     if all(y->y==1,sku_weight)
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
+        if optimization_cycle == true
+            time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
+        else
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            ls = 0
+        end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -295,8 +326,14 @@ if  start[1,:KLQ] == 1
     if all(y->y==1,sku_weight)
         sleep(0.01)
         GC.gc()
-        time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
-                                                            cpu_cores,allowed_gap,max_nodes,"QMK")
+        if optimization_cycle
+            time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
+                                                                cpu_cores,allowed_gap,max_nodes,"QMK")
+        else
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            gap_optimisation = 0.0
+        end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
         parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -347,7 +384,12 @@ end
 if start[1,:GO] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity,sku_weight)
+    if optimization_cycle == true
+        time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity,sku_weight)
+    else
+        W = X[:,:,dict_algorithm[algorithm]]
+        time_benchmark = 0.0
+    end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -397,7 +439,12 @@ end
 if start[1,:GP] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity,sku_weight)
+    if optimization_cycle == true
+        time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity,sku_weight)
+    else
+        W = X[:,:,dict_algorithm[algorithm]]
+        time_benchmark = 0.0
+    end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -446,7 +493,12 @@ end
 if start[1,:GS] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity,sku_weight)
+    if optimization_cycle == true
+        time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity,sku_weight)
+    else
+        W = X[:,:,dict_algorithm[algorithm]]
+        time_benchmark = 0.0
+    end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -495,7 +547,12 @@ end
 if  start[1,:BS] == 1
     sleep(0.01)
     GC.gc()
-    time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity,sku_weight)
+    if optimization_cycle
+        time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity,sku_weight)
+    else
+        W = X[:,:,dict_algorithm[algorithm]]
+        time_benchmark = 0.0
+    end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
     parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)
     parcels_train, split_train = PARCELSSEND_WEIGHT(trans_train, W, capacity, combination, true)
@@ -546,12 +603,19 @@ if start[1,:OPT] == 1
     if all(y->y==1,sku_weight)
         sleep(0.01)
         GC.gc()
-        if sum(capacity) == size(trans,2)
-            time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
-                                                                            cpu_cores,allowed_gap,max_nodes)
+        if optimization_cycle
+            if sum(capacity) == size(trans,2)
+                time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTEQ(trans_train,capacity,abort,show_opt,
+                                                                                cpu_cores,allowed_gap,max_nodes)
+            else
+                time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
+                                                                                cpu_cores,allowed_gap,max_nodes)
+            end
         else
-            time_benchmark = @elapsed W,gap_optimisation,popt = FULLOPTUEQ(trans_train,capacity,abort,show_opt,
-                                                                            cpu_cores,allowed_gap,max_nodes)
+            W = X[:,:,dict_algorithm[algorithm]]
+            time_benchmark = 0.0
+            gap_optimisation = 0.0
+            popt = 0.0
         end
         parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
         parcels_benchmark, split_bench_min = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, false)

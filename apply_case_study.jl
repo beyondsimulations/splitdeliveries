@@ -4,10 +4,12 @@ include("functions/call_benchmark.jl")
 
 # specify the weeks of training
 all_training_days = 28:28:28
+# specify the interval of the warehouse optimisation in days
+training_intervall = 1
 # specify the name of the datasource
 datasource = "casestudy"
 # specify the capacity of the warehouses in categorybrands
-capacity = [350000,350000]
+capacity = [330000,490000]
 #capacity = [2550,6900]
 # specify alpha for the heuristic
 sig = 0.01
@@ -45,6 +47,7 @@ theme(
     lw=2.0,
 )
 sc3 = palette(["steelblue3","darkgoldenrod1","gray10"])
+sc4 = palette(["orangered","turquoise3","darkgoldenrod1","gray10"])
 scwh2 = palette(["firebrick","cyan4"])
 scwh4 = palette(["salmon","firebrick","paleturquoise3","cyan4"])
 
@@ -86,18 +89,28 @@ warehouse = CSV.read("casestudy_data/warehouse_sku.csv", DataFrame)
 # import the order data
 orders = CSV.read("casestudy_data/orders_sku.csv", DataFrame)
 
+orders = combine(groupby(orders,[:order,:article]), nrow => :count)
+
+# import the order data
+orders_old = CSV.read("casestudy_data/orders.csv", DataFrame)
+
+orders_old = combine(groupby(orders_old,[:order,:article]), nrow => :count)
+
 # save the available yearweeks
 yearweeks = unique(warehouse.yearweek) == unique(orders.yearweek) ? unique(warehouse.yearweek) : error("Warehouse and Orders do not match for yearweeks!")
 alldates = unique(warehouse.date) == unique(orders.date) ? unique(warehouse.date) : error("Warehouse and Orders do not match for dates!")
 
 no_cat = length(unique(warehouse[:,:category]))
 no_brand = length(unique(warehouse[:,:brand]))
-no_size = length(unique(warehouse[:,:sku]))
+no_sku = length(unique(warehouse[:,:sku]))
+no_article = length(unique(warehouse[:,:article]))
 no_catbrand = nrow(unique(select(warehouse,[:category,:brand])))
 
 # plot the unique articles in each warehouse per week
 plot_wh_aggregated = combine(groupby(warehouse,[:date]),nrow => :SKUs, :warehouse_47 => sum => :warehouse_47, :warehouse_50 => sum => :warehouse_50)
-display(plot(plot_wh_aggregated.date, [plot_wh_aggregated.SKUs, plot_wh_aggregated.warehouse_47, plot_wh_aggregated.warehouse_50], labels=["Overall unique SKUs" "Unique SKUs in 47" "Unique SKUs in 50"], ylabel = "SKUs", xlabel ="date"))
+fig = plot(plot_wh_aggregated.date, [plot_wh_aggregated.SKUs, plot_wh_aggregated.warehouse_47, plot_wh_aggregated.warehouse_50], labels=["Overall unique SKUs" "Unique SKUs in 47" "Unique SKUs in 50"], ylabel = "SKUs", xlabel ="date")
+display(fig)
+savefig("casestudy_plots/SKUs: Warehouses.pdf")
 
 # aggregate the articles to categorybrands
 categorybrands = combine(groupby(warehouse, [:category,:brand,:date]), nrow => :SKUs, :warehouse_47 => sum => :warehouse_47, :warehouse_50 => sum => :warehouse_50)
@@ -106,10 +119,14 @@ sort!(categorybrands, :Mean_SKUs, rev=true)
 
 # create some dicts for the evaluation
 skuscategorybrands = combine(groupby(warehouse,[:article,:sku,:category,:brand]), nrow => :days_available)
-display(histogram(skuscategorybrands[:,:days_available],xlabel="days available",ylabel="SKUs", label="", title="SKU: Availability"))
+fig = display(histogram(skuscategorybrands[:,:days_available],xlabel="days available",ylabel="SKUs", label="", title="SKU: Availability"))
+display(fig)
+savefig("casestudy_plots/SKUs: Availability.pdf")
 
 skusarticles = combine(groupby(skuscategorybrands,[:article,:category,:brand]), nrow => :skus_article)
-display(histogram(skusarticles[:,:skus_article],xlabel="SKUs per Article",ylabel="Articles", label="", title="SKU: Weight"))
+fig = histogram(skusarticles[:,:skus_article],xlabel="SKUs per Article",ylabel="Articles", label="", title="SKU: Weight")
+display(fig)
+savefig("casestudy_plots/SKUs: Articles.pdf")
 
 dict_sku_categorybrand = Dict(skuscategorybrands[x,:sku] => (skuscategorybrands[x,:category],skuscategorybrands[x,:brand]) for x in axes(skuscategorybrands,1))
 dict_categorybrand_id = Dict((categorybrands[x,:category],categorybrands[x,:brand]) => x for x in axes(categorybrands,1))
@@ -118,7 +135,9 @@ dict_categorybrand_weight = Dict((categorybrands[x,:category],categorybrands[x,:
 # estimate real split-delivery ratio from casestudy based on the orders alone
 order_skus_warehouse = combine(groupby(orders, [:order,:warehouse_id]), nrow => :SKUs)
 order_skus = combine(groupby(order_skus_warehouse, [:order]), :SKUs => sum => :SKUs)
-display(histogram(order_skus[:,:SKUs],xlabel="SKUs per Order",ylabel="Orders", label="", title="SKU: Orders"))
+fig = histogram(order_skus[:,:SKUs],xlabel="SKUs per Order",ylabel="Orders", label="", title="SKU: Orders")
+display(fig)
+savefig("casestudy_plots/SKUs: Orders.pdf")
 
 real_split_day = (nrow(order_skus_warehouse) - nrow(order_skus))/length(alldates)
 real_ratio_day = nrow(order_skus_warehouse)/nrow(order_skus) - 1
@@ -207,45 +226,6 @@ function real_splits(warehouse,orders,capacity)
 end
 sim_ware == true ? simparcels = real_splits(warehouse,orders_sku,capacity) : nothing
 
-if sim_ware == true
-    display(@df simparcels plot(:day, 
-        [:parcel_test,:parcel_real], ylabel="Split Deliveries", 
-        label=["Split Deliveries Simulated" "Split Deliveries Real"],
-        color_palette = sc3,
-        title = "Split Deliveries: Shipment Simulation"
-    ))
-
-    display(@df simparcels plot(:day, 
-    [:parcel_test./:orders_test, :parcel_real./:orders_test], ylabel="Split Ratio", 
-    label=["Split Ratio Simulated" "Split Ratio Real"],
-    color_palette = sc3,
-    title = "Split Ratio: Simulation v Real"
-    ))
-
-    display(@df simparcels plot(:day, 
-        :reorderskus, ylabel="Daily SKU Movement", 
-        label="Shipment Simulation",
-        color_palette = sc3,
-        title = "Transshipments: Shipment Simulation"
-    ))
-
-    display(@df simparcels plot(:day, 
-        [:min_dispatch_47./:orders_test,:max_dispatch_47./:orders_test,:min_dispatch_50./:orders_test,:max_dispatch_50./:orders_test],
-        ylabel="% Orders dispatched from Warehouse", 
-        label=["Minimum 47" "Maximum 47" "Minimum 50" "Maximum 50"],
-        color_palette = scwh4,
-        title = "Flexibility: Shipment Simulation"
-    ))
-
-    display(@df simparcels plot(:day, 
-        [:weight_app_47,:weight_app_50],
-        ylabel="Warehouse Capacity used in SKUs", 
-        label=["Warehouse 47" "Warehouse 50"],
-        color_palette = scwh2,
-        title = "Capacity: Shipment Simulation"
-    ))
-end
-
 # prepare data for weekly analysis based on optimisation
 function benchmark_splits(start,binary,all_training_days,alldates,categorybrands,orders,datasource,capacity)
     print("\n\nStarting Optimisation of Warehouse Allocation based on Order Data.")
@@ -306,6 +286,8 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
             test_orders = sparse(dict_eval(dict_test_orders_id,test_orders_raw.order),dict_eval(dict_categorybrand_id,dict_eval(dict_sku_categorybrand,test_orders_raw.sku)),true)
             test_orders = [test_orders spzeros(Bool,length(unique_test_ordernumbers),nrow(categorybrands)-size(test_orders,2))]
 
+            mod1(daynumber,mod1(all_training_days+1,training_intervall)) == mod1(all_training_days+1,training_intervall) ? optimization_cycle = true : optimization_cycle = false
+
             benchmark!(
                 start,
                 X,
@@ -329,11 +311,12 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
                 10,
                 2,
                 false,
-                sku_weight
+                sku_weight,
+                optimization_cycle
             )
         end
     end
-    CSV.write("casestudy_results/benchmark_$(sig)_$(minimum(all_training_days))_to_$(maximum(all_training_days))_$(capacity[1])_$(capacity[2]).csv",benchmark)
+    CSV.write("casestudy_results/benchmark_$(sig)_$(minimum(all_training_days))_to_$(maximum(all_training_days))_$(capacity[1])_$(capacity[2])_$training_intervall.csv",benchmark)
     return benchmark
 end
 
@@ -342,71 +325,185 @@ articlecategorybrands = nothing
 
 sim_order == true ? simbench = benchmark_splits(start,binary,all_training_days,alldates,categorybrands,orders,datasource,capacity) : nothing
 
-if sim_order == true
-    display(@df filter(row -> row.mode in ["CHIM_0.01","BS","RND"], simbench) plot(:date, 
-        :parcel_test ,groups=:mode,ylabel="split deliveries", 
-        label=["Competing Heuristic" "Our Heuristic" "Random"],
-        color_palette = sc3,
-        title = "Split Deliveries: Compared Algorithms"
-    ))
+simparcels = CSV.read("casestudy_results/warehousesim.csv",DataFrame)
+rename!(simparcels,[:day => :date])
+simbench = CSV.read("casestudy_results/benchmark_$(sig)_$(minimum(all_training_days))_to_$(maximum(all_training_days))_$(capacity[1])_$(capacity[2])_$training_intervall.csv", DataFrame)
 
-    display(@df filter(row -> row.mode in ["CHIM_0.01", "BS"], simbench) plot(:date, 
-        :parcel_test ,groups=:mode,ylabel="split deliveries", 
-        label=["Competing Heuristic" "Our Heuristic"],
-        color_palette = sc3,
-        title = "Split Deliveries: Compared Algorithms"
-    ))
+# Plots based on observations and simulation
+# Filter the days that haven't been benched
+filter!(row -> row.date in unique(simbench[:,:date]), simparcels)
 
-    display(@df filter(row -> row.mode in ["CHIM_0.01","BS","RND"], simbench) plot(:date, 
-        :parcel_test./:orders_test ,groups=:mode,ylabel="split ratio", 
-        label=["Competing Heuristic" "Our Heuristic" "Random"],
-        color_palette = sc3,
-        title = "Split Ratio: Compared Algorithms"
-    ))
+begin
+    fig = @df simparcels plot(:date, 
+        [:parcel_test,:parcel_real], 
+        label=["Simulated" "Observed"],
+    )
+    @df filter(row -> row.mode in ["CHIM_0.01","RND"] && row.traindays == 28, simbench) plot!(fig, :date, 
+    :parcel_test ,groups=:mode,ylabel="Split Deliveries", 
+    label=["Our Heuristic" "Random Allocation"],
+    color_palette = sc4,
+    title = "Split Deliveries: Compared"
+)
+    @df simbench plot!(fig, )
+    display(fig)
+    savefig("casestudy_plots/Split Deliveries: Compared.pdf")
+end
 
-    display(@df filter(row -> row.mode in ["CHIM_0.01","BS"], simbench) plot(:date, 
-        :parcel_test./:orders_test ,groups=:mode,ylabel="split ratio", 
-        label=["Competing Heuristic" "Our Heuristic"],
-        color_palette = sc3,
-        title = "Split Ratio: Compared Algorithms"
-    ))
+begin
+    parcel_price = 5/1000
+    fig = @df simparcels plot(:date, 
+        [:parcel_test.*parcel_price,:parcel_real.*parcel_price], 
+        label=["Simulated" "Observed"],
+    )
+    @df filter(row -> row.mode in ["CHIM_0.01","RND"] && row.traindays == 28, simbench) plot!(fig, :date, 
+    :parcel_test.*parcel_price ,groups=:mode,ylabel="Split Costs in 1,000 Euros", 
+    label=["Our Heuristic" "Random Allocation"],
+    color_palette = sc4,
+    title = "Split Costs: Compared"
+)
+    @df simbench plot!(fig, )
+    display(fig)
+    savefig("casestudy_plots/Split Costs: Compared.pdf")
+end
 
-    display(@df filter(row -> row.mode in ["CHIM_0.01","BS"], simbench) plot(:date, 
-        :reorderskus ,groups=:mode,ylabel="daily app movement", 
-        label=["Competing Heuristic" "Our Heuristic"],
-        color_palette = sc3,
-        title = "Transshipments: Compared Algorithms "
-    ))
+begin
+    fig = @df simparcels plot(:date, 
+        [:parcel_test./:orders_test,:parcel_real./:orders_test], 
+        label=["Simulated" "Observed"],
+    )
+    @df filter(row -> row.mode in ["CHIM_0.01","RND"] && row.traindays == 28, simbench) plot!(fig, :date, 
+    :parcel_test./:orders_test ,groups=:mode,ylabel="Split Ratio", 
+    label=["Our Heuristic" "Random Allocation"],
+    color_palette = sc4,
+    title = "Split Ratio: Compared"
+)
+    @df simbench plot!(fig, )
+    display(fig)
+    savefig("casestudy_plots/Split Ratio: Compared.pdf")
+end
 
-    display(@df filter(row -> row.mode in ["CHIM_0.01"], simbench) plot(:date, 
+begin
+    fig = @df simparcels plot(:date, 
+        :reorderskus, 
+        label="Observed",
+    )
+    @df filter(row -> row.mode in ["CHIM_0.01"] && row.traindays == 28, simbench) plot!(fig, :date, 
+    :reorderskus, ylabel="Daily SKU Movement", 
+    label=["Our Heuristic" "Random Allocation"],
+    color_palette = sc4,
+    title = "Transshipments: Compared"
+)
+    @df simbench plot!(fig, )
+    display(fig)
+    savefig("casestudy_plots/Transshipments: Compared.pdf")
+end
+
+begin
+    fig = @df simparcels plot(:date, 
         [:min_dispatch_47./:orders_test,:max_dispatch_47./:orders_test,:min_dispatch_50./:orders_test,:max_dispatch_50./:orders_test],
         ylabel="% Orders dispatched from Warehouse", 
-        label=["Minimum 47" "Maximum 47" "Minimum 50" "Maximum 50"],
+        label=["Min 47" "Max 47" "Min 50" "Max 50"],
+        color_palette = scwh4,
+        title = "Flexibility: Observed"
+    )
+    display(fig)
+    savefig("casestudy_plots/Flexibility: Observed.pdf")
+end
+
+begin
+    fig = @df simparcels plot(:date, 
+        [:weight_app_47,:weight_app_50],
+        ylabel="Warehouse Capacity used in SKUs", 
+        label=["Warehouse 47" "Warehouse 50"],
+        color_palette = scwh2,
+        title = "Capacity: Observed"
+    )
+    display(fig)
+    savefig("casestudy_plots/Capacity: Observed.pdf")
+end
+
+begin
+    fig = @df simparcels plot(:date, 
+        [:weight_app_47,:weight_app_50],
+        ylabel="Warehouse Capacity used in SKUs", 
+        label=["Observed: Warehouse 47" "Observed: Warehouse 50"],
+    )
+    @df filter(row -> row.mode in ["CHIM_0.01"] && row.traindays == 28, simbench) plot!(fig, :date, 
+    [:weight_app_47,:weight_app_50],
+    ylabel="Warehouse Capacity used in SKUs", 
+    label=["Our Algorithm: Warehouse 47" "Our Algorithm: Warehouse 50"],
+    color_palette = scwh4,
+    title = "Capacity: Compared"
+    )
+    display(fig)
+    savefig("casestudy_plots/Capacity: Compared.pdf")
+end
+
+# Plots based on simulation and optimisation
+begin
+fig = @df filter(row -> row.mode in ["CHIM_0.01","GP","BS","RND"] && row.traindays == 28, simbench) plot(:date, 
+    :parcel_test ,groups=:mode,ylabel="Split Deliveries", 
+    label=["BS Heuristic" "Our Heuristic" "GP Heuristic" "Random"],
+    color_palette = sc4,
+    title = "Split Deliveries: Compared Algorithms"
+    )
+    display(fig)
+    savefig("casestudy_plots/Split Deliveries: Compared Algorithms.pdf")
+end
+
+begin
+    fig = @df filter(row -> row.mode in ["CHIM_0.01","GP","BS"] && row.traindays == 28, simbench) plot(:date, 
+        :parcel_test ,groups=:mode,ylabel="Split Deliveries", 
+        label=["BS Heuristic" "Our Heuristic" "GP Heuristic" "Random"],
+        color_palette = sc4,
+        title = "Split Deliveries: Compared Algorithms"
+    )
+    display(fig)
+    savefig("casestudy_plots/Split Deliveries: Compared Algorithms (No RND).pdf")
+end
+
+begin
+    fig = @df filter(row -> row.mode in ["CHIM_0.01","GP","BS"] && row.traindays == 28, simbench) plot(:date, 
+        :parcel_test./:orders_test ,groups=:mode,ylabel="Split Ratio", 
+        label=["BS Heuristic" "Our Heuristic" "GP Heuristic"],
+        color_palette = sc4,
+        title = "Split Ratio: Compared Algorithms"
+    )
+    display(fig)
+    savefig("casestudy_plots/Split Ratio: Compared Algorithms.pdf")
+end
+
+begin
+    fig = @df filter(row -> row.mode in ["CHIM_0.01","GP","BS"] && row.traindays == 28, simbench) plot(:date, 
+        :reorderskus ,groups=:mode,ylabel="Daily SKU Movement", 
+        label=["BS Heuristic" "Our Heuristic" "GP Heuristic"],
+        color_palette = sc4,
+        title = "Transshipments: Compared Algorithms"
+    )
+    display(fig)
+    savefig("casestudy_plots/Transshipments: Compared Algorithms.pdf")
+end
+
+begin
+    fig = @df filter(row -> row.mode in ["CHIM_0.01"] && row.traindays == 28, simbench) plot(:date, 
+        [:min_dispatch_47./:orders_test,:max_dispatch_47./:orders_test,:min_dispatch_50./:orders_test,:max_dispatch_50./:orders_test],
+        ylabel="% Orders dispatched from Warehouse", 
+        label=["Min 47" "Max 47" "Min 50" "Max 50"],
         color_palette = scwh4,
         title = "Flexibility: Our Algorithm"
-    ))
+    )
+    display(fig)
+    savefig("casestudy_plots/Flexibility: Our Algorithm.pdf")
+end
 
-    display(@df filter(row -> row.mode in ["CHIM_0.01"], simbench) plot(:date, 
+begin
+    fig = @df filter(row -> row.mode in ["CHIM_0.01"] && row.traindays == 28, simbench) plot(:date, 
         [:weight_app_47,:weight_app_50],
-        ylabel="Warehouse Capacity used in APPs", 
+        ylabel="Warehouse Capacity used in SKUs", 
         label=["Warehouse 47" "Warehouse 50"],
         color_palette = scwh2,
         title = "Capacity: Our Algorithm"
-    ))
-
-    display(@df filter(row -> row.mode in ["CHIM_0.01"], simbench) plot(:date, 
-        :parcel_test./:orders_test, groups =:traindays,
-        ylabel="Warehouse Capacity used in APPs", 
-        #label=["Warehouse 47" "Warehouse 50"],
-        #color_palette = scwh2,
-        title = "Capacity: Our Algorithm"
-    ))
-
-    display(@df filter(row -> row.mode in ["BS"], simbench) plot(:date, 
-        [:weight_app_47,:weight_app_50],
-        ylabel="Warehouse Capacity used in APPs", 
-        label=["Warehouse 47" "Warehouse 50"],
-        color_palette = scwh2,
-        title = "Capacity: Competing Algorithm"
-    ))
+    )
+    display(fig)
+    savefig("casestudy_plots/Capacity: Our Algorithm.pdf")
 end
