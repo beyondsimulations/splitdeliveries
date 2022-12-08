@@ -1,5 +1,6 @@
 casestudy_data
 casestudy_results
 case_study.jl
-casestudy_plots
 apply_case_study.jl
+call_benchmark.jl
+casestudy_plots
