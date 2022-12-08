@@ -23,6 +23,7 @@ function benchmark!(
     klinkstatus,
     sku_weight,
     optimization_cycle::Bool,
+    training_intervall,
     )
 
 ## Determine the possible warehouse combinations
@@ -40,7 +41,7 @@ if start[1,:QMKO] == 1
             time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"CPLEX",show_opt,
                                                                 cpu_cores,allowed_gap,max_nodes,"QMK")
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["QMKO"]]
             time_benchmark = 0.0
             gap_optimisation = 0.0
         end
@@ -67,6 +68,7 @@ if start[1,:QMKO] == 1
                             orders_test = size(trans_test,1),
                             date=date,
                             traindays=training_days,
+                            trainingintervall=training_intervall,
                             capacity_47=capacity[1],
                             capacity_50=capacity[2],
                             min_dispatch_47=split_bench_max[1],
@@ -98,7 +100,7 @@ if start[1,:QMK] == 1
             time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort, "SBB",show_opt,
                                                                 cpu_cores,allowed_gap,max_nodes,"QMK")
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["QMK"]]
             time_benchmark = 0.0
             gap_optimisation = 0.0
         end
@@ -125,6 +127,7 @@ if start[1,:QMK] == 1
                         orders_test = size(trans_test,1),
                         date=date,
                         traindays=training_days,
+                        trainingintervall=training_intervall,
                         capacity_47=capacity[1],
                         capacity_50=capacity[2],
                         min_dispatch_47=split_bench_max[1],
@@ -154,7 +157,7 @@ if start[1,:CHIM] == 1
         if optimization_cycle == true
             time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train,capacity,sig,0,sku_weight,chistatus)
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["CHIM"]]
             time_benchmark = 0.0
             ls = 0
         end
@@ -183,6 +186,7 @@ if start[1,:CHIM] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
+                    trainingintervall=training_intervall,
                     capacity_47=capacity[1],
                     capacity_50=capacity[2],
                     min_dispatch_47=split_bench_max[1],
@@ -212,7 +216,7 @@ if start[1,:CHI] == 1
         if optimization_cycle == true
             time_benchmark = @elapsed W,ls = CHISQUAREHEUR(trans_train,capacity,sig,max_ls,sku_weight,chistatus)
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["CHI"]]
             time_benchmark = 0.0
             ls = 0
         end
@@ -240,6 +244,7 @@ if start[1,:CHI] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
+                    trainingintervall=training_intervall,
                     capacity_47=capacity[1],
                     capacity_50=capacity[2],
                     min_dispatch_47=split_bench_max[1],
@@ -271,7 +276,7 @@ if  start[1,:KL] == 1
         if optimization_cycle == true
             time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["KL"]]
             time_benchmark = 0.0
             ls = 0
         end
@@ -298,6 +303,7 @@ if  start[1,:KL] == 1
                         orders_test = size(trans_test,1),
                         date=date,
                         traindays=training_days,
+                        trainingintervall=training_intervall,
                         capacity_47=capacity[1],
                         capacity_50=capacity[2],
                         min_dispatch_47=split_bench_max[1],
@@ -330,7 +336,7 @@ if  start[1,:KLQ] == 1
             time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
                                                                 cpu_cores,allowed_gap,max_nodes,"QMK")
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["KLQ"]]
             time_benchmark = 0.0
             gap_optimisation = 0.0
         end
@@ -357,6 +363,7 @@ if  start[1,:KLQ] == 1
                         orders_test = size(trans_test,1),
                         date=date,
                         traindays=training_days,
+                        trainingintervall=training_intervall,
                         capacity_47=capacity[1],
                         capacity_50=capacity[2],
                         min_dispatch_47=split_bench_max[1],
@@ -387,7 +394,7 @@ if start[1,:GO] == 1
     if optimization_cycle == true
         time_benchmark = @elapsed W = GREEDYORDERS(trans_train,capacity,sku_weight)
     else
-        W = X[:,:,dict_algorithm[algorithm]]
+        W = X[:,:,dict_algorithm["GO"]]
         time_benchmark = 0.0
     end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
@@ -413,6 +420,7 @@ if start[1,:GO] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
+                    trainingintervall=training_intervall,
                     capacity_47=capacity[1],
                     capacity_50=capacity[2],
                     min_dispatch_47=split_bench_max[1],
@@ -442,7 +450,7 @@ if start[1,:GP] == 1
     if optimization_cycle == true
         time_benchmark = @elapsed W = GREEDYPAIRS(trans_train,capacity,sku_weight)
     else
-        W = X[:,:,dict_algorithm[algorithm]]
+        W = X[:,:,dict_algorithm["GP"]]
         time_benchmark = 0.0
     end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
@@ -467,6 +475,7 @@ if start[1,:GP] == 1
                     orders_test = size(trans_test,1),
                     date=date,
                     traindays=training_days,
+                    trainingintervall=training_intervall,
                     capacity_47=capacity[1],
                     capacity_50=capacity[2],
                     min_dispatch_47=split_bench_max[1],
@@ -496,7 +505,7 @@ if start[1,:GS] == 1
     if optimization_cycle == true
         time_benchmark = @elapsed W = GREEDYSEEDS(trans_train,capacity,sku_weight)
     else
-        W = X[:,:,dict_algorithm[algorithm]]
+        W = X[:,:,dict_algorithm["GS"]]
         time_benchmark = 0.0
     end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
@@ -521,6 +530,7 @@ if start[1,:GS] == 1
                 orders_test = size(trans_test,1),
                 date=date,
                 traindays=training_days,
+                trainingintervall=training_intervall,
                 capacity_47=capacity[1],
                 capacity_50=capacity[2],
                 min_dispatch_47=split_bench_max[1],
@@ -550,7 +560,7 @@ if  start[1,:BS] == 1
     if optimization_cycle
         time_benchmark = @elapsed W = BESTSELLING(trans_train,capacity,sku_weight)
     else
-        W = X[:,:,dict_algorithm[algorithm]]
+        W = X[:,:,dict_algorithm["BS"]]
         time_benchmark = 0.0
     end
     parcels_benchmark, split_bench_max = PARCELSSEND_WEIGHT(trans_test, W, capacity, combination, true)
@@ -575,6 +585,7 @@ if  start[1,:BS] == 1
                 orders_test = size(trans_test,1),
                 date=date,
                 traindays=training_days,
+                trainingintervall=training_intervall,
                 capacity_47=capacity[1],
                 capacity_50=capacity[2],
                 min_dispatch_47=split_bench_max[1],
@@ -612,7 +623,7 @@ if start[1,:OPT] == 1
                                                                                 cpu_cores,allowed_gap,max_nodes)
             end
         else
-            W = X[:,:,dict_algorithm[algorithm]]
+            W = X[:,:,dict_algorithm["OPT"]]
             time_benchmark = 0.0
             gap_optimisation = 0.0
             popt = 0.0
@@ -639,6 +650,7 @@ if start[1,:OPT] == 1
                         orders_test = size(trans_test,1),
                         date=date,
                         traindays=training_days,
+                        trainingintervall=training_intervall,
                         capacity_47=capacity[1],
                         capacity_50=capacity[2],
                         min_dispatch_47=split_bench_max[1],
@@ -694,6 +706,7 @@ push!(benchmark, (data = datasource,
                 orders_test = size(trans_test,1),
                 date=date,
                 traindays=training_days,
+                trainingintervall=training_intervall,
                 capacity_47=capacity[1],
                 capacity_50=capacity[2],
                 min_dispatch_47=round(Int64,split_bench_max_rand[1]),

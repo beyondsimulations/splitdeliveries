@@ -3,13 +3,13 @@ include("load_packages.jl")
 include("functions/call_benchmark.jl")
 
 # specify the weeks of training
-all_training_days = 28:28:28
+all_training_days = 14:14:56
 # specify the interval of the warehouse optimisation in days
-training_intervall = 1
+training_intervall = 7
 # specify the name of the datasource
 datasource = "casestudy"
 # specify the capacity of the warehouses in categorybrands
-capacity = [330000,490000]
+capacity = [350000,350000]
 #capacity = [2550,6900]
 # specify alpha for the heuristic
 sig = 0.01
@@ -100,7 +100,7 @@ no_catbrand = nrow(unique(select(warehouse,[:category,:brand])))
 
 # plot the unique articles in each warehouse per week
 plot_wh_aggregated = combine(groupby(warehouse,[:date]),nrow => :SKUs, :warehouse_47 => sum => :warehouse_47, :warehouse_50 => sum => :warehouse_50)
-fig = plot(plot_wh_aggregated.date, [plot_wh_aggregated.SKUs, plot_wh_aggregated.warehouse_47, plot_wh_aggregated.warehouse_50], labels=["Overall unique SKUs" "Unique SKUs in 47" "Unique SKUs in 50"], ylabel = "SKUs", xlabel ="date")
+fig = plot(plot_wh_aggregated.date, [plot_wh_aggregated.SKUs, plot_wh_aggregated.warehouse_47, plot_wh_aggregated.warehouse_50], labels=["Overall unique SKUs" "Unique SKUs in 50" "Unique SKUs in 47"], ylabel = "SKUs", xlabel ="date")
 display(fig)
 savefig("casestudy_plots/SKUs: Warehouses.pdf")
 
@@ -228,6 +228,7 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
         orders_test=Int64[],
         date=Date[],
         traindays=Int64[],
+        trainingintervall=Int64[],
         capacity_47=Int64[],
         capacity_50=Int64[],
         min_dispatch_47=Int64[],
@@ -262,7 +263,8 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
         for daynumber in maximum(all_training_days)+1:length(alldates)
 
             print("\n\n Trainingdays: ", training_days)
-            print("\n Testday: ", alldates[daynumber])
+            print("\n Testday:        ", alldates[daynumber])
+            print("\n Intervall:      ", training_intervall)
             train_orders_raw = filter(row -> row.date in alldates[daynumber-training_days:daynumber-1], orders)
             test_orders_raw = filter(row -> row.date == alldates[daynumber], orders)
 
@@ -278,7 +280,7 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
             test_orders = sparse(dict_eval(dict_test_orders_id,test_orders_raw.order),dict_eval(dict_categorybrand_id,dict_eval(dict_sku_categorybrand,test_orders_raw.sku)),true)
             test_orders = [test_orders spzeros(Bool,length(unique_test_ordernumbers),nrow(categorybrands)-size(test_orders,2))]
 
-            mod1(daynumber,mod1(all_training_days+1,training_intervall)) == mod1(all_training_days+1,training_intervall) ? optimization_cycle = true : optimization_cycle = false
+            mod1(daynumber,training_intervall) == 1 ? optimization_cycle = true : optimization_cycle = false
 
             benchmark!(
                 start,
@@ -304,16 +306,15 @@ function benchmark_splits(start,binary,all_training_days,alldates,categorybrands
                 2,
                 false,
                 sku_weight,
-                optimization_cycle
+                optimization_cycle,
+                training_intervall
             )
+
+            CSV.write("casestudy_results/benchmark_$(sig)_$(minimum(all_training_days))_to_$(maximum(all_training_days))_$(capacity[1])_$(capacity[2])_$training_intervall.csv",benchmark)
         end
     end
-    CSV.write("casestudy_results/benchmark_$(sig)_$(minimum(all_training_days))_to_$(maximum(all_training_days))_$(capacity[1])_$(capacity[2])_$training_intervall.csv",benchmark)
     return benchmark
 end
-
-warehouse = nothing
-articlecategorybrands = nothing
 
 sim_order == true ? simbench = benchmark_splits(start,binary,all_training_days,alldates,categorybrands,orders,datasource,capacity) : nothing
 
