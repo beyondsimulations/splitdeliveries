@@ -14,8 +14,8 @@
 ### ID-VF
 ### MD-VF
 ### HD-VF
-    experiment = "p1_10000to600000skus"
-    dependency = "ID-SF"
+    experiment = "p2_1000to10000skus"
+    dependency = "MD-SF"
 
 # load the data that specifies the dependencies
     include("dependency/$dependency.jl")
@@ -25,7 +25,7 @@
     train_test = 0.50
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-    order_sets = [20000]
+    order_sets = [200000]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
@@ -71,7 +71,7 @@
 ## sig_levels:  significance levels alpha to apply with the chi-square tests
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
-    sig_levels = [1.0e-2]
+    sig_levels = [1.0e-3]
     #sig_levels = [1.0/(10^x) for x = 0:1:9]
     max_ls = 100
     chistatus = false
@@ -81,7 +81,7 @@
     iterations = 100
 
 # Parameters for the whole Benchmark
-    benchiterations = 20
+    benchiterations = 1
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation

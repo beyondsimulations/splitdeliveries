@@ -1,8 +1,8 @@
 ## import packages
 include("load_packages.jl")
 
-experiment = "p1_10000to60000skus"
-capa = 10000:10000:100000
+experiment = "p3_10000to50000skus"
+capa = 10000:10000:50000
 ware = 2:1:4
 diff = 0.0:0.2:0.4
 buff = 0.0:0.20:0.20
