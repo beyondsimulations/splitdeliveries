@@ -8,23 +8,24 @@
 ### b3_1000skus
 ### b4_10000skus
 ## Dependencies used in our article:
-### ID-EF
-### MD-EF
-### HD-EF
+### ID-SF
+### MD-SF
+### HD-SF
 ### ID-VF
 ### MD-VF
 ### HD-VF
-    experiment = "s2_1000skus"
-    dependency = "MD-VF"
+    experiment = "p1_10000to600000skus"
+    dependency = "ID-SF"
+
+# load the data that specifies the dependencies
+    include("dependency/$dependency.jl")
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
     train_test = 0.50
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
-    order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-
-# load the data that specifies the dependencies
-    include("dependency/$dependency.jl")
+    #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
+    order_sets = [20000]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
@@ -37,8 +38,8 @@
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
                       KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
                       KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GO    = [0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GP    = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       OPT   = [0]) # optimisation model to determine the optimal solution with CPLEX
@@ -54,7 +55,7 @@
     trials   = 100
     stagnant = 10
     strategy = 3
-    klinkstatus = 0
+    klinkstatus = false
 
 # Parameters for all Optimisations
 ## abort: number of seconds until the Optimisation is aborted
@@ -70,8 +71,8 @@
 ## sig_levels:  significance levels alpha to apply with the chi-square tests
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
-    #sig_levels = [1.0e-8]
-    sig_levels = [1.0/(10^x) for x = 0:1:9]
+    sig_levels = [1.0e-2]
+    #sig_levels = [1.0/(10^x) for x = 0:1:9]
     max_ls = 100
     chistatus = false
 
@@ -98,7 +99,7 @@
                             trials::Int64,
                             stagnant::Int64,
                             strategy::Int64,
-                            klinkstatus::Int64,
+                            klinkstatus::Bool,
                             abort::Int64,
                             iterations::Int64,
                             show_opt::Bool,

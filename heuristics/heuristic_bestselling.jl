@@ -13,14 +13,10 @@ function BESTSELLING(
     if CHECKCAPACITY(capacity,sku_weight)
         #  Start the heuristic
         capacity_left::Vector{Float64} = copy(capacity)
-        B = BESTSELLING_B(capacity_left,sku_weight)
         sales = SORTSALES(trans)
         X = zeros(Bool,size(trans,2),size(capacity,1))
-        # while there exists a DC d such that the overall capacity is smaller than B do
-        # for such each DC d do
-        BESTSELLINGSTART!(sales,capacity_left,B,X,sku_weight)
         # apply the Greedy Seeds Heuristic if B = 0
-        if B == 0
+        if sum(capacity) == size(trans,2)
             ## Assign the top (best selling) SKU to the largest DC
             X = zeros(Bool,size(trans,2),size(capacity,1))
             X[sales[1,1],1] = 1
@@ -35,8 +31,12 @@ function BESTSELLING(
             FILLUP!(X,Q,capacity_left,sku_weight)
             ## Return the solution
         else
+            B = BESTSELLING_B(capacity_left,sku_weight)
+            # while there exists a DC d such that the overall capacity is smaller than B do
+            # for such each DC d do
+            BESTSELLINGSTART!(sales,capacity_left,B,X,sku_weight)
             ## Assign the B top selling SKUs to each warehouse with capacity > B
-            BESTSELLINGTOP!(sales,capacity_left,B,X,sku_weight)
+            BESTSELLINGTOP!(sales,capacity_left,capacity,B,X,sku_weight)
             GREEDYSEEDMAIN!(sales,X,Q,capacity_left,sku_weight)
             FILLUP!(X,Q,capacity_left,sku_weight)
         end

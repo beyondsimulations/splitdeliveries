@@ -182,18 +182,17 @@ end
 ## warehouse until the remaining SKUs can only be allocated once
 function BESTSELLINGTOP!(sales::Matrix{Int64},
                          capacity_left::Vector{<:Real},
+                         capacity::Vector{<:Real},
                          B::Int64,
                          X::Matrix{Bool}, 
                          sku_weight::Vector{<:Real})
     for d in axes(capacity_left,1)
-        if capacity_left[d] > B
-            i = 1
-            while capacity_left[d] > B
-                X[sales[i,1],d] = 1
-                sales[sales[i,2],4] = 1
-                capacity_left[d] -= sku_weight[sales[i,1]]
-                i += 1
-            end
+        i = 1
+        while capacity_left[d] > capacity[d] - B
+            X[sales[i,1],d] = 1
+            sales[sales[i,2],4] = 1
+            capacity_left[d] -= sku_weight[sales[i,1]]
+            i += 1
         end
     end
 end

@@ -6,7 +6,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                    trials::Int64,
                    stagnant::Int64,
                    strategy::Int64,
-                   klinkstatus::Int64,
+                   klinkstatus::Bool,
                    abort::Int64,
                    iterations::Int64,
                    show_opt::Bool,
@@ -102,7 +102,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n   QMKO: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train, 
                         " / time: ",round(time_benchmark,digits = 3),
-                        " / gap: ",round(gap_optimisation,6))
+                        " / gap: ",round(gap_optimisation,6),
+                        " / warehouse: ",sum(W,dims=1))
                     
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -132,7 +133,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n    QMK: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ", round(time_benchmark, digits = 3),
-                        " / gap: ",round(gap_optimisation, digits = 6))
+                        " / gap: ",round(gap_optimisation, digits = 6),
+                        " / warehouse: ",sum(W,dims=1))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -163,7 +165,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                             " / parcels training data: ", parcels_train,  
                             " / time: ",round(time_benchmark, digits = 3),
                             " / local search: ", ls,
-                            " / sig: ", sig)
+                            " / sig: ", sig,
+                            " / warehouse: ",sum(W,dims=1))
 
                         push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -195,7 +198,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                             " / parcels training data: ", parcels_train,  
                             " / time: ",round(time_benchmark, digits = 3),
                             " / local search: ", ls,
-                            " / sig: ", sig)
+                            " / sig: ", sig,
+                            " / warehouse: ",sum(W,dims=1))
 
                         push!(benchmark, (dependency = dependency, 
                                             skus = skus_benchmark[a],  
@@ -226,7 +230,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n     KL: parcels train data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ", round(time_benchmark, digits = 3),
-                        " / local search: ", ls)
+                        " / local search: ", ls,
+                        " / warehouse: ",sum(W,dims=1))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -257,7 +262,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n    KLQ: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
                         " / time: ", round(time_benchmark, digits = 3),
-                        " / gap: ", round(gap_optimisation, digits = 6))
+                        " / gap: ", round(gap_optimisation, digits = 6),
+                        " / warehouse: ",sum(W,dims=1))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -286,7 +292,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     GO: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
-                        " / time: ",round(time_benchmark, digits = 3))
+                        " / time: ",round(time_benchmark, digits = 3),
+                        " / warehouse: ",sum(W,dims=1))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -315,7 +322,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     GP: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
-                        " / time: ",round(time_benchmark, digits = 3))
+                        " / time: ",round(time_benchmark, digits = 3),
+                        " / warehouse: ",sum(W,dims=1))
                     
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -344,7 +352,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     GS: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
-                        " / time: ",round(time_benchmark, digits = 3))
+                        " / time: ",round(time_benchmark, digits = 3),
+                        " / warehouse: ",sum(W,dims=1))
 
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -373,7 +382,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     BS: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
-                        " / time: ",round(time_benchmark, digits = 3))
+                        " / time: ",round(time_benchmark, digits = 3),
+                        " / warehouse: ",sum(W,dims=1))
                         
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -409,7 +419,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n    OPT: parcels test data: ", parcels_benchmark, 
                         " / parcels training data: ", parcels_train,  
-                        " / time: ",round(time_benchmark, digits = 3))
+                        " / time: ",round(time_benchmark, digits = 3),
+                        " / warehouse: ",sum(W,dims=1))
                     
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
@@ -435,7 +446,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 print("\n    RND: parcels test data: ", parcels_benchmark,
                     " / parcels training data: ", parcels_train,
                     " / time: ", round(time_benchmark, digits = 3),
-                    " / benchmarks: ", iterations, "\n")
+                    " / benchmarks: ", iterations, 
+                    " / warehouse: ",sum(W,dims=1), "\n")
 
                 push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  

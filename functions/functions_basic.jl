@@ -160,14 +160,13 @@ end
 # Functions for the random allocation of SKUs to warehouses
 ## RANDOMALLOCONCE: allocate SKUs randomly in case each SKU can only be assigned once
 function RANDOMALLOCONCE(
-    trans::SparseMatrixCSC{Bool, Int64},
     capacity::Vector{<:Real},
     sku_weight::Vector{<:Real},
     )
     cap_left::Vector{Float64} = copy(capacity);
-    X = Array{Bool,2}(undef,size(trans,2),size(capacity,1))
+    X = Array{Bool,2}(undef,length(sku_weight),size(capacity,1))
     X .= 0
-    for j in 1:size(X,1)
+    for j in randperm(size(X,1))
         while sum(X[j,:]) == 0
             randomnumber = rand(1:size(capacity,1))
             if cap_left[randomnumber] > 0
@@ -176,7 +175,6 @@ function RANDOMALLOCONCE(
             end
         end
     end
-    X = X[shuffle(1:size(X,1)),:]
     if any(y->y < 1,sum(X,dims=2))
         "\n Error: Not all SKUs are allocated."
     end
@@ -189,10 +187,10 @@ function RANDOMALLOCMULTI(
     capacity::Vector{<:Real},
     sku_weight::Vector{<:Real}
     )
-    X = RANDOMALLOCONCE(trans,capacity,sku_weight::Vector{<:Real})
+    X = RANDOMALLOCONCE(capacity,sku_weight::Vector{<:Real})
     cap_used = sum(X.*sku_weight,dims=1)
     for d in axes(capacity,1)
-        while cap_used[d] < sum(capacity[d])
+        while cap_used[d] < capacity[d]
             randomproduct = rand(1:size(trans,2))
             if X[randomproduct,d] == 0
                 X[randomproduct,d] = 1
