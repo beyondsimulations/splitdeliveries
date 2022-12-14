@@ -8,8 +8,8 @@ using StatsPlots
 using Statistics
 #using LaTeXStrings
 
-experiments     = ["s2_1000skus"]
-dependencies    = ["HD-EF","HD-VF","ID-EF","ID-VF","MD-EF","MD-VF"]
+experiments     = ["e1_100to1000skus","e2_1000to10000skus","e3_10000to50000skus"]
+dependencies    = ["HD-VF","MD-VF","ID-VF"]
 datasets        = ["benchmark"]
 
 function load_data()
@@ -26,7 +26,7 @@ function load_data()
 end
 
 frame = load_data()
-CSV.write("results/s2_1000skus_aggregated.csv",frame)
+CSV.write("results/overall_results.csv",frame)
 
 #=for experiment in experiments
     parcels, duration = load_data()

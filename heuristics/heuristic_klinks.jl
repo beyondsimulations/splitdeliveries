@@ -6,7 +6,9 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
                 strategy::Int64,
                 klinkstatus::Bool)
     # Sort the warehouses by decreasing capacity
-    capacity = sort(capacity, rev=true)   
+    #capacity = sort(capacity, rev=true)   
+    # Introduce the equal weights for all SKUs
+    sku_weight = zeros(Int64,size(trans,2)) .= 1
     ## Calculation of links based on orders
     L  = LINKS(trans,LINKADJUST(trans))
     ## Set trial = 0
@@ -22,7 +24,7 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
     local_search_trials = 0
     for y = 1:trials
         ## Random initialisation of the category distribution
-        X = RANDOMALLOCONCE(trans,capacity)
+        X = RANDOMALLOCONCE(capacity,sku_weight)
         ## Get the matrix CW trial, Calculate the LW trial
         lw_trial[y] = LW(L,X)
         if klinkstatus == true

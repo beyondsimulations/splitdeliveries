@@ -7,7 +7,7 @@ function HYOPTHESISTEST!(dep::Matrix{<:Real},
                         sig::Float64,
                         sum_cond_sku::Vector{<:Real})
     ## Initialise chi square test
-    M = convert(Int64,((I^2-I)/2))
+    M = convert(Int64,((I^2-I)))
     ## Determine the acceptance level of the test
     accept = cquantile(Chisq(1), sig/M)
     ## Fill the arrays with the results of the chi-square test

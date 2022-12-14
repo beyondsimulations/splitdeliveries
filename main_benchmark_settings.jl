@@ -3,29 +3,25 @@
 
 # Choose the benchmark which should be evaluated
 ## Benchmarks used in our article:
-### b1_40skus
-### b2_100skus
-### b3_1000skus
-### b4_10000skus
+### e1_100to1000skus
+### e2_1000to10000skus
+### e3_10000to50000skus
 ## Dependencies used in our article:
-### ID-SF
-### MD-SF
-### HD-SF
 ### ID-VF
 ### MD-VF
 ### HD-VF
-    experiment = "p2_1000to10000skus"
-    dependency = "MD-SF"
+    experiment = "e3_10000to50000skus"
+    dependency = "HD-VF"
 
 # load the data that specifies the dependencies
     include("dependency/$dependency.jl")
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    train_test = 0.50
+    train_test = 0.90
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-    order_sets = [200000]
+    order_sets = [1000000]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8

@@ -68,7 +68,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     else
                         print("\n Starting generation of transactions.")
                         time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,skus_in_order,sku_frequency,
-                                                            ceil(Int64,max(skus_benchmark[a]/50,10)),
+                                                            ceil(Int64,max(skus_benchmark[a]/20,10)),
                                                             min_dependence,max_dependence,
                                                             group_link,ind_chance,one_direction,
                                                             multi_relatio)
@@ -221,7 +221,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
                 ## Start our reproduction of the  K-LINKS heuristic by
                 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-                if  start[1,:KL] == 1
+                if  start[1,:KL] == 1 && sum(capacity) == length(sku_weight)
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
@@ -252,7 +252,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
                 ## Start our reproduction of the  K-LINKS optimization with SBB by
                 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-                if  start[1,:KLQ] == 1
+                if  start[1,:KLQ] == 1 && sum(capacity) == length(sku_weight)
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
