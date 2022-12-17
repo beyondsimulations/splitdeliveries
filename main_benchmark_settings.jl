@@ -10,8 +10,12 @@
 ### ID-VF
 ### MD-VF
 ### HD-VF
-    experiment = "e3_10000to50000skus"
-    dependency = "HD-VF"
+    experiment = "r2_1000skus"
+    dependencies = ["ID-SF","ID-VF","MD-SF","MD-VF","HD-SF","HD-VF"]
+    ren_lock = ReentrantLock()
+
+# iterate over all dependencies
+for dependency in dependencies
 
 # load the data that specifies the dependencies
     include("dependency/$dependency.jl")
@@ -21,21 +25,20 @@
     train_test = 0.90
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-    order_sets = [1000000]
+    order_sets = [10000]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
-    ren_lock = ReentrantLock()
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK   = [0], # quadratic-multiple knapsack heuristic with SBB as solver
+                      QMK   = [1], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      GO    = [0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      GP    = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      KL    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KLQ   = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       OPT   = [0]) # optimisation model to determine the optimal solution with CPLEX
@@ -58,7 +61,7 @@
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 3600
+    abort       = 1800
     show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000
@@ -67,7 +70,7 @@
 ## sig_levels:  significance levels alpha to apply with the chi-square tests
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
-    sig_levels = [1.0e-3]
+    sig_levels = [1.0e-2]
     #sig_levels = [1.0/(10^x) for x = 0:1:9]
     max_ls = 100
     chistatus = false
@@ -105,7 +108,9 @@
                             sig_levels::Vector{Float64},
                             max_ls::Int64,
                             chistatus::Bool,
-                            benchiterations::Int64)
+                            benchiterations::Int64,
+                            train_test::Float64,
+                            dependency::String)
                                                                         
     print("\nbenchmark finished at ",now(),".")
-    
+end

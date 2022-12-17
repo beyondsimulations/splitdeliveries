@@ -3,7 +3,7 @@ function GREEDYPAIRS(trans::SparseMatrixCSC{Bool,Int64},
                      capacity::Array{Int64,1},
                      sku_weight::Vector{<:Real})
     # Sort the warehouses by decreasing capacity
-    #capacity = sort(capacity, rev=true)
+    capacity = sort(capacity, rev=true)
     # Create Coapperance Matrix
     Q = COAPPEARENCE(trans,sku_weight)
     # Clean the principle diagonal

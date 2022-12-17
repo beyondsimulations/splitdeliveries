@@ -5,7 +5,7 @@ function BESTSELLING(
     sku_weight::Vector{<:Real}
     )
     # Sort the warehouses by decreasing capacity
-    #capacity = sort(capacity, rev=true)
+    capacity = sort(capacity, rev=true)
     # Create Coapperance Matrix
     Q = COAPPEARENCE(trans,sku_weight)
     # Clean the principle diagonal

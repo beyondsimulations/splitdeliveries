@@ -27,9 +27,7 @@ function WEIGHT_SKUS!(
     )
     @inbounds @simd for j = 1:size(Q,1)
         @inbounds for i = 1:size(Q,2)
-            if i != j
-                Q[i,j] = Q[i,j]/((sku_weight[i]+sku_weight[j])/2)
-            end
+            Q[i,j] = Q[i,j]/((sku_weight[i]+sku_weight[j])/2)
         end
     end
 end

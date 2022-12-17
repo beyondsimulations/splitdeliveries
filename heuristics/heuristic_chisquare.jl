@@ -9,7 +9,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
     # Number of products
     I = size(trans,2)
     # Sort the warehouses by decreasing capacity
-    #capacity = sort(capacity, rev=true)
+    capacity = sort(capacity, rev=true)
     # Create Coapperance Matrix
     log_results == true ? print("\n  creating coappearance matrix.") : nothing
     Q = COAPPEARENCE(trans,sku_weight)

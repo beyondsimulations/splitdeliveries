@@ -4,9 +4,10 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
                 trials::Int64,
                 stagnant::Int64,
                 strategy::Int64,
+                abort::Int64,
                 klinkstatus::Bool)
     # Sort the warehouses by decreasing capacity
-    #capacity = sort(capacity, rev=true)   
+    capacity = sort(capacity, rev=true)   
     # Introduce the equal weights for all SKUs
     sku_weight = zeros(Int64,size(trans,2)) .= 1
     ## Calculation of links based on orders

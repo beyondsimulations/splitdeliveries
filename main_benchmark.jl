@@ -16,7 +16,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                    sig_levels::Vector{Float64},
                    max_ls::Int64,
                    chistatus::Bool,
-                   benchiterations::Int64)
+                   benchiterations::Int64,
+                   train_test::Float64,
+                   dependency::String)
     
     # Start the benchmark of the data set
     ## Create dataframes for the export of the results
@@ -224,7 +226,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if  start[1,:KL] == 1 && sum(capacity) == length(sku_weight)
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,klinkstatus)
+                    time_benchmark = @elapsed W,ls = KLINKS(trans_train,capacity,trials,stagnant,strategy,abort,klinkstatus)
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
                     print("\n     KL: parcels train data: ", parcels_benchmark, 
