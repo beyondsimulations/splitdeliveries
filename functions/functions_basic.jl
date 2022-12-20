@@ -5,9 +5,6 @@ function COAPPEARENCE(
     )
     Q::Matrix{Float64} = trans'*trans
     Q = Matrix(Q)
-    if all(y->y==sku_weight[1],sku_weight)
-        WEIGHT_SKUS!(Q,sku_weight)
-    end
     return Q
 end
 
@@ -17,18 +14,6 @@ function CLEANPRINCIPLE!(
     )
     for i in axes(Q,1)
         Q[i,i] = 0
-    end
-end
-
-# function to weight the SKUs
-function WEIGHT_SKUS!(
-    Q::Matrix{<:Real},
-    sku_weight::Vector{<:Real}
-    )
-    @inbounds @simd for j = 1:size(Q,1)
-        @inbounds for i = 1:size(Q,2)
-            Q[i,j] = Q[i,j]/((sku_weight[i]+sku_weight[j])/2)
-        end
     end
 end
 

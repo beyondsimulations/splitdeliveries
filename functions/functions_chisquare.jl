@@ -98,15 +98,25 @@ end
 # the independent coappearances in each warehouse if we were to allocate
 # all SKUs according to the highest independent coappearances.
 function WHWEIGHT(capacity::Vector{Int64},
-                  sum_nor::Vector{<:Real})
-    sort_sum_nor = sort!(copy(sum_nor), rev = true)
-    sort_sum_nor = vcat(sort_sum_nor,zeros(Float64,sum(capacity)-I))
+                  sum_nor::Vector{<:Real},
+                  sku_weights::Vector{<:Real})
     weight = zeros(Float64,size(capacity))
-    weight[1] = sum(sort_sum_nor[1:capacity[1]])/sum(sort_sum_nor)
-    for k = 2:size(capacity,1)
-        weight[k] = sum(sort_sum_nor[sum(capacity[1:k-1]):sum(capacity[1:k])])/
-                    sum(sort_sum_nor)
+    free_capacity::Vector{Float64} = copy(capacity)
+    normal_weight = copy(sum_nor)
+    for k = 1:size(capacity,1)
+        next = argmax(normal_weight)
+        while free_capacity[k] >= sku_weights[next]
+            weight[k] += normal_weight[next]
+            free_capacity[k] -= sku_weights[next]
+            normal_weight[next] = 0
+            next = argmax(normal_weight)
+            if sum(normal_weight) == 0
+                #normal_weight = copy(sum_nor)
+                break
+            end
+        end
     end
+    weight .= weight ./ sum(sum_nor)
     return weight::Vector{Float64}
 end
 
@@ -133,7 +143,7 @@ function SELECTIK(sum_dep::Vector{<:Real},
                   dep::Matrix{<:Real},
                   allocated::Vector{Bool},
                   sku_weight::Vector{<:Real})
-    i       = findmax(sum_nor)[2]
+    i       = argmax(sum_nor)
     if sum(@view(X[i,:])) > 0
         for j = 1:size(X,1)
             if allocated[j] == 0
@@ -146,15 +156,16 @@ function SELECTIK(sum_dep::Vector{<:Real},
     k_max   = findmax(capacity_left)[2]
     pot_dep = WHPOTDEP(capacity_left,i,X,dep,sku_weight)
     k_dep   = findmax(pot_dep)[2]
-    if pot_dep[k_dep] > 0 && k_ind != k_ind
-        sum_dep[i] + sum_nor[i] * weight[k_dep] > 
-        sum_nor[i] * weight[k_ind]
-            k = k_dep
-        elseif k_max != k_ind && sum_dep[i] + sum_nor[i] * weight[k_max] >
+    if      pot_dep[k_dep] > 0 && k_ind != k_dep &&
+            sum_dep[i] + sum_nor[i] * weight[k_dep] > 
+            sum_nor[i] * weight[k_ind]
+                k = k_dep
+    elseif  k_ind != k_max && 
+            sum_dep[i] + sum_nor[i] * weight[k_max] >
             sum_nor[i] * weight[k_ind]
                 k = k_max
-        else
-            k = k_ind
+    else
+                k = k_ind
     end
     return i::Int64,
            k::Int64
@@ -219,7 +230,7 @@ function ADDDEPENDENT!(X::Matrix{Bool},
     while add == 1 && capacity_left[k] > 0 && sum(X) < size(X,1)
         add = 0
         FINDDEP!(X,k,state_dep,state_nor,pot_dep,pot_nor,allocated,sku_weight,capacity_left)
-        i = findmax(pot_dep)[2]
+        i = argmax(pot_dep)
         if findmax(pot_dep)[1] > 0
             if pot_dep[i] >= findmax(pot_nor)[1] && capacity_left[k] >= sku_weight[i]
                 ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,
@@ -242,8 +253,8 @@ function FINDDEP!(X::Array{Bool,2},
                   capacity_left::Vector{<:Real})
     @fastmath @simd for j in 1:size(X,1)
         if allocated[j] == 0 && capacity_left[k] >= sku_weight[j]
-            pot_dep[j]  = state_dep[j,k] 
-            pot_nor[j]  = state_nor[j,k] 
+            pot_dep[j]  = state_dep[j,k]
+            pot_nor[j]  = state_nor[j,k]
             if pot_dep[j] > 0
                 pot_dep[j] += pot_nor[j]
             end

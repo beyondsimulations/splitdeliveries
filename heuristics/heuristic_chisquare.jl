@@ -35,11 +35,11 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## Determine the sum of the coappearances for each SKU on the base of
         ## the matrices dep and nor
         sum_dep = vec(sum(dep,dims = 2))
-        sum_nor = vec(sum(Q,dims = 2)) .- vec(sum(dep,dims = 2))
+        sum_nor = (vec(sum(Q,dims = 2)) .- vec(sum(dep,dims = 2)))
         ## Calculate the weight of each warehouse. It shows us the density of 
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
-        weight = WHWEIGHT(capacity,sum_nor)
+        weight = WHWEIGHT(capacity,sum_nor,sku_weight)
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left::Vector{Float64} = copy(capacity)
         ## Create arrays that save the current dependencies for all unallocated
