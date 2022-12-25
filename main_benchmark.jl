@@ -75,6 +75,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                                             group_link,ind_chance,one_direction,
                                                             multi_relatio)
                         print("\n Transactions generated after ", round(time,digits = 3)," seconds.")
+                        if skus_benchmark[a] <= 1000
+                            display(histogram(sum(trans,dims=2)))
+                            display(histogram(vec(sum(trans,dims=1))))
+                        end
                     end
                 end
 

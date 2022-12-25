@@ -15,6 +15,7 @@ function GREEDYPAIRS(trans::SparseMatrixCSC{Bool,Int64},
         pairs = SORTPAIRS(Q)
         X = zeros(Bool,size(Q,2),size(capacity,1))
         GREEDYPAIRSMAIN!(pairs,X,capacity_left,sku_weight)
+        #GREEDYPAIRSMAIN_NEW!(Q,X,capacity_left,sku_weight)
         ## While there is unallocated space in the DCs do
         FILLUP!(X,Q,capacity_left,sku_weight)
         # Check whether all SKUs are allocated

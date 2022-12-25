@@ -102,45 +102,55 @@ function PARCELSSEND(
     capacity::Array{Int64,1}, 
     combination::Array{Array{Array{Int64,1},1},1}
     )
-    if sum(capacity) == size(trans,2)
-        parcel = trans * X
-        for j in axes(parcel,1)
-            for k in axes(parcel,2)
-                if parcel[j,k] > 0
-                    parcel[j,k] = 1
-                else
-                    parcel[j,k] = 0
-                end
-            end
-        end
-        parcel = round(Int64, sum(parcel))
-    else
-        warehouse_combination = Array{Int64,2}(undef,size(X,1),size(combination,1)) .= 0
-        parcels_out = zeros(size(combination,1))
-        for i in axes(combination,1)
-            for j in axes(combination[i],1)
-                for k in axes(X,1)
-                    if X[k,combination[i][j]] == [1]
-                        warehouse_combination[k,i] = 1
+    if any(y -> y == 0, sum(X, dims = 2)) == false
+        if sum(capacity) == size(trans,2)
+            parcel = trans * X
+            for j in axes(parcel,1)
+                for k in axes(parcel,2)
+                    if parcel[j,k] > 0
+                        parcel[j,k] = 1
+                    else
+                        parcel[j,k] = 0
                     end
                 end
-                parcels_out[i] += 1
             end
-        end
-        warehouse_combination = dropzeros(sparse(warehouse_combination))
-        parcel_evalu = trans * warehouse_combination
-        parcel_check = sum(trans, dims = 2)
-        parcel = 0
-        for i in axes(parcel_evalu,1)
-            for j in axes(parcel_evalu,2)
-                if parcel_evalu[i,j] == parcel_check[i]
-                    parcel += parcels_out[j]
-                    break
+            parcel = round(Int64, sum(parcel))
+        else
+            warehouse_combination = Array{Int64,2}(undef,size(X,1),size(combination,1)) .= 0
+            parcels_out = zeros(size(combination,1))
+            for i in axes(combination,1)
+                for j in axes(combination[i],1)
+                    for k in axes(X,1)
+                        if X[k,combination[i][j]] == [1]
+                            warehouse_combination[k,i] = 1
+                        end
+                    end
+                    parcels_out[i] += 1
+                end
+            end
+            warehouse_combination = dropzeros(sparse(warehouse_combination))
+            parcel_evalu = trans * warehouse_combination
+            parcel_check = sum(trans, dims = 2)
+            parcel = 0
+            for i in axes(parcel_evalu,1)
+                for j in axes(parcel_evalu,2)
+                    if parcel_evalu[i,j] == parcel_check[i]
+                        parcel += parcels_out[j]
+                        break
+                    end
+                    if j == size(parcel_evalu,2)
+                        if parcel_evalu[i,j] != parcel_check[i]
+                            error("Order was not fully dispatched!")
+                        end
+                    end
                 end
             end
         end
+        parcel -= size(trans,1)
+    else
+        show(X)
+        error("Not all SKUs are allocated!")
     end
-    parcel -= size(trans,1)
     return parcel
 end
 

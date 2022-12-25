@@ -46,7 +46,7 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     out = Array{Bool,2}(undef,size(Q,2),size(capacity,1)) .= 0
     for i in axes(out,1)
         for j in axes(out,2)
-            if value.(X[i,j]) > 0.9
+            if value.(X[i,j]) > 0.1
                 out[i,j] = 1
             end
         end

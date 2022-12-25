@@ -98,11 +98,51 @@ function GREEDYSEEDMAIN!(sales::Matrix{Int64},
 end
 
 ## function to allocate the SKUs in the greedy pairs heuristic
-function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
+function GREEDYPAIRSMAIN_NEW!(Q::Matrix{<:Real},
                           X::Matrix{Bool},
                           capacity_left::Vector{<:Real},
                           sku_weight::Vector{<:Real})
-    ## Sort the DCs by decreasing capacity
+    Q_local = copy(Q)
+    while any(y -> y == 0, sum(X,dims=2)) && maximum(Q_local) > 0
+        highest_pair = argmax(Q_local)
+        for d in 1:size(capacity_left,1)
+            if capacity_left[d] >= sku_weight[highest_pair[1]]
+                if sum(X[highest_pair[1],:]) == 0
+                    X[highest_pair[1],d] = 1
+                    capacity_left[d] -= sku_weight[highest_pair[1]]
+                    break
+                end
+            end
+        end
+        for d in 1:size(capacity_left,1)
+            if capacity_left[d] >= sku_weight[highest_pair[2]]
+                if sum(X[highest_pair[2],:]) == 0
+                    X[highest_pair[2],d] = 1
+                    capacity_left[d] -= sku_weight[highest_pair[2]]
+                    break
+                end
+            end
+        end
+        Q_local[highest_pair] = 0
+    end
+    skus_assigned = sum(X,dims = 2)
+    for sku in axes(Q,2)
+        if skus_assigned[sku] == 0
+            while sum(X[sku,:]) == 0
+                k = rand(1:length(capacity_left))
+                if capacity_left[k] >= sku_weight[sku]
+                    X[sku,k] = 1
+                    capacity_left[k] -= sku_weight[sku]
+                end
+            end
+        end
+    end
+end
+
+function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
+    X::Matrix{Bool},
+    capacity_left::Vector{<:Real},
+    sku_weight::Vector{<:Real})
     for i in axes(pairs,1)
         ## For each pair of SKUs in sorted list of pairs do
         for j = 1:2
@@ -112,6 +152,7 @@ function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
                     if sum(X[pairs[i,j],:]) == 0
                         X[pairs[i,j],d] = 1
                         capacity_left[d] -= sku_weight[pairs[i,j]]
+                        break
                     end
                 end
             end
@@ -141,6 +182,18 @@ function GREEDYORDERSMAIN!(
                             capacity_left[d] -= sku_weight[sku]
                         end
                     end
+                end
+            end
+        end
+    end
+    skus_assigned = sum(X,dims = 2)
+    for sku in axes(trans,2)
+        if skus_assigned[sku] == 0
+            while sum(X[sku,:]) == 0
+                k = rand(1:length(capacity_left))
+                if capacity_left[k] >= sku_weight[sku]
+                    X[sku,k] = 1
+                    capacity_left[k] -= sku_weight[sku]
                 end
             end
         end
