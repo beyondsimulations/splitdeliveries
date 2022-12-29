@@ -12,10 +12,9 @@ function GREEDYPAIRS(trans::SparseMatrixCSC{Bool,Int64},
         ## Calculate the coapperance matrix
         capacity_left::Vector{Float64} = copy(capacity)
         ## Sort the pairs of distinct SKUs by decreasing coappearance
-        pairs = SORTPAIRS(Q)
+        pairs = SORTPAIRS(Q,sku_weight)
         X = zeros(Bool,size(Q,2),size(capacity,1))
         GREEDYPAIRSMAIN!(pairs,X,capacity_left,sku_weight)
-        #GREEDYPAIRSMAIN_NEW!(Q,X,capacity_left,sku_weight)
         ## While there is unallocated space in the DCs do
         FILLUP!(X,Q,capacity_left,sku_weight)
         # Check whether all SKUs are allocated

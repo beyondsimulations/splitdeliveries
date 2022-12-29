@@ -34,12 +34,13 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         X = zeros(Bool,I,size(capacity,1))
         ## Determine the sum of the coappearances for each SKU on the base of
         ## the matrices dep and nor
-        sum_dep = vec(sum(dep,dims = 2))
-        sum_nor = (vec(sum(Q,dims = 2)) .- vec(sum(dep,dims = 2)))
+        sum_dep = vec(sum(dep,dims = 2))./sku_weight
+        sum_nor = (vec(sum(Q,dims = 2)) .- vec(sum(dep,dims = 2)))./sku_weight
         ## Calculate the weight of each warehouse. It shows us the density of 
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
         weight = WHWEIGHT(capacity,sum_nor,sku_weight)
+        show(weight)
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left::Vector{Float64} = copy(capacity)
         ## Create arrays that save the current dependencies for all unallocated
@@ -55,6 +56,9 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## Start the allocation:
         ## If all SKUs are allocated once, continue after the while loop, else
         log_results == true ? print("\n  starting unique allocation of each sku.") : nothing
+        ## Allocate all SKUs without coappearances to the smallest warehouses
+        ## ALLOCATENOCOAPP!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight)
+        ## Allocate the rest of the SKUs with coapperances
         while sum(X) < I
         ## select the SKU i with the highest coappearance not being allocated
         ## to the warehouses yet. In addition, select the first sorted 

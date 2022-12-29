@@ -1,7 +1,7 @@
 ## function to sort the SKUs after the number of sales
-function SORTSALES(trans::SparseMatrixCSC{Bool, Int64})
+function SORTSALES(trans::SparseMatrixCSC{Bool, Int64}, sku_weight::Vector{<:Real})
     sales = Array{Int64,2}(undef,size(trans,2),4) .= 0
-    sales[:,3] = sum(trans,dims=1)
+    sales[:,3] = round.(Int64, sum(trans,dims=1)./transpose(sku_weight))
     sales[:,4] .= 0
     for i in axes(trans,2)
         sales[i,1] = i
@@ -18,14 +18,14 @@ function SORTSALES(trans::SparseMatrixCSC{Bool, Int64})
 end
 
 ## function to sort the SKU pairs after the highest number of coappearances
-function SORTPAIRS(Q::Matrix{<:Real})
+function SORTPAIRS(Q::Matrix{<:Real}, sku_weight::Vector{<:Real})
     pairs = zeros(Int64,round(Int64,(size(Q,1)*size(Q,1)-size(Q,1))/2),3)
     iter = 1
     for i = 2:size(Q,1)
         for j = 1 : i-1
             pairs[iter,1] = i
             pairs[iter,2] = j
-            pairs[iter,3] = round(Int64,Q[i,j])
+            pairs[iter,3] = round(Int64, Q[i,j]./(sku_weight[i]+sku_weight[j])/2)
             iter += 1
         end
     end
@@ -58,7 +58,7 @@ function GREEDYSEEDSTART!(sales::Matrix{Int64},
             coapp = zeros(Float64,size(top_sales,1))
             for i in 1:size(top_sales,1)
                 for j in 1:size(capacity_left,1)-1
-                    coapp[i] = CURRENTCOAPP(X,j,i,Q)
+                    coapp[i] = CURRENTCOAPP(X,j,i,Q)/sku_weight[i]
                 end
             end
             # allocate the SKU to the DC
@@ -82,7 +82,7 @@ function GREEDYSEEDMAIN!(sales::Matrix{Int64},
                 if capacity_left[d] >= sku_weight[i]
                     # retrieve the list of SKUs allocated to d so far
                     # calculate the average of coapperances with the SKUs in d
-                    best_allocation[d] = CURRENTCOAPP(X,d,i,Q)
+                    best_allocation[d] = CURRENTCOAPP(X,d,i,Q)/sku_weight[i]
                 end
             end
             if findmax(best_allocation)[1] > 0
@@ -97,47 +97,6 @@ function GREEDYSEEDMAIN!(sales::Matrix{Int64},
     end
 end
 
-## function to allocate the SKUs in the greedy pairs heuristic
-function GREEDYPAIRSMAIN_NEW!(Q::Matrix{<:Real},
-                          X::Matrix{Bool},
-                          capacity_left::Vector{<:Real},
-                          sku_weight::Vector{<:Real})
-    Q_local = copy(Q)
-    while any(y -> y == 0, sum(X,dims=2)) && maximum(Q_local) > 0
-        highest_pair = argmax(Q_local)
-        for d in 1:size(capacity_left,1)
-            if capacity_left[d] >= sku_weight[highest_pair[1]]
-                if sum(X[highest_pair[1],:]) == 0
-                    X[highest_pair[1],d] = 1
-                    capacity_left[d] -= sku_weight[highest_pair[1]]
-                    break
-                end
-            end
-        end
-        for d in 1:size(capacity_left,1)
-            if capacity_left[d] >= sku_weight[highest_pair[2]]
-                if sum(X[highest_pair[2],:]) == 0
-                    X[highest_pair[2],d] = 1
-                    capacity_left[d] -= sku_weight[highest_pair[2]]
-                    break
-                end
-            end
-        end
-        Q_local[highest_pair] = 0
-    end
-    skus_assigned = sum(X,dims = 2)
-    for sku in axes(Q,2)
-        if skus_assigned[sku] == 0
-            while sum(X[sku,:]) == 0
-                k = rand(1:length(capacity_left))
-                if capacity_left[k] >= sku_weight[sku]
-                    X[sku,k] = 1
-                    capacity_left[k] -= sku_weight[sku]
-                end
-            end
-        end
-    end
-end
 
 function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
     X::Matrix{Bool},

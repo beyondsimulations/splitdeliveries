@@ -13,7 +13,7 @@ function BESTSELLING(
     if CHECKCAPACITY(capacity,sku_weight)
         #  Start the heuristic
         capacity_left::Vector{Float64} = copy(capacity)
-        sales = SORTSALES(trans)
+        sales = SORTSALES(trans,sku_weight)
         X = zeros(Bool,size(trans,2),size(capacity,1))
         # apply the Greedy Seeds Heuristic if B = 0
         if sum(capacity) == size(trans,2)

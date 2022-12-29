@@ -7,7 +7,7 @@ function HYOPTHESISTEST!(dep::Matrix{<:Real},
                         sig::Float64,
                         sum_cond_sku::Vector{<:Real})
     ## Initialise chi square test
-    M = convert(Int64,((I^2-I)))
+    M = convert(Int64,(((I^2)-I)/2))
     ## Determine the acceptance level of the test
     accept = cquantile(Chisq(1), sig/M)
     ## Fill the arrays with the results of the chi-square test
@@ -111,8 +111,7 @@ function WHWEIGHT(capacity::Vector{Int64},
             normal_weight[next] = 0
             next = argmax(normal_weight)
             if sum(normal_weight) == 0
-                #normal_weight = copy(sum_nor)
-                break
+                normal_weight = copy(sum_nor)
             end
         end
     end
@@ -182,7 +181,7 @@ function WHPOTDEP(capacity_left::Vector{<:Real},
     pot_dep = zeros(Float64,size(capacity_left,1))
     for k in 1:size(capacity_left,1)
         if capacity_left[k] >= sku_weight[i]
-            pot_dep[k] = CALCVAL(X,dep,i,k)
+            pot_dep[k] = CALCVAL(X,dep,i,k) / sku_weight[i]
         end
     end
     return pot_dep::Vector{Float64}
@@ -253,14 +252,25 @@ function FINDDEP!(X::Array{Bool,2},
                   capacity_left::Vector{<:Real})
     @fastmath @simd for j in 1:size(X,1)
         if allocated[j] == 0 && capacity_left[k] >= sku_weight[j]
-            pot_dep[j]  = state_dep[j,k]
-            pot_nor[j]  = state_nor[j,k]
+            pot_dep[j]  = state_dep[j,k] /sku_weight[j]
+            pot_nor[j]  = state_nor[j,k] /sku_weight[j]
             if pot_dep[j] > 0
                 pot_dep[j] += pot_nor[j]
             end
         else
             pot_dep[j]  = 0
             pot_nor[j]  = 0
+        end
+    end
+end
+
+# function to allocate SKUs without coapperances
+function ALLOCATENOCOAPP!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight)
+    check_coappearance = sum(Q,dims=2)
+    for i in eachindex(check_coappearance)
+        if  check_coappearance[i] == 0
+            k = argmin(cap_left)
+            ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight,i,k)
         end
     end
 end
@@ -334,7 +344,7 @@ function FILLUP!(X::Array{Bool,2},
     state = Matrix{Float64}(undef,size(X,1),size(X,2)) .= 0
     for i = 1:size(X,1)
         for d = 1:size(X,2)
-            state[i,d] = CALCVAL(X,Q,i,d)
+            state[i,d] = CALCVAL(X,Q,i,d) / sku_weight[i]
         end
     end
     for d = 1:size(capacity_left,1)
@@ -349,7 +359,7 @@ function FILLUP!(X::Array{Bool,2},
             if best[1] > 0
                 X[best[2],d] = 1
                 for j in 1:size(X,1)
-                    state[j,d] += Q[j,best[2]]
+                    state[j,d] += Q[j,best[2]] / sku_weight[j]
                 end
                 capacity_left[d] -= sku_weight[best[2]]
             else

@@ -14,7 +14,7 @@ function GREEDYSEEDS(
         ## Calculate the coapperance matrix
         capacity_left::Vector{Float64} = copy(capacity)
         ## Sort the SKUs by decreasing sales
-        sales = SORTSALES(trans)
+        sales = SORTSALES(trans,sku_weight)
         ## Assign the top (best selling) SKU to the largest DC
         X = zeros(Bool,size(trans,2),size(capacity,1))
         X[sales[1,1],1] = 1

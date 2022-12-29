@@ -35,7 +35,7 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     GK = 1:length(capacity)
     @variable(mqkp, X[GI,GK], Bin)
     @objective(mqkp, Max, sum(X[i,k] .* X[j,k] .* Q[i,j] for i in GI, j in 1:i-1, k in GK))
-    @constraint(mqkp, capconstraint[k in GK], sum(X[i,k] for i in GI) == capacity[k])
+    @constraint(mqkp, capconstraint[k in GK], sum(X[i,k] * sku_weight[i] for i in GI) == capacity[k])
     if mode == "QMK"
         @constraint(mqkp, minallocation[i in GI], sum(X[i,k] for k in GK) >= 1)
     elseif mode == "KLINK"
