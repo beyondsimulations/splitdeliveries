@@ -38,18 +38,6 @@ Julia and GAMS have to be installed on the machine executing the code in this re
 2. Execute the file "main_benchmark_settings.jl" to start the benchmark
 3. The results will be saved in the folder "results"
 
-### Apply the benchmark on own datasets
-To apply the benchmark on your own dataset you have to allocate two new files:
-1. capacity_"your_experiment_name".csv in the folder "capacity"
-2. transactions_"your_experiment_name".csv in the folder "transactions"
-The capacity file has to contain a matrix. Each new column indicates a new warehouse with the number representing the available space. Each new row indicates a new capacity constellation that will be tested during the benchmark. For example [5 5 0; 6 4 2] represents two capacity constellations that will be benchmarked. The first constellation consists of two warehouses with a capacity of 5 each while the second represents 3 warehouses with a capacity of 6, 4 and 2. For further details take a look at the uploaded files used in our article in the folder "capacity".
-The transaction file has to contain a matrix as well. Each column represents a new SKU while each new row is an order. The dataset has to be binary indicating for each order whether the corresponding SKU in the column was part of the order. For further details take a look at the uploaded files used in our article in the folder "transactions".
-Execute the follwing steps two start the benchmark after both files are allocated correctly:
-1. Rename the variable "experiment" in "main_benchmark_settings.jl" after "your_experiment_name" used in both files
-2. Further parameters can be adjusted as explained in "main_benchmark_settings.jl"
-3. Execute the file "main_benchmark_settings.jl" to start the benchmark
-4. The results will be saved in the folder "results"
-
 ## License
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
