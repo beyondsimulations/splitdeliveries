@@ -22,7 +22,7 @@ The choice of heuristics as well as parameters can be controlled in the file "ma
 
 ## Solvers
 * [CPLEX](https://www.ibm.com/analytics/cplex-optimizer)
-* [BONMIN](https://github.com/coin-or/Bonmin)
+* [SBB](https://www.gams.com/latest/docs/S_SBB.html)
 
 ## Getting started
 ### Prerequisites
