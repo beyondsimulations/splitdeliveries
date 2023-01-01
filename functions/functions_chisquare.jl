@@ -388,13 +388,13 @@ function LOCALSEARCHCHI!(trans::SparseMatrixCSC{Bool,Int64},
     CURRENTSTATE!(X,Q,state)
     impro_bef = PARCELSSEND(trans,X,capacity,combination)
     X_backup = zeros(Bool,size(X,1),size(X,2))
-    log_results == true ? print("\n  Iter: 0 - parcels: ",impro_bef,"\n") : nothing
+    log_results == true ? print("\n  Iter: 0 - parcels: ",impro_bef) : nothing
     while ls < max_ls
         ls += 1
         X_backup .= X
         SEARCHLOOP!(X,Q,coapp_sort,state)
         impro_now = PARCELSSEND(trans,X,capacity,combination)
-        log_results == true ? print("  Iter: ",ls," - parcels: ",impro_now,"\n") : nothing
+        log_results == true ? print("\n  Iter: ",ls," - parcels: ",impro_now) : nothing
         if impro_now < impro_bef
             impro_bef = impro_now
         else

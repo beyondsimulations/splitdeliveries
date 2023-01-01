@@ -40,7 +40,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
         weight = WHWEIGHT(capacity,sum_nor,sku_weight)
-        show(weight)
+        print(" The weight per warehouses is, ",weight)
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left::Vector{Float64} = copy(capacity)
         ## Create arrays that save the current dependencies for all unallocated
