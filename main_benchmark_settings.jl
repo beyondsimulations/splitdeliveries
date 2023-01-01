@@ -27,7 +27,7 @@ for dependency in dependencies
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    train_test = 0.80
+    train_test = 0.90
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
     order_sets = [1000]
