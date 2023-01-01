@@ -64,21 +64,19 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             for orders in order_sets
 
                 ## Generate artificial random transactions without dependencies if there is no transactional dataset
-                if isfile("transactions/transactions_$experiment.csv") == false
-                    if  size(trans,2) == skus_benchmark[a] && size(trans,1) == orders
-                            print("\n Reused transactions from previous run.")
-                    else
-                        print("\n Starting generation of transactions.")
-                        time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,skus_in_order,sku_frequency,
-                                                            ceil(Int64,max(skus_benchmark[a]/20,10)),
-                                                            min_dependence,max_dependence,
-                                                            group_link,ind_chance,one_direction,
-                                                            multi_relatio)
-                        print("\n Transactions generated after ", round(time,digits = 3)," seconds.")
-                        if skus_benchmark[a] <= 1000
-                            display(histogram(sum(trans,dims=2)))
-                            display(histogram(vec(sum(trans,dims=1))))
-                        end
+                if  size(trans,2) == skus_benchmark[a] && size(trans,1) == orders
+                        print("\n Reused transactions from previous run.")
+                else
+                    print("\n Starting generation of transactions.")
+                    time = @elapsed trans = RANDOMTRANS(skus_benchmark[a],orders,skus_in_order,sku_frequency,
+                                                        ceil(Int64,max(skus_benchmark[a]/20,10)),
+                                                        min_dependence,max_dependence,
+                                                        group_link,ind_chance,one_direction,
+                                                        multi_relatio)
+                    print("\n Transactions generated after ", round(time,digits = 3)," seconds.")
+                    if skus_benchmark[a] <= 10000
+                        display(histogram(sum(trans,dims=2)))
+                        display(histogram(vec(sum(trans,dims=1))))
                     end
                 end
 

@@ -3,14 +3,19 @@
 
 # Choose the benchmark which should be evaluated
 ## Benchmarks used in our article:
-### e1_100to1000skus
-### e2_1000to10000skus
-### e3_10000to50000skus
+### r1_100skus
+### r2_1000skus
+### r3_10000skus
+### r4_100000skus
+
 ## Dependencies used in our article:
 ### ID-VF
 ### MD-VF
 ### HD-VF
-    experiment = "r3_10000skus"
+### ID-SF
+### MD-SF
+### HD-SF
+    experiment = "r1_100skus"
     dependencies = ["ID-VF","MD-VF","HD-VF","ID-SF","MD-SF","HD-SF"]
     ren_lock = ReentrantLock()
 
@@ -25,7 +30,7 @@ for dependency in dependencies
     train_test = 0.80
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-    order_sets = [200000]
+    order_sets = [1000]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
@@ -33,10 +38,10 @@ for dependency in dependencies
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
                       QMK   = [1], # quadratic-multiple knapsack heuristic with SBB as solver
-                      CHIM  = [0], # main chi-square heuristic without local search
+                      CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KL    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KLQ   = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
                       GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
@@ -53,15 +58,15 @@ for dependency in dependencies
 ## klinkstatus: display the current iteration during the heuristic
     trials   = 100
     stagnant = 10
-    strategy = 3
-    klinkstatus = false
+    strategy = 2
+    klinkstatus = true
 
 # Parameters for all Optimisations
 ## abort: number of seconds until the Optimisation is aborted
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 1800
+    abort       = 3600
     show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000
@@ -73,14 +78,14 @@ for dependency in dependencies
     sig_levels = [1.0e-2]
     #sig_levels = [1.0/(10^x) for x = 0:1:9]
     max_ls = 100
-    chistatus = false
+    chistatus = true
 
 # Parameters for RANDOM
 ## iterations: number of different random allocations for the comparison
     iterations = 100
 
 # Parameters for the whole Benchmark
-    benchiterations = 1
+    benchiterations = 5
 
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
