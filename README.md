@@ -1,4 +1,4 @@
-# Split-Delivery Minimisation in E-Commerce Environments
+# Optimising SKU-Warehouse Allocations to minimise Split Parcels in E-Commerce Environments
 ## About the project
 This repository contains the code used in a currently anonymous article. It contains two new heuristics, the QMK heuristic and the CHI heuristic, as well as four competing heuristics that represent the state-of-the-art in split delivery minimisation. With this repository all heuristics and optimisations applied in the article can be reproduced. Furthermore, the code can be applied to any other split-delivery minimisation problem.
 
