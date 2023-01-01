@@ -103,6 +103,7 @@ function WHWEIGHT(capacity::Vector{Int64},
     weight = zeros(Float64,size(capacity))
     free_capacity::Vector{Float64} = copy(capacity)
     normal_weight = copy(sum_nor)
+    iteration = 1
     for k = 1:size(capacity,1)
         next = argmax(normal_weight)
         while free_capacity[k] >= sku_weights[next]
@@ -110,8 +111,10 @@ function WHWEIGHT(capacity::Vector{Int64},
             free_capacity[k] -= sku_weights[next]
             normal_weight[next] = 0
             next = argmax(normal_weight)
-            if sum(normal_weight) == 0
+            iteration += 1
+            if iteration == length(sku_weights)
                 normal_weight = copy(sum_nor)
+                iteration = 1
             end
         end
     end
