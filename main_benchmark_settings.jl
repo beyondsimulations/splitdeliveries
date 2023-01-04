@@ -15,7 +15,7 @@
 ### ID-SF
 ### MD-SF
 ### HD-SF
-    experiment = "r1_100skus"
+    experiment = "r4_100000skus"
     dependencies = ["ID-VF","MD-VF","HD-VF","ID-SF","MD-SF","HD-SF"]
     ren_lock = ReentrantLock()
 
@@ -30,20 +30,20 @@ for dependency in dependencies
     train_test = 0.90
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
     #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-    order_sets = [1000]
+    order_sets = [1000000]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK   = [1], # quadratic-multiple knapsack heuristic with SBB as solver
+                      QMK   = [0], # quadratic-multiple knapsack heuristic with SBB as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      KLQ   = [1], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      GO    = [0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GP    = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       OPT   = [0]) # optimisation model to determine the optimal solution with CPLEX

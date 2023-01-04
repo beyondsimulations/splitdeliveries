@@ -129,7 +129,6 @@ function BESTSELLING_ALLOCATE!(
     sku_weights::Vector{<:Real},
     )
     bestselling = BESTSELLING_SKUS(capacity_left,sku_weights)
-    print("Bestselling: ", bestselling)
     normal_weight = sum_nor./sku_weights
     for k in axes(capacity_left,1)
         if capacity_left[k] > bestselling
@@ -159,7 +158,6 @@ function WHWEIGHT(
     free_capacity::Vector{Float64} = copy(capacity)
     weight = zeros(Float64,size(free_capacity))
     normal = BESTSELLING_ALLOCATE!(sum_nor,free_capacity,weight,sku_weights)
-    print("The current weight is ",weight)
     normal_weight = copy(normal)
     for k = 1:size(capacity,1)
         next = argmax(normal_weight)
