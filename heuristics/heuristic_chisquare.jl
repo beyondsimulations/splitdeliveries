@@ -36,11 +36,6 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## the matrices dep and nor
         sum_dep = vec(sum(dep,dims = 2))./sku_weight
         sum_nor = (vec(sum(Q,dims = 2)) .- vec(sum(dep,dims = 2)))./sku_weight
-        ## Calculate the weight of each warehouse. It shows us the density of 
-        ## the independent coappearances in each warehouse if we were to allocate
-        ## all SKUs simply according to the highest independent coappearances.
-        weight = WHWEIGHT(capacity,sum_nor,sku_weight)
-        print(" The weight per warehouses is, ",weight)
         ## Copy the capacity to have an array that keeps the left-over capacity
         cap_left::Vector{Float64} = copy(capacity)
         ## Create arrays that save the current dependencies for all unallocated
@@ -48,6 +43,11 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         state_dep = zeros(Float64,size(X,1),length(cap_left))
         state_nor = zeros(Float64,size(X,1),length(cap_left))
         allocated = zeros(Bool,size(X,1))
+        ## Calculate the weight of each warehouse. It shows us the density of 
+        ## the independent coappearances in each warehouse if we were to allocate
+        ## all SKUs simply according to the highest independent coappearances.
+        weight = WHWEIGHT(capacity,sum_nor,sku_weight)
+        show(weight)
         ## In the heuristic we compare the split-delivery minimising potential 
         ## of SKU allocations to maximise dependent coappearances (SKUs with 
         ## positive dependencies are stored in the same warehouse) with the 
