@@ -28,7 +28,8 @@ function COMBINEWAREHOUSES(
     return combination::Array{Array{Array{Int64,1},1},1}
 end
 
-## PARCELSSEND: number of parcels due to ordersplitting necessary to fulfill all orders
+## PARCELSSEND_WEIGHT: shows the number of parcels necessary plus the weight for each warehouse dispatch
+## Attention: does only work with 2 Warehouses!!
 function PARCELSSEND_WEIGHT(
     trans::SparseMatrixCSC{Bool, Int64}, 
     X::Array{Bool,2}, 
@@ -96,6 +97,7 @@ function PARCELSSEND_WEIGHT(
     return split, parcel
 end
 
+## PARCELSSEND: number of parcels due to ordersplitting necessary to fulfill all orders
 function PARCELSSEND(
     trans::SparseMatrixCSC{Bool, Int64}, 
     X::Array{Bool,2}, 

@@ -163,9 +163,9 @@ end
 ## multiple times
 function BESTSELLING_B(
     capacity_left::Vector{<:Real},
-    sku_weight::Vector{<:Real},
+    sku_weights::Vector{<:Real},
 )
-    floor(Int64,(sum(capacity_left)-sum(sku_weight))/(size(capacity_left,1)-1))
+    floor(Int64,(sum(capacity_left)-sum(sku_weights))/(size(capacity_left,1)-1))
 end
 
 ## function to initialise the bestselling heuristic
@@ -200,7 +200,7 @@ function BESTSELLINGTOP!(sales::Matrix{Int64},
                          sku_weight::Vector{<:Real})
     for d in axes(capacity_left,1)
         i = 1
-        while capacity_left[d] > capacity[d] - B
+        while capacity_left[d] > capacity[d] - B && i <= size(sales,1)
             X[sales[i,1],d] = 1
             sales[sales[i,2],4] = 1
             capacity_left[d] -= sku_weight[sales[i,1]]

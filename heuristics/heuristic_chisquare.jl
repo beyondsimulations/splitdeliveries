@@ -47,7 +47,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## the independent coappearances in each warehouse if we were to allocate
         ## all SKUs simply according to the highest independent coappearances.
         weight = WHWEIGHT(capacity,sum_nor,sku_weight)
-        show(weight)
+        print("The weight is ",weight)
         ## In the heuristic we compare the split-delivery minimising potential 
         ## of SKU allocations to maximise dependent coappearances (SKUs with 
         ## positive dependencies are stored in the same warehouse) with the 
