@@ -16,7 +16,7 @@
 ### MD-SF
 ### HD-SF
     experiment = "r4_100000skus"
-    dependencies = ["ID-VF","MD-VF","HD-VF","ID-SF","MD-SF","HD-SF"]
+    dependencies = ["MD-VF","HD-VF","ID-SF","MD-SF","HD-SF"]
     ren_lock = ReentrantLock()
 
 # iterate over all dependencies
