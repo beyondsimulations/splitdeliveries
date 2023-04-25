@@ -39,7 +39,7 @@ Julia and GAMS have to be installed on the machine executing the code in this re
 3. The results will be saved in the folder "results"
 
 ## License
-Distributed under the GNU GPLv3 License. See `LICENSE.txt` for more information.
+Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Associated Repositories
 * [CSV.jl](https://github.com/JuliaData/CSV.jl)
