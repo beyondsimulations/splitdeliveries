@@ -18,7 +18,7 @@ function load_data()
     for experiment in experiments
         for dataset in datasets
             for dependency in dependencies
-                loadframe = CSV.read("results/Published Results/$(experiment)_$(dataset)_$dependency.csv", DataFrame)
+                loadframe = CSV.read("results/$(experiment)_$(dataset)_$dependency.csv", DataFrame)
                 isempty(frame) ? frame = loadframe : frame = append!(frame,loadframe)
             end
         end
