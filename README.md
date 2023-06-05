@@ -1,6 +1,6 @@
 # Optimising SKU-Warehouse Allocations to minimise Split Parcels in E-Commerce Environments
 ## About the project
-This repository contains the code used in a currently anonymous article. It contains two new heuristics, the QMK heuristic and the CHI heuristic, as well as four competing heuristics that represent the state-of-the-art in split delivery minimisation. With this repository all heuristics and optimisations applied in the article can be reproduced. Furthermore, the code can be applied to any other split-delivery minimisation problem.
+This repository contains the code used in a research article. It contains two new heuristics, the QMK heuristic and the CHI heuristic, as well as four competing heuristics that represent the state-of-the-art in split delivery minimisation. With this repository all heuristics and optimisations applied in the article can be reproduced. Furthermore, the code can be applied to any other split-delivery minimisation problem.
 
 ## Built with
 * [Julia](https://github.com/JuliaLang)
@@ -12,10 +12,10 @@ This repository contains the following heuristics:
 * QMK: optimisation model from the QMK heuristic solved with the solver BONMIN
 * CHISOL: CHI heuristic without local search
 * CHI: CHI heuristic with local search
-* KLINK: KLINK heuristic by [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024), replicated based on the article
-* GP: greedy pairs heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
-* GS: greedy seeds heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
-* BS: bestselling heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
+* KLINK: K-LINK heuristic by [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024), replicated based on the article
+* GP: GREEDY PAIRS heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
+* GS: GREEDY SEEDS heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
+* BS: BESTSELLERS heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
 * OPT: optimisation model to solve the split-delivery minimisation with CPLEX based on the models of [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687) and [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
 * RND: random allocation of SKUs to warehouses
 The choice of heuristics as well as parameters can be controlled in the file "main_benchmark_seetings.jl".
