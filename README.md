@@ -19,7 +19,7 @@ This repository contains the following heuristics:
 * OPT: optimisation model to solve the split-delivery minimisation with CPLEX based on the models of [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687) and [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
 * RND: random allocation of SKUs to warehouses.
 
-The choice of heuristics as well as parameters can be controlled in the file "main_benchmark_seetings.jl".
+The choice of heuristics as well as parameters can be controlled in the file "main_benchmark_settings.jl".
 
 ## Solvers
 * [CPLEX](https://www.ibm.com/analytics/cplex-optimizer)
