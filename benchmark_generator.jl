@@ -1,3 +1,4 @@
+# script to generate new problem instances for benchmarking
 ## import packages
 include("load_packages.jl")
 

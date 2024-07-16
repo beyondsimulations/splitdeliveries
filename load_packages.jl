@@ -1,8 +1,8 @@
-# Activate necessary environment
+# activate necessary environment
 import Pkg
 Pkg.activate("splitdeliveries")
 
-# Load all necessary packages (repositories)
+# load all necessary packages (repositories)
 using DataFrames
 using DelimitedFiles
 using CSV
@@ -16,7 +16,7 @@ using StatsPlots
 using Dates
 using Measures
 
-# Load all necessary packages from the standard library module
+# load all necessary packages from the standard library module
 using LinearAlgebra
 using Random
 using Statistics

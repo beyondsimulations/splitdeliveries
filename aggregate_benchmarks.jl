@@ -1,3 +1,4 @@
+# Script to aggregate the results of all benchmarks into one file
 ## import packages
 include("load_packages.jl")
 
