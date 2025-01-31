@@ -44,7 +44,7 @@ Configuration of heuristics and parameters can be adjusted in `main_benchmark_se
 1. Install Julia and GAMS
 2. Clone this repository:
    ```bash
-   git clone [repository-url]
+   git clone https://github.com/beyondsimulations/splitdeliveries
    ```
 3. Install required packages:
    ```bash
