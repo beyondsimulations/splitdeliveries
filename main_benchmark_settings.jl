@@ -87,6 +87,19 @@ for dependency in dependencies
 # Parameters for the whole Benchmark
     benchiterations = 5
 
+# Configuration validation
+function validate_settings()
+    if !all(0 .<= sig_levels .<= 1)
+        throw(ArgumentError("Significance levels must be between 0 and 1"))
+    end
+    if cpu_cores < 1
+        throw(ArgumentError("CPU cores must be positive"))
+    end
+    if !isfile("capacity/capacity_$experiment.csv") || !isfile("capacity/skus_$experiment.csv")
+        throw(ArgumentError("Capacity or SKUs file not found for experiment: $experiment"))
+    end
+end
+
 # Initialise the basic problem by loading the respective capacity constellations
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
     capacity_benchmark  = readdlm("capacity/capacity_$experiment.csv", ';', Int64)

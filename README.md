@@ -1,59 +1,78 @@
 # Optimizing SKU-Warehouse Allocations to minimize Split Parcels in E-Commerce Environments
-## About the project
-This repository contains the code used in a research article. It contains two new heuristics, the QMK heuristic and the CHI heuristic, as well as four competing heuristics that represent the state-of-the-art in split delivery minimization. With this repository, all heuristics and optimizations applied in the article can be reproduced. Furthermore, the code can be applied to any other split-delivery minimization problem.
 
-## Built with
-* [Julia](https://github.com/JuliaLang)
-* [GAMS](https://www.gams.com)
+## About the Project
+This repository contains the implementation of novel heuristics for minimizing split deliveries in e-commerce warehouse allocation problems, as presented in our research article. We introduce two new approaches:
+- QMK heuristic
+- CHI heuristic
 
-## Heuristics
-This repository contains the following heuristics:
-* QMKOPT: optimization model from the QMK heuristic solved with the solver CPLEX
-* QMK: optimization model from the QMK heuristic solved with the solver BONMIN
-* CHISOL: CHI heuristic without local search
-* CHI: CHI heuristic with local search
-* KLINK: K-LINK heuristic by [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024), replicated based on the article
-* GP: GREEDY PAIRS heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
-* GS: GREEDY SEEDS heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
-* BS: BESTSELLERS heuristic by [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687), replicated based on the article
-* OPT: optimization model to solve the split-delivery minimization with CPLEX based on the models of [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687) and [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
-* RND: random allocation of SKUs to warehouses.
+Additionally, we implement four state-of-the-art competing heuristics for comparison. This codebase enables full reproduction of our research results and can be adapted for any split-delivery minimization problem.
 
-The choice of heuristics, as well as parameters, can be controlled in the file “main_benchmark_settings.jl”.
+## Built With
+* [Julia](https://julialang.org/) - Primary programming language
+* [GAMS](https://www.gams.com) - Mathematical optimization system
 
-## Solvers
-* [CPLEX](https://www.ibm.com/analytics/cplex-optimizer)
-* [SBB](https://www.gams.com/latest/docs/S_SBB.html)
+## Implemented Heuristics
 
-## Getting started
+### Novel Approaches
+* **QMKOPT**: QMK heuristic optimization model (CPLEX solver)
+* **QMK**: QMK heuristic optimization model (BONMIN solver)
+* **CHISOL**: CHI heuristic without local search
+* **CHI**: CHI heuristic with local search
+
+### Benchmark Heuristics
+* **KLINK**: K-LINK heuristic ([Zhu et al., 2021](https://doi.org/10.1016/j.ejor.2020.08.024))
+* **GP**: GREEDY PAIRS heuristic ([Catalan & Fisher, 2012](https://doi.org/10.2139/ssrn.2166687))
+* **GS**: GREEDY SEEDS heuristic ([Catalan & Fisher, 2012](https://doi.org/10.2139/ssrn.2166687))
+* **BS**: BESTSELLERS heuristic ([Catalan & Fisher, 2012](https://doi.org/10.2139/ssrn.2166687))
+* **OPT**: CPLEX optimization model based on Catalan & Fisher (2012) and Zhu et al. (2021)
+* **RND**: Random allocation baseline
+
+Configuration of heuristics and parameters can be adjusted in `main_benchmark_settings.jl`.
+
+## Required Solvers
+* [CPLEX](https://www.ibm.com/analytics/cplex-optimizer) - For QMKOPT and OPT
+* [SBB](https://www.gams.com/latest/docs/S_SBB.html) - GAMS solver
+
+## Getting Started
+
 ### Prerequisites
-Julia and GAMS have to be installed on the machine executing the code in this repository. Furthermore, a valid GAMS license is necessary to execute the heuristics QMKOPT, QMK and OPT.
+- Julia installation
+- GAMS installation
+- Valid GAMS license (required for QMKOPT, QMK, and OPT heuristics)
 
 ### Installation
-1. Install Julia and GAMS (use a valid GAMS license if QMKOPT, QMK or OPT should be executed)
-1. Clone the repo
-2. Execute the file “install_packages.jl” to install all necessary packages (also listed under “Associated Repositories”)
+1. Install Julia and GAMS
+2. Clone this repository:
+   ```bash
+   git clone [repository-url]
+   ```
+3. Install required packages:
+   ```bash
+   julia install_packages.jl
+   ```
 
-### Reproduce benchmarks from the article
-1. Adjust the parameters in the file “main_benchmark_settings.jl” (more details within the comments of the file)
-2. Execute the file “main_benchmark_settings.jl” to start the benchmark
-3. The results will be saved in the folder “results”
+### Running Benchmarks
+1. Configure parameters in `main_benchmark_settings.jl`
+2. Execute the benchmark:
+   ```bash
+   julia main_benchmark_settings.jl
+   ```
+3. Results will be saved to the `results` directory
+
+## Dependencies
+The following Julia packages are required:
+* [CSV.jl](https://github.com/JuliaData/CSV.jl) - CSV file handling
+* [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl) - Data manipulation
+* [Combinatorics.jl](https://github.com/JuliaMath/Combinatorics.jl) - Combinatorial algorithms
+* [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) - Probability distributions
+* [GAMS.jl](https://github.com/JuliaData/GAMS.jl) - GAMS interface
+* [JuMP.jl](https://github.com/jump-dev/JuMP.jl) - Mathematical optimization
+* [Octavian.jl](https://github.com/JuliaLinearAlgebra/Octavian.jl) - Matrix operations
+* [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl) - Loop optimization
 
 ## License
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
-## Associated Repositories
-* [CSV.jl](https://github.com/JuliaData/CSV.jl)
-* [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl)
-* [Combinatorics.jl](https://github.com/JuliaMath/Combinatorics.jl)
-* [Distributions.jl](https://github.com/JuliaStats/Distributions.jl)
-* [GAMS.jl](https://github.com/JuliaMath/Combinatorics.jl)
-* [JuMP.jl](https://github.com/jump-dev/JuMP.jl)
-* [Octavian.jl](https://github.com/JuliaLinearAlgebra/Octavian.jl)
-* [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl)
-* [Combinatorics.jl](https://github.com/JuliaMath/Combinatorics.jl)
-
-## Acknowledgments
-
-* [S. Zhu, X. Hu and K. Huang et al. (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
-* [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
+## References
+* Zhu, S., Hu, X., Huang, K. et al. (2021). Optimization of product category allocation in multiple warehouses to minimize splitting of online supermarket customer orders. European Journal of Operational Research. https://doi.org/10.1016/j.ejor.2020.08.024
+* Catalan, A., Fisher, M. (2012). Assortment Allocation to Distribution Centers to Minimize Split Customer Orders. SSRN. https://doi.org/10.2139/ssrn.2166687
