@@ -5,7 +5,7 @@
 # Order-Level Parameters
 skus_in_order  = 3.00    # Mean of normal distribution for number of SKUs per order
                          # Actual: 1 + floor(abs(rand(Normal(0,skus_in_order))))
-sku_frequency  = 3.50    # Controls SKU selection probability distribution
+sku_frequency  = 1.50    # Controls SKU selection probability distribution
                          # 0.00: Uniform random selection
                          # >0.0: Normal distribution: 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency))))
 

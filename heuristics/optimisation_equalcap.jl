@@ -9,16 +9,15 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
     trans = Matrix(trans)
     # Sort the warehouses by decreasing capacity
     capacity = sort(capacity, rev=true)
-    allocation = Model(GAMS.Optimizer)
+    allocation = Model(Gurobi.Optimizer)
     if show_opt == 0
         set_silent(allocation)
     end
-    set_optimizer_attribute(allocation, GAMS.ModelType(), "MIP")
-    set_optimizer_attribute(allocation, "Solver",  "CPLEX")
-    set_optimizer_attribute(allocation, "OptCR",   allowed_gap)
-    set_optimizer_attribute(allocation, "ResLim",  abort)
+
+    set_optimizer_attribute(allocation, "MIPGap", allowed_gap)
+    set_optimizer_attribute(allocation, "TimeLimit", abort)
     set_optimizer_attribute(allocation, "Threads", cpu_cores)
-    set_optimizer_attribute(allocation, "NodLim",  max_nodes)
+    set_optimizer_attribute(allocation, "NodeLimit", max_nodes)
     GJ = 1:size(trans,1)
     GI = 1:size(trans,2)
     GK = 1:size(capacity,1)
