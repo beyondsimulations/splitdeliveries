@@ -39,19 +39,11 @@ function PARCELSSEND_WEIGHT(
     )
     if sum(capacity) == size(trans,2)
         parcel = trans * X
-        for j in axes(parcel,1)
-            for k in axes(parcel,2)
-                if parcel[j,k] > 0
-                    parcel[j,k] = 1
-                else
-                    parcel[j,k] = 0
-                end
-            end
-        end
-        parcel = round.(Int64, sum(parcel,dims = 2))
+        parcel = (parcel .> 0)
+        parcel = sum(parcel, dims=2)
     else
-        warehouse_combination = Array{Int64,2}(undef,size(X,1),size(combination,1)) .= 0
-        parcels_out = zeros(size(X,2),size(combination,1))
+        warehouse_combination = zeros(Int64, size(X,1), size(combination,1))
+        parcels_out = zeros(size(X,2), size(combination,1))
         for i in axes(combination,1)
             for j in axes(combination[i],1)
                 for k in axes(X,1)
@@ -104,21 +96,12 @@ function PARCELSSEND(
     capacity::Array{Int64,1}, 
     combination::Array{Array{Array{Int64,1},1},1}
     )
-    if any(y -> y == 0, sum(X, dims = 2)) == false
+    if !any(iszero, sum(X, dims=2))
         if sum(capacity) == size(trans,2)
             parcel = trans * X
-            for j in axes(parcel,1)
-                for k in axes(parcel,2)
-                    if parcel[j,k] > 0
-                        parcel[j,k] = 1
-                    else
-                        parcel[j,k] = 0
-                    end
-                end
-            end
-            parcel = round(Int64, sum(parcel))
+            parcel = sum(parcel .> 0)
         else
-            warehouse_combination = Array{Int64,2}(undef,size(X,1),size(combination,1)) .= 0
+            warehouse_combination = zeros(Int64, size(X,1), size(combination,1))
             parcels_out = zeros(size(combination,1))
             for i in axes(combination,1)
                 for j in axes(combination[i],1)
@@ -162,22 +145,24 @@ function RANDOMALLOCONCE(
     capacity::Vector{<:Real},
     sku_weight::Vector{<:Real},
     )
-    cap_left::Vector{Float64} = copy(capacity);
-    X = Array{Bool,2}(undef,length(sku_weight),size(capacity,1))
-    X .= 0
-    for j in randperm(size(X,1))
-        while sum(X[j,:]) == 0
-            randomnumber = rand(1:size(capacity,1))
+    cap_left = copy(capacity)
+    X = zeros(Bool, length(sku_weight), length(capacity))
+    
+    # Pre-calculate warehouse indices
+    warehouse_indices = collect(1:length(capacity))
+    
+    for j in randperm(length(sku_weight))
+        while sum(view(X, j, :)) == 0  # Use view instead of full slice
+            randomnumber = rand(warehouse_indices)
             if cap_left[randomnumber] > 0
-                X[j,randomnumber] = 1
+                X[j,randomnumber] = true
                 cap_left[randomnumber] -= sku_weight[j]
             end
         end
     end
-    if any(y->y < 1,sum(X,dims=2))
-        "\n Error: Not all SKUs are allocated."
-    end
-    return X::Array{Bool,2}
+    
+    any(iszero, sum(X, dims=2)) && error("Not all SKUs are allocated.")
+    return X
 end
 
 ## RANDOMALLOCMULTI: allocate SKUs randomly in case each SKU can be allocated multiple times
@@ -208,16 +193,12 @@ function RANDOMBENCH(
     sku_weight::Vector{<:Real},
     combination::Array{Array{Array{Int64,1},1},1}
     )
-    randomcollection = Array{Int64,1}(undef,iterations) .= 0
+    randomcollection = zeros(Int64, iterations)
     Threads.@threads for r = 1:iterations
-        W = RANDOMALLOCMULTI(trans,capacity,sku_weight)
-        parcel = PARCELSSEND(trans,W,capacity,combination)
-        Threads.lock(ren_lock) do
-            randomcollection[r] = parcel
-        end
+        W = RANDOMALLOCMULTI(trans, capacity, sku_weight)
+        randomcollection[r] = PARCELSSEND(trans, W, capacity, combination)
     end
-    average_parcels = round(sum(randomcollection)/iterations,digits=0)
-    return average_parcels::Float64
+    return round(mean(randomcollection))  # More efficient than sum/length
 end
 
 ## CHECKCAPACITY: function to test whether the input capacity is viable for the transactional data

@@ -8,7 +8,7 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
               allowed_gap::Float64,
               max_nodes::Int64,
               mode::String)
-              
+
     # Create the Matrix for the objective of the optimisation
     if mode == "QMK"
         Q = COAPPEARENCE(trans,sku_weight)
@@ -33,8 +33,20 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         set_optimizer_attribute(mqkp, "TimeLimit", abort)
         set_optimizer_attribute(mqkp, "Threads", cpu_cores)
         set_optimizer_attribute(mqkp, "NodeLimit", max_nodes)
+    elseif solv == "Juniper"
+        ipopt = optimizer_with_attributes(Ipopt.Optimizer, "print_level" => 0)
+        highs = optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "threads" => cpu_cores)
+        mqkp = Model(
+            optimizer_with_attributes(
+                Juniper.Optimizer,
+                "nl_solver" => ipopt,
+                "mip_solver" => highs,
+            ),
+        )
+        set_optimizer_attribute(mqkp, "mip_gap", allowed_gap)
+        set_optimizer_attribute(mqkp, "time_limit", abort)
     else
-        error("Sorry, only the solver Gurobi is allowed.")
+        error("Sorry, only the solver Gurobi or Juniper is allowed.")
     end
     if show_opt == false
         set_silent(mqkp)
@@ -65,5 +77,31 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
             end
         end
     end
+
+    # Check if the solution is empty (no allocations made)
+    if sum(out) == 0
+        if termination_status(mqkp) == MOI.INFEASIBLE
+            error("MQKP optimization resulted in an infeasible model. Please check input parameters.")
+        else
+            println("MQKP optimization resulted in an empty solution. Status: $(termination_status(mqkp))")
+            println("Attempting basic allocation as fallback...")
+            # Simple greedy allocation - assign each item to the first warehouse with capacity
+            remaining_capacity = copy(capacity)
+            for i in GI
+                for k in GK
+                    if remaining_capacity[k] >= sku_weight[i]
+                        out[i,k] = 1
+                        remaining_capacity[k] -= sku_weight[i]
+                        break
+                    end
+                end
+            end
+            # If we still have an empty solution, it's truly infeasible
+            if sum(out) == 0
+                error("Cannot create a feasible allocation with the given capacities and weights.")
+            end
+        end
+    end
+
     return out,G
 end

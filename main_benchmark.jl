@@ -131,6 +131,37 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                                         gap = gap_optimisation))
                 end
 
+                ## Start QMK heuristic with Juniper as solver
+                if start[1,:QMKJ] == 1
+                    sleep(0.01)
+                    GC.gc()
+                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"Juniper",show_opt,
+                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
+                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
+                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    print("\n   QMKJ: parcels test data: ", parcels_benchmark, 
+                        " / parcels training data: ", parcels_train,  
+                        " / time: ", round(time_benchmark, digits = 3),
+                        " / gap: ",round(gap_optimisation, digits = 6),
+                        " / warehouse: ",sum(W,dims=1))
+
+                    push!(benchmark, (dependency = dependency, 
+                                        skus = skus_benchmark[a],  
+                                        wareh = length(capacity), 
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
+                                        mode = "QMKJ",
+                                        benchiter = benchnr,
+                                        orders = size(trans,1),
+                                        train_test = train_test,
+                                        parcel_train = parcels_train, 
+                                        parcel_test = parcels_benchmark, 
+                                        duration = time_benchmark,
+                                        cap_used = sum(W),
+                                        local_search = 0,
+                                        gap = gap_optimisation))
+                end
+
                 ## Start chi square heuristic without local search
                 if start[1,:CHIM] == 1
                     for sig in sig_levels

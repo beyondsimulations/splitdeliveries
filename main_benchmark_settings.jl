@@ -3,35 +3,19 @@
 
 # Choose the benchmark which should be evaluated
 ## Benchmarks used in our article:
-### 10skus
-### 100skus
-### 1000skus
-### 10000skus
-### 100000skus
+### small_benchmark
+### medium_benchmark
+### large_benchmark
 
 ## Dependencies used in our article:
 ### ID-SF
-### ID-MF
 ### ID-HF
 ### MD-SF
-### MD-MF
 ### MD-HF
 ### HD-SF
-### HD-MF
 ### HD-HF
-    experiment = "small_benchmark"
-    dependencies = [
-        #"ID-SF",
-        #"ID-MF",
-        #"ID-HF",
-        #"MD-SF",
-        #"MD-MF",
-        #"MD-HF",
-        #"HD-SF",
-        #"HD-MF",
-        "HD-HF"
-        ]
-    ren_lock = ReentrantLock()
+
+ren_lock = ReentrantLock()
 
 # iterate over all dependencies
 for dependency in dependencies
@@ -42,23 +26,24 @@ for dependency in dependencies
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
     train_test = 0.50
-    order_sets = [2,20]
+    order_sets = [2,10]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(
-                      QMK   = [1], # quadratic-multiple knapsack heuristic with Gurobi as solver
+                      QMK   = [0], # quadratic-multiple knapsack heuristic with Gurobi as solver
+                      QMKJ  = [0], # quadratic-multiple knapsack heuristic with Juniper as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
-                      KL    = [1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      KLQ   = [1], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      KLQ   = [0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
                       GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      GP    = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      GP    = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      OPT   = [1], # optimisation model to determine the optimal solution with Gurobi
+                      OPT   = [0], # optimisation model to determine the optimal solution with Gurobi
                       )
 
 # Parameters for the KLINK heuristic
@@ -79,8 +64,8 @@ for dependency in dependencies
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 1800
-    show_opt    = true
+    abort       = 900
+    show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000
 
@@ -118,7 +103,7 @@ end
     skus_benchmark      = vec(readdlm("capacity/skus_$experiment.csv", ';', Int64))
     diff_benchmark      = vec(readdlm("capacity/diff_$experiment.csv", ';', Float64))
     buff_benchmark      = vec(readdlm("capacity/buff_$experiment.csv", ';', Float64))
-    
+
 # Run the benchmark
     print("\n\n### Benchmark of dependency ",dependency," on experiment ",experiment," ###")
     print("\n     benchmark started at ",now(),".\n")
@@ -145,6 +130,6 @@ end
                             benchiterations::Int64,
                             train_test::Float64,
                             dependency::String)
-                                                                        
+
     print("\nbenchmark finished at ",now(),".")
 end

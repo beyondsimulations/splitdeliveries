@@ -9,8 +9,9 @@ using CSV
 using Combinatorics
 using Distributions
 using JuMP
-using AmplNLWriter
-using Bonmin_jll
+using Ipopt
+using Juniper
+using HiGHS
 using Gurobi
 using LoopVectorization
 using Plots

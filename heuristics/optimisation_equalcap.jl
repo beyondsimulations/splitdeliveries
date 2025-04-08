@@ -38,5 +38,31 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
             end
         end
     end
+
+    # Check if the solution is empty (no allocations made)
+    if sum(out) == 0
+        if termination_status(mqkp) == MOI.INFEASIBLE
+            error("MQKP optimization resulted in an infeasible model. Please check input parameters.")
+        else
+            println("MQKP optimization resulted in an empty solution. Status: $(termination_status(mqkp))")
+            println("Attempting basic allocation as fallback...")
+            # Simple greedy allocation - assign each item to the first warehouse with capacity
+            remaining_capacity = copy(capacity)
+            for i in GI
+                for k in GK
+                    if remaining_capacity[k] >= sku_weight[i]
+                        out[i,k] = 1
+                        remaining_capacity[k] -= sku_weight[i]
+                        break
+                    end
+                end
+            end
+            # If we still have an empty solution, it's truly infeasible
+            if sum(out) == 0
+                error("Cannot create a feasible allocation with the given capacities and weights.")
+            end
+        end
+    end
+
     return out::Matrix{Bool},G::Float64,P::Float64
 end

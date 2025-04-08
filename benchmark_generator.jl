@@ -2,14 +2,14 @@
 ## import packages
 include("load_packages.jl")
 
-skus = 20:10:60
-experiment = "small_benchmark"
-ware = 2:1:8
-diff = 0.0:0.2:0.4
-buff = 0.0:0.2:0.4
+skus = 20000:20000:100000
+experiment = "large"
+ware = 2:2:10
+diff = 0.0:0.2:0.2
+buff = 0.0:0.2:0.2
 
 total_rows = length(skus)*length(ware)*length(diff)*length(buff)
-total_cols = length(ware)+1
+total_cols = maximum(ware)
 
 benchmark = Matrix{Int64}(undef,total_rows,total_cols) .= 0
 sku_list  = Vector{Int64}(undef,total_rows) .= 0

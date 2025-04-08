@@ -8,10 +8,9 @@ using Plots
 using StatsPlots
 using Statistics
 
-
 ## the following aggregates all results
-experiments     = ["r1_100skus","r2_1000skus","r3_10000skus","r4_100000skus"]
-dependencies    = ["HD-VF","MD-VF","ID-VF","HD-SF","MD-SF","ID-SF"]
+experiments     = ["small"]
+dependencies    = ["ID-SF","ID-MF","ID-HF","MD-SF","MD-MF","MD-HF","HD-SF","HD-MF","HD-HF"]
 datasets        = ["benchmark"]
 
 function load_data()
