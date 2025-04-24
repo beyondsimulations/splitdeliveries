@@ -4,10 +4,10 @@
 
 # Array of dependencies
 dependencies=(
-    #"ID-SF"
+    "ID-SF"
     #"ID-HF"
-    "MD-SF"
-    "MD-HF"
+    #"MD-SF"
+    #"MD-HF"
     #"HD-SF"
     #"HD-HF"
 )
