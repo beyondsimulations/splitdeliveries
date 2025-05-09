@@ -10,18 +10,15 @@ using Statistics
 
 
 ## the following aggregates all results
-experiments     = ["r1_100skus","r2_1000skus","r3_10000skus","r4_100000skus"]
-dependencies    = ["HD-VF","MD-VF","ID-VF","HD-SF","MD-SF","ID-SF"]
-datasets        = ["benchmark"]
+experiments     = ["small_benchmark","medium_benchmark","large_benchmark"]
+dependencies    = ["HD-HF","MD-HF","ID-HF","HD-SF","MD-SF","ID-SF"]
 
 function load_data()
     frame = DataFrame[]
     for experiment in experiments
-        for dataset in datasets
-            for dependency in dependencies
-                loadframe = CSV.read("results/$(experiment)_$(dataset)_$dependency.csv", DataFrame)
-                isempty(frame) ? frame = loadframe : frame = append!(frame,loadframe)
-            end
+        for dependency in dependencies
+            loadframe = CSV.read("results/$(experiment)_$dependency.csv", DataFrame)
+            isempty(frame) ? frame = loadframe : frame = append!(frame,loadframe)
         end
     end
     return frame

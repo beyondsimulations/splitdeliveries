@@ -7,10 +7,6 @@ This repository contains the implementation of novel heuristics for minimizing s
 
 Additionally, we implement four state-of-the-art competing heuristics for comparison. This codebase enables full reproduction of our research results and can be adapted for any split-delivery minimization problem.
 
-## Built With
-* [Julia](https://julialang.org/) - Primary programming language
-* [GAMS](https://www.gams.com) - Mathematical optimization system
-
 ## Implemented Heuristics
 
 ### Novel Approaches
@@ -30,23 +26,25 @@ Additionally, we implement four state-of-the-art competing heuristics for compar
 Configuration of heuristics and parameters can be adjusted in `main_benchmark_settings.jl`.
 
 ## Required Solvers
-* [CPLEX](https://www.ibm.com/analytics/cplex-optimizer) - For QMKOPT and OPT
-* [SBB](https://www.gams.com/latest/docs/S_SBB.html) - GAMS solver
+* [Gurobi](https://www.gurobi.com) - Mathematical optimization solver
 
 ## Getting Started
 
 ### Prerequisites
 - Julia installation
-- GAMS installation
-- Valid GAMS license (required for QMKOPT, QMK, and OPT heuristics)
+- Valid Gurobi license (required for QMKOPT, QMK, and OPT heuristics)
 
 ### Installation
-1. Install Julia and GAMS
-2. Clone this repository:
+1. Install Julia from [julialang.org](https://julialang.org/downloads/)
+2. Install Gurobi:
+   - Download and install Gurobi from [gurobi.com](https://www.gurobi.com/downloads/)
+   - Set up your license 
+3. Clone this repository:
    ```bash
    git clone https://github.com/beyondsimulations/splitdeliveries
+   cd splitdeliveries
    ```
-3. Install required packages:
+4. Install required packages:
    ```bash
    julia install_packages.jl
    ```
@@ -65,13 +63,17 @@ The following Julia packages are required:
 * [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl) - Data manipulation
 * [Combinatorics.jl](https://github.com/JuliaMath/Combinatorics.jl) - Combinatorial algorithms
 * [Distributions.jl](https://github.com/JuliaStats/Distributions.jl) - Probability distributions
-* [GAMS.jl](https://github.com/JuliaData/GAMS.jl) - GAMS interface
+* [Gurobi.jl](https://github.com/jump-dev/Gurobi.jl) - Mathematical Solver
 * [JuMP.jl](https://github.com/jump-dev/JuMP.jl) - Mathematical optimization
 * [Octavian.jl](https://github.com/JuliaLinearAlgebra/Octavian.jl) - Matrix operations
 * [LoopVectorization.jl](https://github.com/JuliaSIMD/LoopVectorization.jl) - Loop optimization
 
 ## License
 Distributed under the MIT License. See `LICENSE.txt` for more information.
+
+## Contact
+- Project Link: [https://github.com/beyondsimulations/splitdeliveries](https://github.com/beyondsimulations/splitdeliveries)
+- For issues and feature requests, please use the [GitHub Issues](https://github.com/beyondsimulations/splitdeliveries/issues) page
 
 ## References
 * Zhu, S., Hu, X., Huang, K. et al. (2021). Optimization of product category allocation in multiple warehouses to minimize splitting of online supermarket customer orders. European Journal of Operational Research. https://doi.org/10.1016/j.ejor.2020.08.024
