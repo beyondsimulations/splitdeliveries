@@ -1,12 +1,12 @@
 ## function to sort the SKUs after the number of sales
 function SORTSALES(trans::SparseMatrixCSC{Bool, Int64}, sku_weight::Vector{<:Real})
-    sales = Array{Int64,2}(undef,size(trans,2),4) .= 0
+    sales = zeros(Int64, size(trans,2), 4)
     sales[:,3] = round.(Int64, sum(trans,dims=1)./transpose(sku_weight))
     sales[:,4] .= 0
     for i in axes(trans,2)
         sales[i,1] = i
     end
-    sales = sortslices(sales,dims=1,by=x->x[3],rev=true)
+    sales = sortslices(sales, dims=1, by=x->x[3], rev=true, alg=QuickSort)
     for i in axes(trans,2)
         sales[i,2] = i
     end
@@ -19,27 +19,34 @@ end
 
 ## function to sort the SKU pairs after the highest number of coappearances
 function SORTPAIRS(Q::Matrix{<:Real}, sku_weight::Vector{<:Real})
-    pairs = zeros(Int64,round(Int64,(size(Q,1)*size(Q,1)-size(Q,1))/2),3)
-    iter = 1
-    for i = 2:size(Q,1)
-        for j = 1 : i-1
-            pairs[iter,1] = i
-            pairs[iter,2] = j
-            pairs[iter,3] = round(Int64, Q[i,j]./(sku_weight[i]+sku_weight[j])/2)
-            iter += 1
+    n = size(Q,1)
+    npairs = div(n*(n-1), 2)
+    pairs = Matrix{Int64}(undef, npairs, 3)
+    
+    idx = 1
+    @inbounds for i = 2:n
+        weight_i = sku_weight[i]
+        @simd for j = 1:i-1
+            pairs[idx,1] = i
+            pairs[idx,2] = j
+            pairs[idx,3] = round(Int64, Q[i,j]/(weight_i + sku_weight[j])/2)
+            idx += 1
         end
     end
-    pairs = pairs[sortperm(@view(pairs[:,3]),rev=true),:]
-    return pairs::Array{Int64,2}
+    
+    sortslices(pairs, dims=1, by=x->x[3], rev=true)
+
+    return pairs::Matrix{Int64}
 end
 
 ## function to check the number of coappearances in the selected warehouse
 ## for the selected product
-function CURRENTCOAPP(X::Matrix{Bool},
-                      warehouse::Int64,
-                      sku::Int64,
-                      Q::Matrix{<:Real})
-    sum(X[:,warehouse] .* Q[sku,:])
+function CURRENTCOAPP(X::Matrix{Bool}, warehouse::Int64, sku::Int64, Q::Matrix{<:Real})
+    sum = 0.0
+    @inbounds @simd for i in axes(X,1)
+        sum += X[i,warehouse] * Q[sku,i]
+    end
+    return sum
 end
 
 ## function to start place the seeds in the greedy seeds heuristic

@@ -9,16 +9,15 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
     trans = Matrix(trans)
     # Sort the warehouses by decreasing capacity
     capacity = sort(capacity, rev=true)
-    allocation = Model(GAMS.Optimizer)
+    allocation = Model(Gurobi.Optimizer)
     if show_opt == 0
         set_silent(allocation)
     end
-    set_optimizer_attribute(allocation, GAMS.ModelType(), "MIP")
-    set_optimizer_attribute(allocation, "Solver",  "CPLEX")
-    set_optimizer_attribute(allocation, "OptCR",   allowed_gap)
-    set_optimizer_attribute(allocation, "ResLim",  abort)
+
+    set_optimizer_attribute(allocation, "MIPGap", allowed_gap)
+    set_optimizer_attribute(allocation, "TimeLimit", abort)
     set_optimizer_attribute(allocation, "Threads", cpu_cores)
-    set_optimizer_attribute(allocation, "NodLim",  max_nodes)
+    set_optimizer_attribute(allocation, "NodeLimit", max_nodes)
     GJ = 1:size(trans,1)
     GI = 1:size(trans,2)
     GK = 1:size(capacity,1)
@@ -39,5 +38,31 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
             end
         end
     end
+
+    # Check if the solution is empty (no allocations made)
+    if sum(out) == 0
+        if termination_status(mqkp) == MOI.INFEASIBLE
+            error("MQKP optimization resulted in an infeasible model. Please check input parameters.")
+        else
+            println("MQKP optimization resulted in an empty solution. Status: $(termination_status(mqkp))")
+            println("Attempting basic allocation as fallback...")
+            # Simple greedy allocation - assign each item to the first warehouse with capacity
+            remaining_capacity = copy(capacity)
+            for i in GI
+                for k in GK
+                    if remaining_capacity[k] >= sku_weight[i]
+                        out[i,k] = 1
+                        remaining_capacity[k] -= sku_weight[i]
+                        break
+                    end
+                end
+            end
+            # If we still have an empty solution, it's truly infeasible
+            if sum(out) == 0
+                error("Cannot create a feasible allocation with the given capacities and weights.")
+            end
+        end
+    end
+
     return out::Matrix{Bool},G::Float64,P::Float64
 end

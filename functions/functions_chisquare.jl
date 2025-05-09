@@ -1,19 +1,27 @@
 # function used to allocate all SKUs with very small coappearances
 function ALLOCATE_SMALLCOAPP!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight)
-    check_coappearance = vec(sum(Q,dims=2))
-    for i in axes(X,1)
-        if allocated[i] == 0
-            if check_coappearance[i] <= 0
-                check_cap_left = copy(cap_left)
-                for k in eachindex(check_cap_left)
-                    if check_cap_left[k] < sku_weight[i]
-                        check_cap_left = maximum(check_cap_left)
-                    end
-                end
-                k = argmin(check_cap_left)
-                ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight,i,k)
-            end
-        end
+    # Calculate coappearance sums once
+    check_coappearance = vec(sum(Q, dims=2))
+    
+    # Find all SKUs with no coappearances
+    no_coapp_skus = findall(x -> x <= 0 && !allocated[x], 1:length(check_coappearance))
+    
+    # If none, return early
+    isempty(no_coapp_skus) && return
+    
+    # Find warehouses with enough capacity for each SKU
+    for i in no_coapp_skus
+        # Find warehouses with enough capacity
+        valid_warehouses = findall(x -> x >= sku_weight[i], cap_left)
+        
+        # If no valid warehouses, skip this SKU
+        isempty(valid_warehouses) && continue
+        
+        # Choose warehouse with minimum capacity
+        k = valid_warehouses[argmin(cap_left[valid_warehouses])]
+        
+        # Allocate the SKU
+        ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight,i,k)
     end
 end
 
@@ -57,24 +65,32 @@ function chi_values!(dep::Matrix{<:Real},
                      accept::Float64,
                      i::Int64,
                      j::Int64)
-    chi = 0.0
+                     
     independent = INDEPENDENT(sum_cond_sku,J,i,j)
-    if Q[i,j] > independent
-        chi_nr = J - sum_cond_sku[i]
-        chi_nd = J - sum_cond_sku[j]
-        chi_yn = sum_cond_sku[i] - Q[i,j]
-        chi_ny = sum_cond_sku[j] - Q[i,j]
-        chi_nn = chi_nd - chi_yn
-        ind_yn = (sum_cond_sku[i] * chi_nd)/J
-        ind_ny = (sum_cond_sku[j] * chi_nr)/J
-        ind_nn = (chi_nr * chi_nd)/J
-        chi += chi_part(Q[i,j],independent)
-        chi += chi_part(chi_yn,ind_yn)
-        chi += chi_part(chi_ny,ind_ny)
-        chi += chi_part(chi_nn,ind_nn)
-        if chi > accept
-            dep[i,j] = dep[j,i] = Q[i,j] - independent
-        end
+    if Q[i,j] <= independent
+        return  
+    end
+    
+    # Pre-calculate common values
+    chi_nr = J - sum_cond_sku[i]
+    chi_nd = J - sum_cond_sku[j]
+    chi_yn = sum_cond_sku[i] - Q[i,j]
+    chi_ny = sum_cond_sku[j] - Q[i,j]
+    chi_nn = chi_nd - chi_yn
+    
+    # Calculate expected values once
+    ind_yn = (sum_cond_sku[i] * chi_nd)/J
+    ind_ny = (sum_cond_sku[j] * chi_nr)/J
+    ind_nn = (chi_nr * chi_nd)/J
+    
+    # Calculate chi-square in one step
+    chi = chi_part(Q[i,j],independent) + 
+          chi_part(chi_yn,ind_yn) + 
+          chi_part(chi_ny,ind_ny) + 
+          chi_part(chi_nn,ind_nn)
+          
+    if chi > accept
+        dep[i,j] = dep[j,i] = Q[i,j] - independent
     end
 end
 
@@ -271,9 +287,9 @@ end
 function REMOVEALLOC!(X::Array{Bool,2},
                       Q::Matrix{<:Real},
                       dep::Matrix{<:Real})
-    for b = 2:size(Q,1)
-        for a = 1:b
-            for k = 1:size(X,2)
+    @inbounds for b = 2:size(Q,1)
+        @inbounds for a = 1:b
+            @inbounds @simd for k = 1:size(X,2)
                 if  X[a,k] == 1 && X[b,k] == 1 && dep[a,b] > 0
                     dep[a,b] = dep[b,a] = Q[a,b] - dep[a,b]
                 else
@@ -328,16 +344,16 @@ function FINDDEP!(X::Array{Bool,2},
                   allocated::Vector{Bool},
                   sku_weight::Vector{<:Real},
                   capacity_left::Vector{<:Real})
-    @fastmath @simd for j in 1:size(X,1)
+    @inbounds @simd for j in 1:size(X,1)
         if allocated[j] == 0 && capacity_left[k] >= sku_weight[j]
-            pot_dep[j]  = state_dep[j,k] /sku_weight[j]
-            pot_nor[j]  = state_nor[j,k] /sku_weight[j]
+            weight_inv = 1.0 / sku_weight[j]
+            pot_dep[j] = state_dep[j,k] * weight_inv
+            pot_nor[j] = state_nor[j,k] * weight_inv
             if pot_dep[j] > 0
                 pot_dep[j] += pot_nor[j]
             end
         else
-            pot_dep[j]  = 0
-            pot_nor[j]  = 0
+            pot_dep[j] = pot_nor[j] = 0
         end
     end
 end
@@ -345,7 +361,7 @@ end
 # function to allocate SKUs without coapperances
 function ALLOCATENOCOAPP!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight)
     check_coappearance = sum(Q,dims=2)
-    for i in eachindex(check_coappearance)
+    @inbounds @simd for i in eachindex(check_coappearance)
         if  check_coappearance[i] == 0
             k = argmin(cap_left)
             ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight,i,k)
@@ -374,7 +390,7 @@ function ALLOCATEONE!(X::Array{Bool,2},
         allocated[i] = true
         state_dep[i,k] = 0
         state_nor[i,k] = 0
-        @fastmath for j in 1:size(X,1)
+        @fastmath @inbounds @simd for j in 1:size(X,1)
             if allocated[j] == 0
                 state_dep[j,k]  += dep[j,i]
                 state_nor[j,k]  += Q[j,i] - dep[j,i]
@@ -392,7 +408,7 @@ function FILLLAST!(X::Array{Bool,2},
                    allocated::Vector{Bool},
                    sku_weight::Vector{<:Real})
     if sum(capacity_left[1:size(capacity_left,1)-1]) <= 0
-        for i = 1:length(allocated)
+        @inbounds @simd for i = 1:length(allocated)
             if allocated[i] == false
                 X[i,size(capacity_left,1)] = 1
                 capacity_left[size(capacity_left,1)] -= sku_weight[i]
@@ -407,8 +423,12 @@ function CALCVAL(X::Matrix{Bool},
                  i::Int64,
                  k::Int64)
     out = 0
-    @avxt for y = 1:size(X,1)
-        out += X[y,k] * T[y,i]
+    @inbounds begin
+        Xk = view(X, :, k)
+        Ti = view(T, :, i)
+        @simd for y = 1:size(X,1)
+            out += Xk[y] * Ti[y]
+        end
     end
     return out
 end
@@ -419,29 +439,42 @@ function FILLUP!(X::Array{Bool,2},
                  Q::Matrix{<:Real},
                  capacity_left::Vector{<:Real},
                  sku_weight::Vector{<:Real})
-    state = Matrix{Float64}(undef,size(X,1),size(X,2)) .= 0
-    for i = 1:size(X,1)
-        for d = 1:size(X,2)
-            state[i,d] = CALCVAL(X,Q,i,d) / sku_weight[i]
+    avg_weight = floor(sum(sku_weight)/length(sku_weight))
+    
+    state = zeros(Float64, size(X,1), size(X,2))
+    
+    @inbounds for i = 1:size(X,1)
+        @inbounds @simd for d = 1:size(X,2)
+            if sku_weight[i] > 0
+                state[i,d] = CALCVAL(X,Q,i,d) / sku_weight[i]
+            end
         end
     end
-    for d = 1:size(capacity_left,1)
-        while capacity_left[d] >= floor(sum(sku_weight)/length(sku_weight))
-            best_allocation = Array{Float64,1}(undef,size(Q,1)) .= 0
-            for i = 1:size(Q,1)
-                if X[i,d] == 0 && capacity_left[d] >= sku_weight[i]
+    
+    best_allocation = zeros(Float64, size(Q,1))
+    
+    @inbounds for d = 1:size(capacity_left,1)
+        while capacity_left[d] >= avg_weight
+            fill!(best_allocation, 0.0)
+            
+            @inbounds @simd for i = 1:size(Q,1)
+                if !X[i,d] && capacity_left[d] >= sku_weight[i]
                     best_allocation[i] = state[i,d]
                 end
             end
+            
             best = findmax(best_allocation)
             if best[1] > 0
                 X[best[2],d] = 1
-                for j in 1:size(X,1)
-                    state[j,d] += Q[j,best[2]] / sku_weight[j]
-                end
                 capacity_left[d] -= sku_weight[best[2]]
+                
+                weight_inv = sku_weight[best[2]] > 0 ? 1.0 / sku_weight[best[2]] : 0.0
+                @inbounds @simd for j in 1:size(X,1)
+                    state[j,d] += Q[j,best[2]] * weight_inv
+                end
             else
                 capacity_left[d] = 0
+                break 
             end
         end
     end
@@ -456,27 +489,52 @@ function LOCALSEARCHCHI!(trans::SparseMatrixCSC{Bool,Int64},
                          log_results::Bool,
                          ls::Int64,
                          max_ls::Int64)
-    coapp_sort = vec(sum(Q,dims = 1))
-    coapp_sort = sortperm(coapp_sort,rev=true)
+    # Compute these once
+    coapp_sum = vec(sum(Q,dims = 1))
+    coapp_sort = sortperm(coapp_sum, rev=true)
+    
+    # Precompute combination
     combination = COMBINEWAREHOUSES(capacity)
-    state = zeros(Float64,size(X,1),size(X,2))
+    
+    # Initialize state matrix
+    state = zeros(Float64, size(X,1), size(X,2))
     CURRENTSTATE!(X,Q,state)
-    impro_bef = PARCELSSEND(trans,X,capacity,combination)
-    X_backup = zeros(Bool,size(X,1),size(X,2))
-    log_results == true ? print("\n  Iter: 0 - parcels: ",impro_bef,"\n") : nothing
+    
+    # Get initial parcels count
+    impro_bef = PARCELSSEND(trans, X, capacity, combination)
+    
+    # Create backup matrix once
+    X_backup = similar(X)
+    
+    # Log initial state if needed
+    log_results && println("\n  Iter: 0 - parcels: ", impro_bef)
+    
+    # Main optimization loop
     while ls < max_ls
         ls += 1
-        X_backup .= X
-        SEARCHLOOP!(X,Q,coapp_sort,state)
-        impro_now = PARCELSSEND(trans,X,capacity,combination)
-        log_results == true ? print("  Iter: ",ls," - parcels: ",impro_now,"\n") : nothing
+        
+        # Make backup
+        copyto!(X_backup, X)
+        
+        # Search for improvements
+        SEARCHLOOP!(X, Q, coapp_sort, state)
+        
+        # Calculate new parcels count
+        impro_now = PARCELSSEND(trans, X, capacity, combination)
+        
+        # Log if needed
+        log_results && println("  Iter: ", ls, " - parcels: ", impro_now)
+        
+        # Check if improvement was made
         if impro_now < impro_bef
             impro_bef = impro_now
         else
-            X .= X_backup
+            # Restore previous solution
+            copyto!(X, X_backup)
             break
         end
     end
+    
     return ls
 end
 
@@ -492,7 +550,7 @@ function CURRENTSTATE!(X::Matrix{Bool},
                        Q::Matrix{<:Real},
                        state::Matrix{<:Real})
     @inbounds for k = 1:size(X,2)
-        @inbounds for i = 1:size(X,1)
+        @inbounds @simd for i = 1:size(X,1)
             state[i,k] += CALCVAL(X,Q,i,k)
         end
     end

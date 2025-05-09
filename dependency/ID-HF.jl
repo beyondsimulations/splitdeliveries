@@ -9,7 +9,7 @@ skus_in_order  = 3.00   # This parameter sets the standard deviation of the
                         # 1 + floor(abs(random_normal(mean=0, std=skus_in_order)))
                         # This ensures orders have at least 1 SKU, with a distribution
                         # that increases in spread as this parameter increases.
-sku_frequency  = 0.00    # Controls SKU selection probability distribution
+sku_frequency  = 3.00    # Controls SKU selection probability distribution
                          # 0.00: Uniform random selection
                          # >0.0: Normal distribution: 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency))))
 

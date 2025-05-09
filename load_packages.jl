@@ -9,7 +9,10 @@ using CSV
 using Combinatorics
 using Distributions
 using JuMP
-using GAMS
+using Ipopt
+using Juniper
+using HiGHS
+using Gurobi
 using LoopVectorization
 using Plots
 using StatsPlots

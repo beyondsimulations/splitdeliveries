@@ -3,8 +3,8 @@ function INL(j::Int64,
             L::Array{Float64,2},
             X::Array{Bool,2})
     out = 0.0
-    for q in axes(L,1)
-        if  X[q,w1] == 1 &&  X[j,w1] == 1 && q != j
+    @inbounds for q in axes(L,1)
+        if X[q,w1] & X[j,w1] & (q != j)
             out += L[j,q]
         end
     end
@@ -17,13 +17,13 @@ function OUTL(j::Int64,
               L::Array{Float64,2},
               X::Array{Bool,2})
     out = 0.0
-    for q in axes(L,1)
-        if  X[q,w2] == 1 &&  X[j,w1] == 1 && q != j
+    @inbounds for q in axes(L,1)
+        if X[q,w2] & X[j,w1] & (q != j)
             out += L[j,q]
         end
     end
     return out::Float64
-end 
+end
 
 function DL(j::Int64,
             w1::Int64,
@@ -44,16 +44,18 @@ end
 
 function LINKS(trans::SparseMatrixCSC{Bool, Int64},
                ov::Vector{Float64})
-    L = zeros(Float64,size(trans,2),size(trans,2))
-    for j in axes(trans,2)
-        if j > 1
-            for q = 1:j-1
-                L[j,q] = sum(@view(trans[:,j]) .* @view(trans[:,q]) .* @view(ov[:]))
-                L[q,j] = L[j,q]
-            end
+    n = size(trans, 2)
+    L = zeros(Float64, n, n)
+    @inbounds for j in 2:n
+        colj = view(trans, :, j)
+        ovview = view(ov, :)
+        for q in 1:j-1
+            colq = view(trans, :, q)
+            L[j,q] = sum(colj .& colq .* ovview)
+            L[q,j] = L[j,q]
         end
     end
-    return L::Matrix{Float64}
+    return L
 end
 
 function LINKADJUST(trans::SparseMatrixCSC{Bool, Int64})

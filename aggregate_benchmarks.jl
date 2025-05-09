@@ -8,7 +8,6 @@ using Plots
 using StatsPlots
 using Statistics
 
-
 ## the following aggregates all results
 experiments     = ["small_benchmark","medium_benchmark","large_benchmark"]
 dependencies    = ["HD-HF","MD-HF","ID-HF","HD-SF","MD-SF","ID-SF"]

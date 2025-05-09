@@ -1,5 +1,7 @@
 function BENCHMARK(capacity_benchmark::Array{Int64,2},
                    skus_benchmark::Vector{Int64},
+                   diff_benchmark::Vector{Float64},
+                   buff_benchmark::Vector{Float64},
                    start::DataFrame,
                    order_sets::Vector{Int64},
                    max_dependence::Float64,
@@ -61,7 +63,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             combination = COMBINEWAREHOUSES(capacity)
 
             ## Iterate over different number of orders
-            for orders in order_sets
+            for order_set in order_sets
+
+                orders = order_set * skus_benchmark[a]
 
                 ## Generate artificial random transactions without dependencies if there is no transactional dataset
                 if  size(trans,2) == skus_benchmark[a] && size(trans,1) == orders
@@ -95,42 +99,12 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 sku_weight = zeros(Int64,size(trans_train,2)) .= 1
 
                 #  Start the heuristics and optmisations
-                ## Start QMK heuristic to find the optimal solution with the solver CPLEX
-                if start[1,:QMKO] == 1
-                    sleep(0.01)
-                    GC.gc()
-                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"CPLEX",show_opt,
-                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
-                    print("\n   QMKO: parcels test data: ", parcels_benchmark, 
-                        " / parcels training data: ", parcels_train, 
-                        " / time: ",round(time_benchmark,digits = 3),
-                        " / gap: ",round(gap_optimisation,6),
-                        " / warehouse: ",sum(W,dims=1))
-                    
-                    push!(benchmark, (dependency = dependency, 
-                                        skus = skus_benchmark[a],  
-                                        wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
-                                        mode = "QMKO",
-                                        benchiter = benchnr,
-                                        orders = size(trans,1),
-                                        train_test = train_test,
-                                        parcel_train = parcels_train, 
-                                        parcel_test = parcels_benchmark, 
-                                        duration = time_benchmark,
-                                        cap_used = sum(W),
-                                        local_search = 0,
-                                        gap = gap_optimisation))
-                end
 
-                ## Start QMK heuristic with SBB as solver
+                ## Start QMK heuristic with Gurobi as solver
                 if start[1,:QMK] == 1
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort, "SBB",show_opt,
+                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"Gurobi",show_opt,
                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
@@ -143,9 +117,40 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "QMK",
+                                        benchiter = benchnr,
+                                        orders = size(trans,1),
+                                        train_test = train_test,
+                                        parcel_train = parcels_train, 
+                                        parcel_test = parcels_benchmark, 
+                                        duration = time_benchmark,
+                                        cap_used = sum(W),
+                                        local_search = 0,
+                                        gap = gap_optimisation))
+                end
+
+                ## Start QMK heuristic with Juniper as solver
+                if start[1,:QMKJ] == 1
+                    sleep(0.01)
+                    GC.gc()
+                    time_benchmark = @elapsed W,gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"Juniper",show_opt,
+                                                                        cpu_cores,allowed_gap,max_nodes,"QMK")
+                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
+                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    print("\n   QMKJ: parcels test data: ", parcels_benchmark, 
+                        " / parcels training data: ", parcels_train,  
+                        " / time: ", round(time_benchmark, digits = 3),
+                        " / gap: ",round(gap_optimisation, digits = 6),
+                        " / warehouse: ",sum(W,dims=1))
+
+                    push!(benchmark, (dependency = dependency, 
+                                        skus = skus_benchmark[a],  
+                                        wareh = length(capacity), 
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
+                                        mode = "QMKJ",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
                                         train_test = train_test,
@@ -175,8 +180,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "CHIM_$sig",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -208,8 +213,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         push!(benchmark, (dependency = dependency, 
                                             skus = skus_benchmark[a],  
                                             wareh = length(capacity), 
-                                            diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                            buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                            diff = diff_benchmark[a], 
+                                            buffer = buff_benchmark[a],
                                             mode = "CHI_$sig",
                                             benchiter = benchnr,
                                             orders = size(trans,1),
@@ -240,8 +245,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "KL",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -259,7 +264,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 if  start[1,:KLQ] == 1 && sum(capacity) == length(sku_weight)
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"SBB",show_opt,
+                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train,capacity,sku_weight,abort,"Gurobi",show_opt,
                                                                         cpu_cores,allowed_gap,max_nodes,"QMK")
                     parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
                     parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
@@ -272,8 +277,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "KLQ",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -302,8 +307,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "GO",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -332,8 +337,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "GP",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -362,8 +367,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "GS",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -392,8 +397,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "BS",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -429,8 +434,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "OPT",
                                         benchiter = benchnr,
                                         orders = size(trans,1),
@@ -456,8 +461,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 push!(benchmark, (dependency = dependency, 
                                         skus = skus_benchmark[a],  
                                         wareh = length(capacity), 
-                                        diff = round((maximum(capacity)-minimum(capacity))/sum(capacity), digits = 2), 
-                                        buffer = round((sum(capacity)/skus_benchmark[a])-1,digits = 2),
+                                        diff = diff_benchmark[a], 
+                                        buffer = buff_benchmark[a],
                                         mode = "RND",
                                         benchiter = benchnr,
                                         orders = size(trans,1),

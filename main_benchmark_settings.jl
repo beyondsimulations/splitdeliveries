@@ -3,21 +3,19 @@
 
 # Choose the benchmark which should be evaluated
 ## Benchmarks used in our article:
-### r1_100skus
-### r2_1000skus
-### r3_10000skus
-### r4_100000skus
+### small_benchmark
+### medium_benchmark
+### large_benchmark
 
 ## Dependencies used in our article:
-### ID-VF
-### MD-VF
-### HD-VF
 ### ID-SF
+### ID-HF
 ### MD-SF
+### MD-HF
 ### HD-SF
-    experiment = "r1_100skus"
-    dependencies = ["MD-VF","HD-VF","ID-SF","MD-SF","HD-SF"]
-    ren_lock = ReentrantLock()
+### HD-HF
+
+ren_lock = ReentrantLock()
 
 # iterate over all dependencies
 for dependency in dependencies
@@ -27,26 +25,26 @@ for dependency in dependencies
 
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
-    train_test = 0.90
-    #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:50]
-    #order_sets  = [round(Int, 1000 * 1/train_test * x) for x =10:10:100]
-    order_sets = [1000000]
+    train_test = 0.50
+    order_sets = [2,10]
 
 # Set the number of cpu cores your computer has at its disposal
     cpu_cores  = 8
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
-    start = DataFrame(QMKO  = [0], # quadratic-multiple knapsack heuristic with CPLEX as solver
-                      QMK   = [0], # quadratic-multiple knapsack heuristic with SBB as solver
+    start = DataFrame(
+                      QMK   = [0], # quadratic-multiple knapsack heuristic with Gurobi as solver
+                      QMKJ  = [0], # quadratic-multiple knapsack heuristic with Juniper as solver
                       CHIM  = [1], # main chi-square heuristic without local search
                       CHI   = [1], # chi-square heuristic + local search based on the QMK objective function
                       KL    = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      KLQ   = [0], # K-LINK optimisation with SBB by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-                      GO    = [0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+                      KLQ   = [0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+                      GO    = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GP    = [0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       GS    = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
                       BS    = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-                      OPT   = [0]) # optimisation model to determine the optimal solution with CPLEX
+                      OPT   = [0], # optimisation model to determine the optimal solution with Gurobi
+                      )
 
 # Parameters for the KLINK heuristic
 ## trials: number of different trials with a completly new random solution
@@ -58,7 +56,7 @@ for dependency in dependencies
 ## klinkstatus: display the current iteration during the heuristic
     trials   = 100
     stagnant = 10
-    strategy = 2
+    strategy = 3
     klinkstatus = false
 
 # Parameters for all Optimisations
@@ -66,7 +64,7 @@ for dependency in dependencies
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 3600
+    abort       = 900
     show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000
@@ -76,7 +74,6 @@ for dependency in dependencies
 ## max_ls:      maximum number of local search runs before termination
 ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
     sig_levels = [1.0e-2]
-    #sig_levels = [1.0/(10^x) for x = 0:1:9]
     max_ls = 100
     chistatus = false
 
@@ -85,7 +82,7 @@ for dependency in dependencies
     iterations = 100
 
 # Parameters for the whole Benchmark
-    benchiterations = 5
+    benchiterations = 1
 
 # Configuration validation
 function validate_settings()
@@ -104,12 +101,16 @@ end
 ## capacity_benchmark: capacity matrix with column = capacity and row = constellation
     capacity_benchmark  = readdlm("capacity/capacity_$experiment.csv", ';', Int64)
     skus_benchmark      = vec(readdlm("capacity/skus_$experiment.csv", ';', Int64))
-    
+    diff_benchmark      = vec(readdlm("capacity/diff_$experiment.csv", ';', Float64))
+    buff_benchmark      = vec(readdlm("capacity/buff_$experiment.csv", ';', Float64))
+
 # Run the benchmark
     print("\n\n### Benchmark of dependency ",dependency," on experiment ",experiment," ###")
     print("\n     benchmark started at ",now(),".\n")
     benchmark = BENCHMARK(capacity_benchmark::Array{Int64,2},
                             skus_benchmark::Vector{Int64},
+                            diff_benchmark::Vector{Float64},
+                            buff_benchmark::Vector{Float64},
                             start::DataFrame,
                             order_sets::Vector{Int64},
                             max_dependence::Float64,
@@ -129,6 +130,6 @@ end
                             benchiterations::Int64,
                             train_test::Float64,
                             dependency::String)
-                                                                        
+
     print("\nbenchmark finished at ",now(),".")
 end
