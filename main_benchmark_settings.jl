@@ -1,20 +1,6 @@
 ## import packages
     include("load_packages.jl")
 
-# Choose the benchmark which should be evaluated
-## Benchmarks used in our article:
-### small_benchmark
-### medium_benchmark
-### large_benchmark
-
-## Dependencies used in our article:
-### ID-SF
-### ID-VF
-### MD-SF
-### MD-VF
-### HD-SF
-### HD-VF
-
 ren_lock = ReentrantLock()
 
 # iterate over all dependencies

@@ -5,14 +5,14 @@
 # Array of dependencies
 dependencies=(
     "ID-SF"
-    #"ID-VF"
+    "ID-VF"
     #"MD-SF"
     #"MD-VF"
     #"HD-SF"
     #"HD-VF"
 )
 
-experiment="large"
+experiment="k"
 
 # Create a new tmux session (if not already in one)
 session_name="benchmarks_${experiment}"
