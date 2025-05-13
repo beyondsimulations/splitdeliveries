@@ -9,11 +9,11 @@
 
 ## Dependencies used in our article:
 ### ID-SF
-### ID-HF
+### ID-VF
 ### MD-SF
-### MD-HF
+### MD-VF
 ### HD-SF
-### HD-HF
+### HD-VF
 
 ren_lock = ReentrantLock()
 
@@ -26,10 +26,10 @@ for dependency in dependencies
 #  Specify the number of orders and the ratio between test
 ## and training data for the generated transactional data sets
     train_test = 0.50
-    order_sets = [2,10]
+    order_sets = [4,8,12]
 
 # Set the number of cpu cores your computer has at its disposal
-    cpu_cores  = 8
+    cpu_cores  = 16
 
 # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(
@@ -64,7 +64,7 @@ for dependency in dependencies
 ## show_opt: specify whether the status of the optimisation should be shown
 ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
 ## max_nodes: maximum number of nodes till termination
-    abort       = 900
+    abort       = 3600
     show_opt    = false
     allowed_gap = 0.00000
     max_nodes   = 10000000

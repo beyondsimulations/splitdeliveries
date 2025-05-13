@@ -5,11 +5,11 @@
 # Array of dependencies
 dependencies=(
     "ID-SF"
-    #"ID-HF"
+    #"ID-VF"
     #"MD-SF"
-    #"MD-HF"
+    #"MD-VF"
     #"HD-SF"
-    #"HD-HF"
+    #"HD-VF"
 )
 
 experiment="large"

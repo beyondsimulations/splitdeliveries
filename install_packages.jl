@@ -10,6 +10,8 @@ Pkg.add("Distributions")
 Pkg.add("JuMP")
 Pkg.add("HiGHS")
 Pkg.add("Gurobi")
+Pkg.add("AmplNLWriter")
+Pkg.add("Bonmin_jll")
 Pkg.add("Octavian")
 Pkg.add("LoopVectorization")
 Pkg.add("Plots")
@@ -20,3 +22,4 @@ Pkg.add("Measures")
 Pkg.precompile()
 
 println("Environment setup complete!")
+

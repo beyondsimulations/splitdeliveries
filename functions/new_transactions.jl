@@ -66,7 +66,7 @@ function RANDOMTRANS(skus::Int64,
         transactions = spzeros(Bool,round(Int64,orders/divide),skus)
         for i = 1:round(Int64,orders/divide)
             already_allocated = 0
-            skus_order = 1 + floor(abs(rand(Normal(0,skus_in_order))))
+            skus_order = 1 + rand(Geometric(1/skus_in_order))
             while already_allocated < skus_order
                 if sku_frequency == 0
                     new_sku = rand(1:skus)
