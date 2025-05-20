@@ -6,13 +6,13 @@
 dependencies=(
     "ID-SF"
     "ID-VF"
-    #"MD-SF"
-    #"MD-VF"
-    #"HD-SF"
-    #"HD-VF"
+    "MD-SF"
+    "MD-VF"
+    "HD-SF"
+    "HD-VF"
 )
 
-experiment="k"
+experiment="10000"
 
 # Create a new tmux session (if not already in one)
 session_name="benchmarks_${experiment}"
@@ -27,10 +27,10 @@ for i in "${!dependencies[@]}"; do
 
     # Create the temporary Julia file for this dependency
     cat > "run_${dep}.jl" << EOL
-include("load_packages.jl")
-dependencies=["${dep}"]
-experiment = "${experiment}"
-include("main_benchmark_settings.jl")
+    include("load_packages.jl")
+    dependencies=["${dep}"]
+    experiment = "${experiment}"
+    include("main_benchmark_settings.jl")
 EOL
 
     # Send the command to run Julia with this configuration

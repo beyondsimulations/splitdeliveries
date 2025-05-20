@@ -2,8 +2,8 @@
 ## import packages
 include("load_packages.jl")
 
-skus = [100,1000,10000,100000]
-experiment = "k4"
+skus = [100000]
+experiment = "100000"
 ware = 2:2:10
 diff = 0.0:0.2:0.2
 buff = 0.0:0.2:0.2
