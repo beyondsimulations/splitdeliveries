@@ -34,7 +34,6 @@ apply_cbench.jl
 benchmarkc.jl
 playground.jl
 archive
-results/
 run_H*
 run_I*
 run_M*
