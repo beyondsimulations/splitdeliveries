@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.5"
+julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "d0c817925ba2190b6690bba604538cee2775ddf0"
+project_hash = "90832db688924f2cd3bf8a04127ef05fe6bc4821"
 
 [[deps.ASL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -709,6 +709,12 @@ version = "1.25.0"
 
     [deps.JuMP.weakdeps]
     DimensionalData = "0703355e-b756-11e9-17c0-8b28908087d0"
+
+[[deps.Juniper]]
+deps = ["Distributed", "JSON", "LinearAlgebra", "MathOptInterface", "MutableArithmetics", "Random", "Statistics"]
+git-tree-sha1 = "ff6d4e857df206763fbdee552a00bc88fd1b3dad"
+uuid = "2ddba703-00a4-53a7-87a5-e8b9971dde84"
+version = "0.9.3"
 
 [[deps.KernelDensity]]
 deps = ["Distributions", "DocStringExtensions", "FFTW", "Interpolations", "StatsBase"]
