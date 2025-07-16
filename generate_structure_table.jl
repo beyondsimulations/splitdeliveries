@@ -7,9 +7,9 @@ df = CSV.read("results/overall_results.csv", DataFrame)
 
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
-    "RND" => "RND",
-    "QMK" => "QMK",
-    "QMKJ" => "QMKJ",
+    "OPT" => "OPT",
+    "QMK" => "QMK-OPT",
+    "QMKJ" => "QMK",
     "CHI_0.01" => "CHI-NL",
     "CHIM_0.01" => "CHI",
     "KL" => "KL",
@@ -17,7 +17,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
-    "OPT" => "OPT"
+    "RND" => "RND"
 )
 
 # Filter for relevant modes and map to standard names
@@ -29,7 +29,7 @@ filtered_df.test_split_ratio = filtered_df.parcel_test ./ filtered_df.orders
 filtered_df.train_split_ratio = filtered_df.parcel_train ./ filtered_df.orders
 
 # Define heuristics in order for table
-heuristics = ["QMKJ", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
 
 # Get unique dependency structures in desired order (ID, MD, HD)
 all_deps = unique(filtered_df.dependency)
@@ -151,9 +151,9 @@ for (i, dep) in enumerate(dependency_levels)
             has_reduced_sample = sample_size < max_sample * 0.9  # Less than 90% of max
 
             if has_reduced_sample && heur != "RND"
-                print(" & {\\footnotesize $train_ratio\$^a\$}")
+                print(" & {\\small $train_ratio\$^a\$}")
             else
-                print(" & {\\footnotesize $train_ratio}")
+                print(" & {\\small $train_ratio}")
             end
         else
             print(" & -")

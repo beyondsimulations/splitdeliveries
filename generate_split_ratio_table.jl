@@ -7,9 +7,9 @@ df = CSV.read("results/overall_results.csv", DataFrame)
 
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
-    "RND" => "RND",
-    "QMK" => "QMK",
-    "QMKJ" => "QMKJ",
+    "OPT" => "OPT",
+    "QMK" => "QMK-OPT",
+    "QMKJ" => "QMK",
     "CHI_0.01" => "CHI-NL",
     "CHIM_0.01" => "CHI",
     "KL" => "KL",
@@ -17,7 +17,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
-    "OPT" => "OPT"
+    "RND" => "RND"
 )
 
 # Filter for relevant modes and map to standard names
@@ -29,7 +29,7 @@ filtered_df.order_sku_ratio = filtered_df.orders ./ filtered_df.skus
 filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
 
 # Define heuristics in order for table (including RND for comparison)
-heuristics = ["QMKJ", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
 
 # Get unique SKU levels and sort them
 sku_levels = sort(unique(filtered_df.skus))
