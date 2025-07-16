@@ -24,6 +24,8 @@ mode_mapping = Dict(
 filtered_df = df[in.(df.mode, Ref(keys(mode_mapping))), :]
 filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 
+
+
 # Add order/SKU ratio and split ratio calculation
 filtered_df.order_sku_ratio = filtered_df.orders ./ filtered_df.skus
 filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
@@ -53,6 +55,8 @@ for sku in sku_levels
             for heur in heuristics
                 subset = filtered_df[(filtered_df.skus.==sku).&(filtered_df.heuristic.==heur).&(filtered_df.order_sku_ratio.==ratio), :]
 
+
+
                 if nrow(subset) > 0
                     # Calculate success rate and average split ratio
                     successful_runs = subset.duration[subset.duration.<3600]
@@ -60,14 +64,19 @@ for sku in sku_levels
                     total_runs = nrow(subset)
                     success_rate = length(successful_runs) / total_runs * 100
 
+
+
                     # Only include results if 100% success rate
                     if success_rate == 100.0 && length(successful_split_ratios) > 0
                         # Calculate actual split ratio
                         avg_split_ratio = mean(successful_split_ratios)
                         actual_split_ratio = round(avg_split_ratio * 100, digits=2)
+
+
                     else
                         # Skip this result if not 100% success
                         actual_split_ratio = nothing
+
                     end
                 else
                     actual_split_ratio = nothing
