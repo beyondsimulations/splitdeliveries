@@ -151,9 +151,9 @@ for (i, dep) in enumerate(dependency_levels)
             has_reduced_sample = sample_size < max_sample * 0.9  # Less than 90% of max
 
             if has_reduced_sample && heur != "RND"
-                print(" & {\\small $train_ratio\$^a\$}")
+                print(" & {\\footnotesize $train_ratio\$^a\$}")
             else
-                print(" & {\\small $train_ratio}")
+                print(" & {\\footnotesize $train_ratio}")
             end
         else
             print(" & -")
