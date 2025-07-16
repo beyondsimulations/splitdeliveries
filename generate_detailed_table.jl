@@ -10,7 +10,7 @@ mode_mapping = Dict(
     "OPT" => "OPT",
     "QMK" => "QMK",
     "QMKJ" => "QMKJ",
-    "CHI_0.01" => "CHIL",
+    "CHI_0.01" => "CHI-NL",
     "CHIM_0.01" => "CHI",
     "KL" => "KL",
     "GO" => "GO",
@@ -67,9 +67,9 @@ for sku in sku_levels
                     # Format success rate
                     if success_rate isa Number
                         if success_rate == 100.0
-                            success_rate_str = "100\\%"
+                            success_rate_str = "100 \\%"
                         else
-                            success_rate_str = "$(round(Int, success_rate))\\%"
+                            success_rate_str = "$(round(Int, success_rate)) \\%"
                         end
                     else
                         success_rate_str = success_rate
@@ -141,7 +141,7 @@ for sku in sku_levels
                     if success_rate == ""
                         print(" & ")
                     else
-                        print(" & {\\small \$$success_rate\$}")
+                        print(" & {\\footnotesize \$$success_rate\$}")
                     end
                 else
                     print(" & ")
