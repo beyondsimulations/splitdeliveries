@@ -21,14 +21,15 @@ for dependency in dependencies
     start = DataFrame(
         QMK=[0], # quadratic-multiple knapsack heuristic with Gurobi as solver
         QMKJ=[0], # quadratic-multiple knapsack heuristic with Juniper as solver
-        CHIM=[1], # main chi-square heuristic without local search
-        CHI=[1], # chi-square heuristic + local search based on the QMK objective function
+        QMKS=[1], # quadratic-multiple knapsack heuristic with SCIP as solver
+        CHIM=[0], # main chi-square heuristic without local search
+        CHI=[0], # chi-square heuristic + local search based on the QMK objective function
         KL=[0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         KLQ=[0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        GO=[1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GP=[1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GS=[1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        BS=[1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GO=[0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GP=[0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GS=[0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        BS=[0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         OPT=[0], # optimisation model to determine the optimal solution with Gurobi
     )
 
