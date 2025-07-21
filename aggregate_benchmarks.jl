@@ -9,8 +9,8 @@ using StatsPlots
 using Statistics
 
 ## the following aggregates all results
-experiments     = ["small_benchmark","medium_benchmark","large_benchmark"]
-dependencies    = ["HD-HF","MD-HF","ID-HF","HD-SF","MD-SF","ID-SF"]
+experiments     = ["100_benchmark","1000_benchmark","10000_benchmark","50000_benchmark"]
+dependencies    = ["HD-VF","MD-VF","ID-VF","HD-SF","MD-SF","ID-SF"]
 
 function load_data()
     frame = DataFrame[]

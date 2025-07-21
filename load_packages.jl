@@ -13,6 +13,7 @@ using Ipopt
 using Juniper
 using HiGHS
 using Gurobi
+using SCIP
 using LoopVectorization
 using Plots
 using StatsPlots
