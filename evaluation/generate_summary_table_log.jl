@@ -147,6 +147,156 @@ else
     println("No RND instances found!")
 end
 
+println("\n=== BEST PERFORMER ANALYSIS ===")
+# Find which heuristic achieves the best (lowest) split ratio for each instance
+function analyze_best_performers(df)
+    println("Analyzing which heuristic achieves the lowest split ratio per instance...")
+
+    # Create DataFrame with all successful instances
+    all_successful = df[df.duration .< 3600, :]
+    println("Total successful instance-heuristic combinations: $(nrow(all_successful))")
+
+    # Group by instance configuration and find winner for each
+    instance_groups = groupby(all_successful, [:skus, :wareh, :diff, :buffer, :dependency])
+    winners = Dict{String, Float64}()
+
+    # Count competing instances and winners
+    num_competing = 0
+    for group in instance_groups
+        if nrow(group) > 1  # Only consider instances where multiple heuristics succeeded
+            min_split_ratio = minimum(group.split_ratio)
+            best_performers = group[group.split_ratio .== min_split_ratio, :]
+
+            # In case of ties, count each tied heuristic
+            for row in eachrow(best_performers)
+                heuristic = row.heuristic
+                credit = 1.0 / nrow(best_performers)  # Split credit for ties
+                winners[heuristic] = get(winners, heuristic, 0.0) + credit
+            end
+            num_competing += 1
+        end
+    end
+
+    println("Instances with multiple competing heuristics: $num_competing")
+    println("\nBest performer frequency (instances where this heuristic achieved lowest split ratio):")
+
+    # Sort heuristics by win count
+    sorted_winners = sort(collect(winners), by=x->x[2], rev=true)
+
+    for (heuristic, wins) in sorted_winners
+        win_percentage = (wins / num_competing) * 100
+        println("  $heuristic: $(round(wins, digits=1))/$num_competing instances ($(round(win_percentage, digits=1))%)")
+    end
+
+    println("\n=== INSTANCE PROPERTIES WHERE EACH HEURISTIC EXCELS ===")
+
+    # Analyze properties of instances where each heuristic wins
+    for group in instance_groups
+        if nrow(group) > 1
+            min_split_ratio = minimum(group.split_ratio)
+            best_performers = group[group.split_ratio .== min_split_ratio, :]
+
+            # Store winning instances for each heuristic
+            for row in eachrow(best_performers)
+                heuristic = row.heuristic
+                if !haskey(winners, heuristic)
+                    continue
+                end
+
+                # Create a key for this winning instance
+                instance_key = (heuristic=heuristic, skus=row.skus, wareh=row.wareh,
+                              diff=row.diff, buffer=row.buffer, dependency=row.dependency,
+                              split_ratio=row.split_ratio)
+
+                # We'll collect these for analysis
+            end
+        end
+    end
+
+    # Now analyze properties for top performers
+    top_heuristics = [h for (h, _) in sorted_winners if get(winners, h, 0) >= 10.0]  # At least 10 wins
+
+    for heuristic in top_heuristics
+        println("\n$heuristic - Properties of best-performing instances:")
+
+        # Collect all instances where this heuristic wins
+        winning_instances = []
+        for group in instance_groups
+            if nrow(group) > 1
+                min_split_ratio = minimum(group.split_ratio)
+                best_performers = group[group.split_ratio .== min_split_ratio, :]
+
+                for row in eachrow(best_performers)
+                    if row.heuristic == heuristic
+                        push!(winning_instances, row)
+                    end
+                end
+            end
+        end
+
+        if length(winning_instances) > 0
+            println("  SKU distribution:")
+            sku_counts = Dict()
+            for instance in winning_instances
+                sku_counts[instance.skus] = get(sku_counts, instance.skus, 0) + 1
+            end
+            for (sku, count) in sort(collect(sku_counts))
+                pct = (count / length(winning_instances)) * 100
+                println("    SKU $sku: $count instances ($(round(pct, digits=1))%)")
+            end
+
+            println("  Warehouse distribution:")
+            wareh_counts = Dict()
+            for instance in winning_instances
+                wareh_counts[instance.wareh] = get(wareh_counts, instance.wareh, 0) + 1
+            end
+            for (wareh, count) in sort(collect(wareh_counts))
+                pct = (count / length(winning_instances)) * 100
+                println("    $wareh warehouses: $count instances ($(round(pct, digits=1))%)")
+            end
+
+            println("  Difficulty distribution:")
+            diff_counts = Dict()
+            for instance in winning_instances
+                diff_counts[instance.diff] = get(diff_counts, instance.diff, 0) + 1
+            end
+            for (diff, count) in sort(collect(diff_counts))
+                pct = (count / length(winning_instances)) * 100
+                println("    Difficulty $diff: $count instances ($(round(pct, digits=1))%)")
+            end
+
+            println("  Buffer distribution:")
+            buffer_counts = Dict()
+            for instance in winning_instances
+                buffer_counts[instance.buffer] = get(buffer_counts, instance.buffer, 0) + 1
+            end
+            for (buffer, count) in sort(collect(buffer_counts))
+                pct = (count / length(winning_instances)) * 100
+                println("    Buffer $buffer: $count instances ($(round(pct, digits=1))%)")
+            end
+
+            println("  Dependency distribution:")
+            dep_counts = Dict()
+            for instance in winning_instances
+                dep_counts[instance.dependency] = get(dep_counts, instance.dependency, 0) + 1
+            end
+            for (dep, count) in sort(collect(dep_counts))
+                pct = (count / length(winning_instances)) * 100
+                println("    Dependency $dep: $count instances ($(round(pct, digits=1))%)")
+            end
+
+            # Show best and worst performance
+            split_ratios = [instance.split_ratio * 100 for instance in winning_instances]
+            println("  Performance on winning instances:")
+            println("    Best split ratio: $(round(minimum(split_ratios), digits=2))%")
+            println("    Worst split ratio: $(round(maximum(split_ratios), digits=2))%")
+            println("    Mean split ratio: $(round(mean(split_ratios), digits=2))%")
+        end
+    end
+end
+
+analyze_best_performers(filtered_df)
+
 println("\n=== INSTANCE OVERLAP ANALYSIS ===")
 # Check what instances each heuristic successfully solves
 instance_keys = []
