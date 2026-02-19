@@ -18,6 +18,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     sig_levels::Vector{Float64},
     max_ls::Int64,
     chistatus::Bool,
+    max_iih_iterations::Int64,
+    epsilon_iih::Float64,
     benchiterations::Int64,
     train_test::Float64,
     dependency::String)
@@ -479,8 +481,107 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         gap=gap_optimisation))
                 end
 
+                ## Start the extended MCI heuristic for D warehouses by
+                ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
+                if start[1, :EMCI] == 1
+                    sleep(0.01)
+                    GC.gc()
+                    time_benchmark = @elapsed W = EMCIALLOC(trans_train, capacity, sku_weight)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
+                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    print("\n   EMCI: parcels test data: ", parcels_benchmark,
+                        " / parcels training data: ", parcels_train,
+                        " / time: ", round(time_benchmark, digits=3),
+                        " / warehouse: ", sum(W, dims=1))
+
+                    push!(benchmark, (dependency=dependency,
+                        skus=skus_benchmark[a],
+                        wareh=length(capacity),
+                        diff=diff_benchmark[a],
+                        buffer=buff_benchmark[a],
+                        mode="EMCI",
+                        benchiter=benchnr,
+                        orders=size(trans, 1),
+                        train_test=train_test,
+                        parcel_train=parcels_train,
+                        parcel_test=parcels_benchmark,
+                        duration=time_benchmark,
+                        cap_used=sum(W),
+                        local_search=0,
+                        gap=0))
+                end
+
+                ## Start the iterative improvement heuristic with Gurobi by
+                ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
+                if start[1, :IIH] == 1 && length(capacity) == 2 && sum(capacity) > sum(sku_weight)
+                    sleep(0.01)
+                    GC.gc()
+                    time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, capacity, sku_weight,
+                        abort, "Gurobi", show_opt, cpu_cores, allowed_gap, max_nodes,
+                        max_iih_iterations, epsilon_iih)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
+                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    print("\n    IIH: parcels test data: ", parcels_benchmark,
+                        " / parcels training data: ", parcels_train,
+                        " / time: ", round(time_benchmark, digits=3),
+                        " / gap: ", round(gap_optimisation, digits=6),
+                        " / iterations: ", ls,
+                        " / warehouse: ", sum(W, dims=1))
+
+                    push!(benchmark, (dependency=dependency,
+                        skus=skus_benchmark[a],
+                        wareh=length(capacity),
+                        diff=diff_benchmark[a],
+                        buffer=buff_benchmark[a],
+                        mode="IIH",
+                        benchiter=benchnr,
+                        orders=size(trans, 1),
+                        train_test=train_test,
+                        parcel_train=parcels_train,
+                        parcel_test=parcels_benchmark,
+                        duration=time_benchmark,
+                        cap_used=sum(W),
+                        local_search=ls,
+                        gap=gap_optimisation))
+                end
+
+                ## Start the iterative improvement heuristic with SCIP by
+                ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
+                if start[1, :IIHS] == 1 && length(capacity) == 2 && sum(capacity) > sum(sku_weight)
+                    sleep(0.01)
+                    GC.gc()
+                    time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, capacity, sku_weight,
+                        abort, "scip", show_opt, cpu_cores, allowed_gap, max_nodes,
+                        max_iih_iterations, epsilon_iih)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
+                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    print("\n   IIHS: parcels test data: ", parcels_benchmark,
+                        " / parcels training data: ", parcels_train,
+                        " / time: ", round(time_benchmark, digits=3),
+                        " / gap: ", round(gap_optimisation, digits=6),
+                        " / iterations: ", ls,
+                        " / warehouse: ", sum(W, dims=1))
+
+                    push!(benchmark, (dependency=dependency,
+                        skus=skus_benchmark[a],
+                        wareh=length(capacity),
+                        diff=diff_benchmark[a],
+                        buffer=buff_benchmark[a],
+                        mode="IIHS",
+                        benchiter=benchnr,
+                        orders=size(trans, 1),
+                        train_test=train_test,
+                        parcel_train=parcels_train,
+                        parcel_test=parcels_benchmark,
+                        duration=time_benchmark,
+                        cap_used=sum(W),
+                        local_search=ls,
+                        gap=gap_optimisation))
+                end
+
                 ## Benchmark the random allocation of SKUs
                 sleep(0.01)
+                GC.gc()
                 time_benchmark = @elapsed parcels_benchmark = RANDOMBENCH(trans_test, capacity, iterations, sku_weight, combination)
                 parcels_train = RANDOMBENCH(trans_train, capacity, iterations, sku_weight, combination)
                 print("\n    RND: parcels test data: ", parcels_benchmark,
@@ -504,6 +605,12 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     cap_used=sum(W),
                     local_search=0,
                     gap=0))
+
+                # Free training/test data before next iteration
+                trans_train = nothing
+                trans_test = nothing
+                sku_weight = nothing
+                W = nothing
 
                 # Export the results after each stage
                 CSV.write("results/$(experiment)_benchmark_$dependency.csv", benchmark)

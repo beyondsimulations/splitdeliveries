@@ -88,6 +88,9 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         end
     end
 
+    # Free solver model to prevent memory accumulation
+    empty!(mqkp)
+
     # Check if the solution is empty (no allocations made)
     if sum(out) == 0
         if termination_status(mqkp) == MOI.INFEASIBLE

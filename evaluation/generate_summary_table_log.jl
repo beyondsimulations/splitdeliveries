@@ -17,6 +17,9 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
+    "EMCI" => "MCI",
+    "IIH" => "IIH",
+    "IIHS" => "IIHS",
     "RND" => "RND"
 )
 
@@ -44,7 +47,7 @@ println("Split ratio range: $(minimum(filtered_df.split_ratio)) to $(maximum(fil
 println()
 
 # Define heuristics in order for table
-heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "MCI", "IIH", "IIHS", "RND"]
 
 println("=== SAMPLE SIZE ANALYSIS ===")
 for heur in heuristics
