@@ -11,11 +11,15 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
     # Introduce the equal weights for all SKUs
     sku_weight = zeros(Int64,size(trans,2)) .= 1
     ## Calculation of links based on orders
+    N = size(trans, 2)
+    if Int128(N) * N > 2_000_000_000
+        error("KLINKS: N=$(N) too large for dense N×N LINKS matrix (would require $(round(Int128(N)*N*8/1e9, digits=1)) GB).")
+    end
     L  = LINKS(trans,LINKADJUST(trans))
     ## Set trial = 0
     besttrial = 0
     lw_trial = zeros(Float64, trials)
-    cw_trial = zeros(Bool,size(trans,2),size(capacity,1),trials)
+    cw_best = zeros(Bool, N, size(capacity, 1))
     if klinkstatus == true
         print("\nstarting k-link trials: ")
     end
@@ -58,7 +62,10 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
         end
         # Save the results from the trial
         lw_trial[y] = LW(L,X)
-        cw_trial[:,:,y] = X
+        if lw_trial[y] >= lw_trial[max(1, besttrial)]
+            besttrial = y
+            copyto!(cw_best, X)
+        end
         local_search_trials = y
         time_elapsed = Dates.now() - start
         if time_elapsed > Minute(time_limit)
@@ -66,9 +73,6 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
             break
         end
     end
-    # Save the best result from all trails for export
-    besttrial = findmax(lw_trial)[2]
-    cw_best   = cw_trial[:,:,besttrial]
     # Check whether all SKUs are allocated
     if any(y->y < 1,sum(cw_best,dims=2))
         "\n Error: Not all SKUs are allocated."

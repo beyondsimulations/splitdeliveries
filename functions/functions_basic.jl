@@ -1,19 +1,21 @@
 # Function to calculate the Coappearance Matrix Q
 function COAPPEARENCE(
-    trans::SparseMatrixCSC{Bool, Int64}, 
+    trans::SparseMatrixCSC{Bool, Int64},
     sku_weight::Vector{<:Real}
     )
-    Q::Matrix{Float64} = trans'*trans
-    Q = Matrix(Q)
+    Q = trans' * trans
     return Q
 end
 
 # function to set all entries on the principle diagonal to zero
 function CLEANPRINCIPLE!(
-    Q::Matrix{<:Real}
+    Q::AbstractMatrix{<:Real}
     )
     for i in axes(Q,1)
         Q[i,i] = 0
+    end
+    if Q isa SparseMatrixCSC
+        dropzeros!(Q)
     end
 end
 

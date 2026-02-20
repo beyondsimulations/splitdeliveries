@@ -119,25 +119,34 @@ function STRATEGY2!(X::Matrix{Bool},
                     L::Matrix{Float64},
                     capacity::Vector{Int64},
                     stop::Int64)
-    pay_arr = zeros(Float64,size(X,1),size(X,1),size(capacity,1))
+    best_val = 0.0
+    best_i = 0
+    best_j = 0
+    best_g = 0
     for i in 1:size(X,1)
-        if X[i,m] == 1 
+        if X[i,m] == 1
             for j in 1:size(X,1)
                 if X[j,m] == 0
                     for g in axes(X,2)
                         if X[j,g] == 1 && X[i,g] == 0
-                            pay_arr[i,j,g] = PAYOFF(i,j,m,g,L,X)
+                            val = PAYOFF(i,j,m,g,L,X)
+                            if val > best_val
+                                best_val = val
+                                best_i = i
+                                best_j = j
+                                best_g = g
+                            end
                         end
                     end
                 end
             end
         end
     end
-    if findmax(pay_arr)[1] > 0
-        X[getindex(findmax(pay_arr)[2],1),m] = 0
-        X[getindex(findmax(pay_arr)[2],1),getindex(findmax(pay_arr)[2],3)] = 1
-        X[getindex(findmax(pay_arr)[2],2),getindex(findmax(pay_arr)[2],3)] = 0
-        X[getindex(findmax(pay_arr)[2],2),m] = 1
+    if best_val > 0
+        X[best_i, m] = 0
+        X[best_i, best_g] = 1
+        X[best_j, best_g] = 0
+        X[best_j, m] = 1
         stop = 0
     end
 end

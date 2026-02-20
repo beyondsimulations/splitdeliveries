@@ -27,8 +27,8 @@ end
 
 # function used to perform the chi square test of independence upon 
 # the coappearance matrix Q
-function HYOPTHESISTEST!(dep::Matrix{<:Real},
-                        Q::Matrix{<:Real},
+function HYOPTHESISTEST!(dep::AbstractMatrix{<:Real},
+                        Q::AbstractMatrix{<:Real},
                         I::Int64,
                         J::Int64,
                         sig::Float64,
@@ -41,8 +41,8 @@ function HYOPTHESISTEST!(dep::Matrix{<:Real},
     DEPTEST!(dep,Q,sum_cond_sku,J,accept)
 end
 
-function DEPTEST!(dep::Matrix{<:Real},
-                  Q::Matrix{<:Real},
+function DEPTEST!(dep::AbstractMatrix{<:Real},
+                  Q::AbstractMatrix{<:Real},
                   sum_cond_sku::Vector{<:Real},
                   J::Int64,
                   accept::Float64)
@@ -58,8 +58,8 @@ function chi_part(a::Real,
     (a-b)^2/b
 end
 
-function chi_values!(dep::Matrix{<:Real},
-                     Q::Matrix{<:Real}, 
+function chi_values!(dep::AbstractMatrix{<:Real},
+                     Q::AbstractMatrix{<:Real},
                      sum_cond_sku::Vector{<:Real}, 
                      J::Int64,
                      accept::Float64,
@@ -94,8 +94,8 @@ function chi_values!(dep::Matrix{<:Real},
     end
 end
 
-function fish_values!(dep::Matrix{<:Real},
-                     Q::Matrix{<:Real}, 
+function fish_values!(dep::AbstractMatrix{<:Real},
+                     Q::AbstractMatrix{<:Real},
                      sum_cond_sku::Vector{<:Real}, 
                      J::Int64,
                      accept::Float64,
@@ -129,6 +129,93 @@ function INDEPENDENT(sum_cond_sku::Vector{<:Real},
     (sum_cond_sku[i] * sum_cond_sku[j])/J
 end
 
+# function used to perform the chi square test of independence upon
+# the coappearance matrix Q
+function HYOPTHESISTEST_SPARSE(Q::AbstractMatrix{<:Real},
+                               I::Int64,
+                               J::Int64,
+                               sig::Float64,
+                               sum_cond_sku::Vector{<:Real})
+    M = convert(Int64, ((I^2) - I) / 2)
+    accept = cquantile(Chisq(1), sig / M)
+
+    dep_rows = Int64[]
+    dep_cols = Int64[]
+    dep_vals = Float64[]
+
+    if Q isa SparseMatrixCSC
+        q_rows = rowvals(Q)
+        q_vals = nonzeros(Q)
+        @inbounds for col in 1:I
+            for idx in nzrange(Q, col)
+                row = q_rows[idx]
+                if row >= col
+                    continue
+                end
+                qij = q_vals[idx]
+                independent = (sum_cond_sku[row] * sum_cond_sku[col]) / J
+                if qij <= independent
+                    continue
+                end
+
+                chi_nr = J - sum_cond_sku[row]
+                chi_nd = J - sum_cond_sku[col]
+                chi_yn = sum_cond_sku[row] - qij
+                chi_ny = sum_cond_sku[col] - qij
+                chi_nn = chi_nd - chi_yn
+
+                ind_yn = (sum_cond_sku[row] * chi_nd) / J
+                ind_ny = (sum_cond_sku[col] * chi_nr) / J
+                ind_nn = (chi_nr * chi_nd) / J
+
+                chi = chi_part(qij, independent) +
+                      chi_part(chi_yn, ind_yn) +
+                      chi_part(chi_ny, ind_ny) +
+                      chi_part(chi_nn, ind_nn)
+
+                if chi > accept
+                    val = qij - independent
+                    push!(dep_rows, row); push!(dep_cols, col); push!(dep_vals, val)
+                    push!(dep_rows, col); push!(dep_cols, row); push!(dep_vals, val)
+                end
+            end
+        end
+    else
+        @inbounds for j_idx = 2:I
+            @inbounds for i_idx = 1:j_idx-1
+                independent = (sum_cond_sku[i_idx] * sum_cond_sku[j_idx]) / J
+                qij = Q[i_idx, j_idx]
+                if qij <= independent
+                    continue
+                end
+
+                chi_nr = J - sum_cond_sku[i_idx]
+                chi_nd = J - sum_cond_sku[j_idx]
+                chi_yn = sum_cond_sku[i_idx] - qij
+                chi_ny = sum_cond_sku[j_idx] - qij
+                chi_nn = chi_nd - chi_yn
+
+                ind_yn = (sum_cond_sku[i_idx] * chi_nd) / J
+                ind_ny = (sum_cond_sku[j_idx] * chi_nr) / J
+                ind_nn = (chi_nr * chi_nd) / J
+
+                chi = chi_part(qij, independent) +
+                      chi_part(chi_yn, ind_yn) +
+                      chi_part(chi_ny, ind_ny) +
+                      chi_part(chi_nn, ind_nn)
+
+                if chi > accept
+                    val = qij - independent
+                    push!(dep_rows, i_idx); push!(dep_cols, j_idx); push!(dep_vals, val)
+                    push!(dep_rows, j_idx); push!(dep_cols, i_idx); push!(dep_vals, val)
+                end
+            end
+        end
+    end
+
+    return sparse(dep_rows, dep_cols, dep_vals, I, I)
+end
+
 # function to find the bestselling SKUs, borrowed from Catalán and Fisher (2021)
 function BESTSELLING_SKUS(
     capacity_left::Vector{<:Real},
@@ -143,6 +230,7 @@ function BESTSELLING_ALLOCATE!(
     capacity_left::Vector{<:Real},
     weight::Vector{<:Real},
     sku_weights::Vector{<:Real},
+    nor_order::Vector{Int64}
     )
     bestselling = BESTSELLING_SKUS(capacity_left,sku_weights)
     normal_weight = sum_nor./sku_weights
@@ -150,13 +238,14 @@ function BESTSELLING_ALLOCATE!(
         if capacity_left[k] > bestselling
             normal_weight .= sum_nor./sku_weights
             bestselling_space_left = copy(bestselling)
-            i = argmax(normal_weight)
-            while bestselling_space_left - sku_weights[i] >= 0
+            pos = 1
+            while pos <= length(nor_order) && bestselling_space_left - sku_weights[nor_order[pos]] >= 0
+                i = nor_order[pos]
                 weight[k] += normal_weight[i]
                 capacity_left[k] -= sku_weights[i]
                 bestselling_space_left -= sku_weights[i]
                 normal_weight[i] = 0.0
-                i = argmax(normal_weight)
+                pos += 1
             end
         end
     end
@@ -173,15 +262,24 @@ function WHWEIGHT(
     )
     free_capacity::Vector{Float64} = copy(capacity)
     weight = zeros(Float64,size(free_capacity))
-    normal = BESTSELLING_ALLOCATE!(sum_nor,free_capacity,weight,sku_weights)
+    nor_order = sortperm(sum_nor./sku_weights, rev=true)
+    normal = BESTSELLING_ALLOCATE!(sum_nor,free_capacity,weight,sku_weights,nor_order)
     normal_weight = copy(normal)
+    pos = 1
     for k = 1:size(capacity,1)
-        next = argmax(normal_weight)
-        while free_capacity[k] >= sku_weights[next]
-            weight[k] += normal_weight[next]
-            free_capacity[k] -= sku_weights[next]
-            normal_weight[next] = 0
-            next = argmax(normal_weight)
+        while pos <= length(nor_order)
+            i = nor_order[pos]
+            if normal_weight[i] <= 0
+                pos += 1
+                continue
+            end
+            if free_capacity[k] < sku_weights[i]
+                break
+            end
+            weight[k] += normal_weight[i]
+            free_capacity[k] -= sku_weights[i]
+            normal_weight[i] = 0
+            pos += 1
         end
     end
     weight .= weight ./ sum(sum_nor./sku_weights)
@@ -233,27 +331,35 @@ function SELECTIK(sum_dep::Vector{<:Real},
                   weight::Vector{Float64},
                   capacity_left::Vector{<:Real},
                   X::Array{Bool,2},
-                  dep::Matrix{<:Real},
+                  dep::AbstractMatrix{<:Real},
                   allocated::Vector{Bool},
-                  sku_weight::Vector{<:Real})
-    i       = argmax(sum_nor)
-    if sum(@view(X[i,:])) > 0
+                  sku_weight::Vector{<:Real},
+                  nor_order::Vector{Int64},
+                  nor_pos::Ref{Int},
+                  avg_sku_weight::Int64)
+    while nor_pos[] <= length(nor_order) && allocated[nor_order[nor_pos[]]]
+        nor_pos[] += 1
+    end
+    if nor_pos[] <= length(nor_order)
+        i = nor_order[nor_pos[]]
+    else
+        i = 1
         for j = 1:size(X,1)
-            if allocated[j] == 0
+            if !allocated[j]
                 i = j
                 break
             end
         end
     end
-    k_ind   = WHSPACE(capacity_left,ceil(Int64,sum(sku_weight)/length(sku_weight)))
+    k_ind   = WHSPACE(capacity_left,avg_sku_weight)
     k_max   = findmax(capacity_left)[2]
     pot_dep = WHPOTDEP(capacity_left,i,X,dep,sku_weight)
     k_dep   = findmax(pot_dep)[2]
     if      pot_dep[k_dep] > 0 && k_ind != k_dep &&
-            sum_dep[i] + sum_nor[i] * weight[k_dep] > 
+            sum_dep[i] + sum_nor[i] * weight[k_dep] >
             sum_nor[i] * weight[k_ind]
                 k = k_dep
-    elseif  k_ind != k_max && 
+    elseif  k_ind != k_max &&
             sum_dep[i] + sum_nor[i] * weight[k_max] >
             sum_nor[i] * weight[k_ind]
                 k = k_max
@@ -269,7 +375,7 @@ end
 function WHPOTDEP(capacity_left::Vector{<:Real},
                   i::Int64,
                   X::Array{Bool,2},
-                  dep::Matrix{<:Real},
+                  dep::AbstractMatrix{<:Real},
                   sku_weight::Vector{<:Real}
     )
     pot_dep = zeros(Float64,size(capacity_left,1))
@@ -281,9 +387,9 @@ function WHPOTDEP(capacity_left::Vector{<:Real},
     return pot_dep::Vector{Float64}
 end
 
-# function to remove every so far assigned dependent SKU-pair from 
-# the coappearance matrix dep to prevent the allocation bias described 
-# in our article. 
+# function to remove every so far assigned dependent SKU-pair from
+# the coappearance matrix dep to prevent the allocation bias described
+# in our article.
 function REMOVEALLOC!(X::Array{Bool,2},
                       Q::Matrix{<:Real},
                       dep::Matrix{<:Real})
@@ -300,34 +406,72 @@ function REMOVEALLOC!(X::Array{Bool,2},
     end
 end
 
+# function to remove every so far assigned dependent SKU-pair from
+# the coappearance matrix dep to prevent the allocation bias described
+# in our article.
+function REMOVEALLOC(X::Array{Bool,2},
+                     Q::SparseMatrixCSC{<:Real},
+                     dep::AbstractMatrix{<:Real})
+    dep_new = copy(Q)
+    if dep isa SparseMatrixCSC
+        d_rows = rowvals(dep)
+        d_vals = nonzeros(dep)
+        for col in 1:size(dep, 2)
+            for idx in nzrange(dep, col)
+                row = d_rows[idx]
+                if row >= col
+                    continue
+                end
+                dval = d_vals[idx]
+                if dval > 0
+                    qval = Q[row, col]
+                    current = dval
+                    for k in 1:size(X, 2)
+                        if X[row, k] == 1 && X[col, k] == 1 && current > 0
+                            current = qval - current
+                        else
+                            current = qval
+                        end
+                    end
+                    dep_new[row, col] = current
+                    dep_new[col, row] = current
+                end
+            end
+        end
+    end
+    dropzeros!(dep_new)
+    return dep_new
+end
+
 # function to check for all unallocated SKUs whether they have positive 
 # dependencies to the SKUs in the warehouse k the last SKU was allocated 
 # to. If so, check whether the dependencies are expected to dominate the 
 # independent coapperances. If yes, allocate the corresponding SKUs to 
 # the warehouse k.
 function ADDDEPENDENT!(X::Matrix{Bool},
-    Q::Matrix{<:Real},
+    Q::AbstractMatrix{<:Real},
     capacity_left::Vector{<:Real},
     k::Int64,
-    dep::Matrix{<:Real},
+    dep::AbstractMatrix{<:Real},
     sum_dep::Vector{<:Real},
     sum_nor::Vector{<:Real},
     state_dep::Matrix{<:Real},
     state_nor::Matrix{<:Real},
     allocated::Vector{Bool},
-    sku_weight::Vector{<:Real}
+    sku_weight::Vector{<:Real},
+    n_allocated::Ref{Int}
     )
     add = 1
     pot_dep = zeros(Float64,size(X,1))
     pot_nor = zeros(Float64,size(X,1))
-    while add == 1 && capacity_left[k] > 0 && sum(X) < size(X,1)
+    while add == 1 && capacity_left[k] > 0 && n_allocated[] < size(X,1)
         add = 0
         FINDDEP!(X,k,state_dep,state_nor,pot_dep,pot_nor,allocated,sku_weight,capacity_left)
         i = argmax(pot_dep)
         if findmax(pot_dep)[1] > 0
             if pot_dep[i] >= findmax(pot_nor)[1] && capacity_left[k] >= sku_weight[i]
                 ALLOCATEONE!(X,dep,Q,sum_dep,sum_nor,state_dep,
-                             state_nor,capacity_left,allocated,sku_weight,i,k)
+                             state_nor,capacity_left,allocated,sku_weight,i,k,n_allocated)
                 add = 1
             end
         end
@@ -381,13 +525,15 @@ function ALLOCATEONE!(X::Array{Bool,2},
                       allocated::Vector{Bool},
                       sku_weight::Vector{<:Real},
                       i::Int64,
-                      k::Int64)
-    if sum(X[i,:]) == 0
+                      k::Int64,
+                      n_allocated::Ref{Int})
+    if !allocated[i]
         X[i,k] = 1
         sum_dep[i] = 0
         sum_nor[i] = 0
         capacity_left[k] -= sku_weight[i]
         allocated[i] = true
+        n_allocated[] += 1
         state_dep[i,k] = 0
         state_nor[i,k] = 0
         @fastmath @inbounds @simd for j in 1:size(X,1)
@@ -401,17 +547,58 @@ function ALLOCATEONE!(X::Array{Bool,2},
     end
 end
 
+function ALLOCATEONE!(X::Array{Bool,2},
+                      dep::AbstractMatrix{<:Real},
+                      Q::SparseMatrixCSC{<:Real},
+                      sum_dep::Vector{<:Real},
+                      sum_nor::Vector{<:Real},
+                      state_dep::Matrix{<:Real},
+                      state_nor::Matrix{<:Real},
+                      capacity_left::Vector{<:Real},
+                      allocated::Vector{Bool},
+                      sku_weight::Vector{<:Real},
+                      i::Int64,
+                      k::Int64,
+                      n_allocated::Ref{Int})
+    if !allocated[i]
+        X[i,k] = 1
+        sum_dep[i] = 0
+        sum_nor[i] = 0
+        capacity_left[k] -= sku_weight[i]
+        allocated[i] = true
+        n_allocated[] += 1
+        state_dep[i,k] = 0
+        state_nor[i,k] = 0
+        q_rows = rowvals(Q)
+        q_vals = nonzeros(Q)
+        @inbounds for idx in nzrange(Q, i)
+            j = q_rows[idx]
+            if !allocated[j]
+                dv = dep[j, i]
+                state_dep[j,k] += dv
+                state_nor[j,k] += q_vals[idx] - dv
+            end
+        end
+    else
+        error("This product is already allocated!")
+    end
+end
+
 ## check whether all warehouse except the last one are already full. If
 ## that is the case just allocate the remaining SKUs yet not allocated there.
 function FILLLAST!(X::Array{Bool,2},
                    capacity_left::Vector{<:Real},
                    allocated::Vector{Bool},
-                   sku_weight::Vector{<:Real})
+                   sku_weight::Vector{<:Real},
+                   n_allocated::Ref{Int})
     if sum(capacity_left[1:size(capacity_left,1)-1]) <= 0
-        @inbounds @simd for i = 1:length(allocated)
+        last_d = size(capacity_left,1)
+        @inbounds for i = 1:length(allocated)
             if allocated[i] == false
-                X[i,size(capacity_left,1)] = 1
-                capacity_left[size(capacity_left,1)] -= sku_weight[i]
+                X[i,last_d] = 1
+                capacity_left[last_d] -= sku_weight[i]
+                allocated[i] = true
+                n_allocated[] += 1
             end
         end
     end
@@ -433,10 +620,23 @@ function CALCVAL(X::Matrix{Bool},
     return out
 end
 
+function CALCVAL(X::Matrix{Bool},
+                 T::SparseMatrixCSC{<:Real},
+                 i::Int64,
+                 k::Int64)
+    out = 0.0
+    rows = rowvals(T)
+    vals = nonzeros(T)
+    @inbounds for idx in nzrange(T, i)
+        out += X[rows[idx], k] * vals[idx]
+    end
+    return out
+end
+
 # function to allocate the SKUs with the highest potential allocation 
 # value to each warehouse with leftover storage space until it is full
 function FILLUP!(X::Array{Bool,2},
-                 Q::Matrix{<:Real},
+                 Q::AbstractMatrix{<:Real},
                  capacity_left::Vector{<:Real},
                  sku_weight::Vector{<:Real})
     avg_weight = floor(sum(sku_weight)/length(sku_weight))
@@ -463,18 +663,38 @@ function FILLUP!(X::Array{Bool,2},
                 end
             end
             
-            best = findmax(best_allocation)
-            if best[1] > 0
-                X[best[2],d] = 1
-                capacity_left[d] -= sku_weight[best[2]]
-                
-                weight_inv = sku_weight[best[2]] > 0 ? 1.0 / sku_weight[best[2]] : 0.0
-                @inbounds @simd for j in 1:size(X,1)
-                    state[j,d] += Q[j,best[2]] * weight_inv
+            fallback = 0
+            for i in 1:size(X,1)
+                if sum(@view(X[i,:])) == 0 && capacity_left[d] >= sku_weight[i]
+                    fallback = i
+                    break
                 end
+            end
+            if fallback > 0
+                X[fallback, d] = 1
+                capacity_left[d] -= sku_weight[fallback]
             else
-                capacity_left[d] = 0
-                break 
+                best = findmax(best_allocation)
+                if best[1] > 0
+                    X[best[2],d] = 1
+                    capacity_left[d] -= sku_weight[best[2]]
+
+                    weight_inv = sku_weight[best[2]] > 0 ? 1.0 / sku_weight[best[2]] : 0.0
+                    if Q isa SparseMatrixCSC
+                        q_rows = rowvals(Q)
+                        q_vals = nonzeros(Q)
+                        @inbounds for idx in nzrange(Q, best[2])
+                            state[q_rows[idx], d] += q_vals[idx] * weight_inv
+                        end
+                    else
+                        @inbounds @simd for j in 1:size(X,1)
+                            state[j,d] += Q[j,best[2]] * weight_inv
+                        end
+                    end
+                else
+                    capacity_left[d] = 0
+                    break
+                end
             end
         end
     end
@@ -483,8 +703,8 @@ end
 # function to apply a pair-wise exchange local search on the allocation
 # of the CHI heuristic
 function LOCALSEARCHCHI!(trans::SparseMatrixCSC{Bool,Int64},
-                         X::Matrix{Bool}, 
-                         Q::Matrix{<:Real},
+                         X::Matrix{Bool},
+                         Q::AbstractMatrix{<:Real},
                          capacity::Vector{Int64},
                          log_results::Bool,
                          ls::Int64,
@@ -547,7 +767,7 @@ function POTENTIAL(state::Matrix{<:Real},
 end
 
 function CURRENTSTATE!(X::Matrix{Bool},
-                       Q::Matrix{<:Real},
+                       Q::AbstractMatrix{<:Real},
                        state::Matrix{<:Real})
     @inbounds for k = 1:size(X,2)
         @inbounds @simd for i = 1:size(X,1)
@@ -568,8 +788,30 @@ function REFRESHSTATE!(state::Matrix{<:Real},
     end
 end
 
+function REFRESHSTATE!(state::Matrix{<:Real},
+                       Q::SparseMatrixCSC{<:Real},
+                       k::Int64,
+                       g::Int64,
+                       i::Int64,
+                       j::Int64)
+    rows = rowvals(Q)
+    vals = nonzeros(Q)
+    @inbounds for idx in nzrange(Q, j)
+        y = rows[idx]
+        v = vals[idx]
+        state[y, k] += v
+        state[y, g] -= v
+    end
+    @inbounds for idx in nzrange(Q, i)
+        y = rows[idx]
+        v = vals[idx]
+        state[y, k] -= v
+        state[y, g] += v
+    end
+end
+
 function SEARCHLOOP!(X::Matrix{Bool},
-                     Q::Matrix{<:Real},
+                     Q::AbstractMatrix{<:Real},
                      coapp_sort::Vector{Int64},
                      state::Matrix{<:Real})
     @fastmath begin

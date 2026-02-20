@@ -12,7 +12,7 @@ dependencies=(
     "HD-VF"
 )
 
-experiment="100"
+experiment="100000"
 
 # Create a new tmux session (if not already in one)
 session_name="benchmarks_${experiment}"

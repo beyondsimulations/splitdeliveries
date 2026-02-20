@@ -65,7 +65,25 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     GI = 1:size(Q, 2)
     GK = 1:length(capacity)
     @variable(mqkp, X[GI, GK], Bin)
-    @objective(mqkp, Max, sum(X[i, k] .* X[j, k] .* Q[i, j] for i in GI, j in 1:i-1, k in GK))
+    if Q isa SparseMatrixCSC
+        nz_rows = rowvals(Q)
+        nz_vals = nonzeros(Q)
+        obj = QuadExpr()
+        for col in GI
+            for idx in nzrange(Q, col)
+                row = nz_rows[idx]
+                if row < col
+                    v = nz_vals[idx]
+                    for k in GK
+                        add_to_expression!(obj, v, X[row, k], X[col, k])
+                    end
+                end
+            end
+        end
+        @objective(mqkp, Max, obj)
+    else
+        @objective(mqkp, Max, sum(X[i, k] .* X[j, k] .* Q[i, j] for i in GI, j in 1:i-1, k in GK))
+    end
     @constraint(mqkp, capconstraint[k in GK], sum(X[i, k] * sku_weight[i] for i in GI) == capacity[k])
     if mode == "QMK"
         @constraint(mqkp, minallocation[i in GI], sum(X[i, k] for k in GK) >= 1)
