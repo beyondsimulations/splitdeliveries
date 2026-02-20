@@ -58,7 +58,7 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         ## ALLOCATENOCOAPP!(X,dep,Q,sum_dep,sum_nor,state_dep,state_nor,cap_left,allocated,sku_weight)
         ## Allocate the rest of the SKUs with coapperances
         n_allocated = Ref(0)
-        nor_order = sortperm(sum_nor, rev=true)
+        nor_order = sortperm(1:I, by=i -> (sum_nor[i], Float64(ordered_skus[i])), rev=true)
         nor_pos = Ref(1)
         avg_sku_weight = ceil(Int64, sum(sku_weight)/length(sku_weight))
         while n_allocated[] < I
