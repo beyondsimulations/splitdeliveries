@@ -5,6 +5,12 @@ function FULLOPTEQ(trans::SparseMatrixCSC{Bool, Int64},
                    cpu_cores::Int64,
                    allowed_gap::Float64,
                    max_nodes::Int64)
+    N = size(trans, 2)
+    M = size(trans, 1)
+    if Int128(M) * N > 2_000_000_000
+        error("FULLOPTEQ: Problem size M×N = $(M)×$(N) = $(Int128(M)*N) exceeds feasible limit for dense trans conversion.")
+    end
+
     # Convert sparse matrix to matrix
     trans = Matrix(trans)
     # Sort the warehouses by decreasing capacity

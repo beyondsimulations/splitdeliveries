@@ -21,15 +21,18 @@ for dependency in dependencies
     start = DataFrame(
         QMK=[0], # quadratic-multiple knapsack heuristic with Gurobi as solver
         QMKJ=[0], # quadratic-multiple knapsack heuristic with Juniper as solver
-        QMKS=[1], # quadratic-multiple knapsack heuristic with SCIP as solver
-        CHIM=[0], # main chi-square heuristic without local search
-        CHI=[0], # chi-square heuristic + local search based on the QMK objective function
+        QMKS=[0], # quadratic-multiple knapsack heuristic with SCIP as solver
+        CHIM=[1], # main chi-square heuristic without local search
+        CHI=[1], # chi-square heuristic + local search based on the QMK objective function
         KL=[0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         KLQ=[0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        GO=[0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GP=[0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GS=[0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        BS=[0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GO=[1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GP=[1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GS=[1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        BS=[1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        EMCI=[1], # extended MCI for D warehouses by Lin et al. (2025)
+        IIH=[0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
+        IIHS=[0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
         OPT=[0], # optimisation model to determine the optimal solution with Gurobi
     )
 
@@ -63,6 +66,12 @@ for dependency in dependencies
     sig_levels = [1.0e-2]
     max_ls = 100
     chistatus = false
+
+    # Parameters for IIH (Lin et al. 2025)
+    ## max_iih_iterations: maximum number of alternating optimization rounds
+    ## epsilon_iih: minimum improvement in split deliveries to continue
+    max_iih_iterations = 50
+    epsilon_iih = 1e-6
 
     # Parameters for RANDOM
     ## iterations: number of different random allocations for the comparison
@@ -114,6 +123,8 @@ for dependency in dependencies
         sig_levels::Vector{Float64},
         max_ls::Int64,
         chistatus::Bool,
+        max_iih_iterations::Int64,
+        epsilon_iih::Float64,
         benchiterations::Int64,
         train_test::Float64,
         dependency::String)

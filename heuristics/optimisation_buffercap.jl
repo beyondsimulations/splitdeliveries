@@ -6,6 +6,13 @@ function FULLOPTUEQ(trans::SparseMatrixCSC{Bool, Int64},
                     allowed_gap::Float64,
                     max_nodes::Int64)
 
+    N = size(trans, 2)
+    M = size(trans, 1)
+    W = count(x -> x > 0, capacity)
+    if Int128(M) * N * W > 500_000_000
+        error("FULLOPTUEQ: Problem size M×N×W = $(M)×$(N)×$(W) = $(Int128(M)*N*W) exceeds feasible limit for Z variables.")
+    end
+
     # Convert sparse matrix to matrix
     trans = Matrix(trans)
 

@@ -24,7 +24,7 @@ function GREEDYORDERS(
         FILLUP!(X,Q,capacity_left,sku_weight)
         # Check whether all SKUs are allocated
         if any(y->y < 1,sum(X,dims=2))
-            "\n Error: Not all SKUs are allocated."
+            error("GO: Not all SKUs are allocated!")
         end
         return X
     end

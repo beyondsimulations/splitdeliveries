@@ -18,25 +18,45 @@ function SORTSALES(trans::SparseMatrixCSC{Bool, Int64}, sku_weight::Vector{<:Rea
 end
 
 ## function to sort the SKU pairs after the highest number of coappearances
-function SORTPAIRS(Q::Matrix{<:Real}, sku_weight::Vector{<:Real})
-    n = size(Q,1)
-    npairs = div(n*(n-1), 2)
-    pairs = Matrix{Int64}(undef, npairs, 3)
-    
-    idx = 1
-    @inbounds for i = 2:n
-        weight_i = sku_weight[i]
-        @simd for j = 1:i-1
-            pairs[idx,1] = i
-            pairs[idx,2] = j
-            pairs[idx,3] = round(Int64, Q[i,j]/(weight_i + sku_weight[j])/2)
-            idx += 1
+function SORTPAIRS(Q::AbstractMatrix{<:Real}, sku_weight::Vector{<:Real})
+    if Q isa SparseMatrixCSC
+        rows_q = rowvals(Q)
+        vals_q = nonzeros(Q)
+        pair_i = Int64[]
+        pair_j = Int64[]
+        pair_v = Int64[]
+        for col in 1:size(Q, 2)
+            for idx in nzrange(Q, col)
+                row = rows_q[idx]
+                if row > col
+                    push!(pair_i, row)
+                    push!(pair_j, col)
+                    push!(pair_v, round(Int64, vals_q[idx] / (sku_weight[row] + sku_weight[col]) / 2))
+                end
+            end
+        end
+        npairs = length(pair_i)
+        pairs = Matrix{Int64}(undef, npairs, 3)
+        pairs[:, 1] = pair_i
+        pairs[:, 2] = pair_j
+        pairs[:, 3] = pair_v
+    else
+        n = size(Q, 1)
+        npairs = div(n * (n - 1), 2)
+        pairs = Matrix{Int64}(undef, npairs, 3)
+        idx = 1
+        @inbounds for i = 2:n
+            weight_i = sku_weight[i]
+            @simd for j = 1:i-1
+                pairs[idx, 1] = i
+                pairs[idx, 2] = j
+                pairs[idx, 3] = round(Int64, Q[i, j] / (weight_i + sku_weight[j]) / 2)
+                idx += 1
+            end
         end
     end
-    
-    sortslices(pairs, dims=1, by=x->x[3], rev=true)
 
-    return pairs::Matrix{Int64}
+    return sortslices(pairs, dims=1, by=x->x[3], rev=true)::Matrix{Int64}
 end
 
 ## function to check the number of coappearances in the selected warehouse
@@ -49,10 +69,20 @@ function CURRENTCOAPP(X::Matrix{Bool}, warehouse::Int64, sku::Int64, Q::Matrix{<
     return sum
 end
 
+function CURRENTCOAPP(X::Matrix{Bool}, warehouse::Int64, sku::Int64, Q::SparseMatrixCSC{<:Real})
+    out = 0.0
+    rows = rowvals(Q)
+    vals = nonzeros(Q)
+    @inbounds for idx in nzrange(Q, sku)
+        out += X[rows[idx], warehouse] * vals[idx]
+    end
+    return out
+end
+
 ## function to start place the seeds in the greedy seeds heuristic
 function GREEDYSEEDSTART!(sales::Matrix{Int64},
                           X::Matrix{Bool},
-                          Q::Matrix{<:Real},
+                          Q::AbstractMatrix{<:Real},
                           capacity_left::Vector{<:Real},
                           sku_weight::Vector{<:Real})
     for k = 2:size(capacity_left,1)
@@ -79,7 +109,7 @@ end
 ## function to allocate the SKU with the highest potential
 function GREEDYSEEDMAIN!(sales::Matrix{Int64},
                          X::Matrix{Bool},
-                         Q::Matrix{<:Real},
+                         Q::AbstractMatrix{<:Real},
                          capacity_left::Vector{<:Real},
                          sku_weight::Vector{<:Real})
     for i in axes(Q,1)
@@ -109,6 +139,7 @@ function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
     X::Matrix{Bool},
     capacity_left::Vector{<:Real},
     sku_weight::Vector{<:Real})
+    n_allocated = 0
     for i in axes(pairs,1)
         ## For each pair of SKUs in sorted list of pairs do
         for j = 1:2
@@ -118,12 +149,13 @@ function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
                     if sum(X[pairs[i,j],:]) == 0
                         X[pairs[i,j],d] = 1
                         capacity_left[d] -= sku_weight[pairs[i,j]]
+                        n_allocated += 1
                         break
                     end
                 end
             end
         end
-        if sum(X) == size(X,1)
+        if n_allocated == size(X,1)
             break
         end
     end

@@ -1,19 +1,21 @@
 # Function to calculate the Coappearance Matrix Q
 function COAPPEARENCE(
-    trans::SparseMatrixCSC{Bool, Int64}, 
+    trans::SparseMatrixCSC{Bool, Int64},
     sku_weight::Vector{<:Real}
     )
-    Q::Matrix{Float64} = trans'*trans
-    Q = Matrix(Q)
+    Q = trans' * trans
     return Q
 end
 
 # function to set all entries on the principle diagonal to zero
 function CLEANPRINCIPLE!(
-    Q::Matrix{<:Real}
+    Q::AbstractMatrix{<:Real}
     )
     for i in axes(Q,1)
         Q[i,i] = 0
+    end
+    if Q isa SparseMatrixCSC
+        dropzeros!(Q)
     end
 end
 
@@ -139,6 +141,24 @@ function PARCELSSEND(
     return parcel
 end
 
+## FLEXIBILITY: average number of warehouses that can individually fulfill each order completely
+function FLEXIBILITY(
+    trans::SparseMatrixCSC{Bool, Int64},
+    X::Array{Bool,2}
+    )
+    fulfillment = trans * X
+    order_sizes = vec(sum(trans, dims=2))
+    flex = 0
+    for j in axes(fulfillment, 1)
+        for k in axes(fulfillment, 2)
+            if fulfillment[j,k] == order_sizes[j]
+                flex += 1
+            end
+        end
+    end
+    return round(flex / size(trans, 1), digits=4)
+end
+
 # Functions for the random allocation of SKUs to warehouses
 ## RANDOMALLOCONCE: allocate SKUs randomly in case each SKU can only be assigned once
 function RANDOMALLOCONCE(
@@ -194,11 +214,13 @@ function RANDOMBENCH(
     combination::Array{Array{Array{Int64,1},1},1}
     )
     randomcollection = zeros(Int64, iterations)
+    flexcollection = zeros(Float64, iterations)
     Threads.@threads for r = 1:iterations
         W = RANDOMALLOCMULTI(trans, capacity, sku_weight)
         randomcollection[r] = PARCELSSEND(trans, W, capacity, combination)
+        flexcollection[r] = FLEXIBILITY(trans, W)
     end
-    return round(mean(randomcollection))  # More efficient than sum/length
+    return round(mean(randomcollection)), round(mean(flexcollection), digits=4)
 end
 
 ## CHECKCAPACITY: function to test whether the input capacity is viable for the transactional data

@@ -19,7 +19,7 @@ function GREEDYPAIRS(trans::SparseMatrixCSC{Bool,Int64},
         FILLUP!(X,Q,capacity_left,sku_weight)
         # Check whether all SKUs are allocated
         if any(y->y < 1,sum(X,dims=2))
-            "\n Error: Not all SKUs are allocated."
+            error("GP: Not all SKUs are allocated!")
         end
         return X
     end
