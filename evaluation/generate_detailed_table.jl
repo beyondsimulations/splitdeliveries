@@ -10,13 +10,13 @@ mode_mapping = Dict(
     "OPT" => "OPT",
     "QMK" => "QMK-OPT",
     "QMKJ" => "QMK",
-    "CHI_0.01" => "CHI-NL",
-    "CHIM_0.01" => "CHI",
+    "CHI_0.01" => "CHI",
     "KL" => "KL",
     "GO" => "GO",
     "GP" => "GP",
     "GS" => "GS",
-    "BS" => "BS"
+    "BS" => "BS",
+    "EMCI" => "MCI"
 )
 
 # Filter for relevant modes and map to standard names
@@ -24,7 +24,7 @@ filtered_df = df[in.(df.mode, Ref(keys(mode_mapping))), :]
 filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 
 # Define heuristics in order for table
-heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "OPT"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "MCI", "OPT"]
 
 # Get unique SKU levels and sort them
 sku_levels = sort(unique(filtered_df.skus))

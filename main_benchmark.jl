@@ -24,6 +24,26 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     train_test::Float64,
     dependency::String)
 
+    # Open log file for this benchmark run
+    logfile = "results/benchmark_$(dependency).log"
+    logio = open(logfile, "a")
+    println(logio, "\n", "="^60)
+    println(logio, "Benchmark started at ", Dates.now())
+    println(logio, "Dependency: ", dependency)
+    println(logio, "="^60)
+    flush(logio)
+
+    function log_failure(io::IO, mode::String, e, bt, benchnr, skus, capacity, orders)
+        println(io, "\n[", Dates.now(), "] FAILURE: ", mode)
+        println(io, "  benchiter=", benchnr, " skus=", skus, " wareh=", length(capacity),
+            " capacity=", capacity, " orders=", orders)
+        println(io, "  Error: ", e)
+        for line in split(sprint(showerror, e, bt), '\n')[1:min(end, 20)]
+            println(io, "  ", line)
+        end
+        flush(io)
+    end
+
     # Start the benchmark of the data set
     ## Create dataframes for the export of the results
     benchmark = DataFrame(dependency=String[],
@@ -105,6 +125,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
 
                 ## Start QMK heuristic with Gurobi as solver
                 if start[1, :QMK] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "Gurobi", show_opt,
@@ -135,10 +156,16 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "QMK failed" exception=(e, bt)
+                        log_failure(logio, "QMK", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start QMK heuristic with Juniper as solver
                 if start[1, :QMKJ] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "Juniper", show_opt,
@@ -169,10 +196,16 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "QMKJ failed" exception=(e, bt)
+                        log_failure(logio, "QMKJ", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start QMK heuristic with SCIP as solver
                 if start[1, :QMKS] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "scip", show_opt,
@@ -203,10 +236,16 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "QMKS failed" exception=(e, bt)
+                        log_failure(logio, "QMKS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start chi square heuristic without local search
                 if start[1, :CHIM] == 1
+                    try
                     for sig in sig_levels
                         sleep(0.01)
                         GC.gc()
@@ -239,10 +278,16 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                             local_search=ls,
                             gap=0))
                     end
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "CHIM failed" exception=(e, bt)
+                        log_failure(logio, "CHIM", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start chi square heuristic with local search
                 if start[1, :CHI] == 1
+                    try
                     for sig in sig_levels
                         sleep(0.01)
                         GC.gc()
@@ -275,11 +320,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                             local_search=ls,
                             gap=0))
                     end
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "CHI failed" exception=(e, bt)
+                        log_failure(logio, "CHI", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start our reproduction of the  K-LINKS heuristic by
                 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
                 if start[1, :KL] == 1 && sum(capacity) == length(sku_weight)
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, ls = KLINKS(trans_train, capacity, trials, stagnant, strategy, abort, klinkstatus)
@@ -309,11 +360,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=ls,
                         gap=0))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "KL failed" exception=(e, bt)
+                        log_failure(logio, "KL", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start our reproduction of the  K-LINKS optimization with SBB by
                 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
                 if start[1, :KLQ] == 1 && sum(capacity) == length(sku_weight)
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "Gurobi", show_opt,
@@ -344,11 +401,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "KLQ failed" exception=(e, bt)
+                        log_failure(logio, "KLQ", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start our reproduction of the greedy orders heuristic by
                 ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
                 if start[1, :GO] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W = GREEDYORDERS(trans_train, capacity, sku_weight)
@@ -377,11 +440,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "GO failed" exception=(e, bt)
+                        log_failure(logio, "GO", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start our reproduction of the greedy pairs heuristic by
                 ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
                 if start[1, :GP] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W = GREEDYPAIRS(trans_train, capacity, sku_weight)
@@ -410,11 +479,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "GP failed" exception=(e, bt)
+                        log_failure(logio, "GP", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start our reproduction of the greedy seeds heuristic by
                 ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
                 if start[1, :GS] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W = GREEDYSEEDS(trans_train, capacity, sku_weight)
@@ -443,11 +518,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "GS failed" exception=(e, bt)
+                        log_failure(logio, "GS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start our reproduction of the  bestselling heuristic by
                 ## [A. Catalan and M. Fisher (2012)](https://doi.org/10.2139/ssrn.2166687)
                 if start[1, :BS] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W = BESTSELLING(trans_train, capacity, sku_weight)
@@ -476,11 +557,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "BS failed" exception=(e, bt)
+                        log_failure(logio, "BS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start the extended MCI heuristic for D warehouses by
                 ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
                 if start[1, :EMCI] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W = EMCIALLOC(trans_train, capacity, sku_weight)
@@ -509,11 +596,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "EMCI failed" exception=(e, bt)
+                        log_failure(logio, "EMCI", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start the iterative improvement heuristic with Gurobi by
                 ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
                 if start[1, :IIH] == 1 && length(capacity) == 2 && sum(capacity) > sum(sku_weight)
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, capacity, sku_weight,
@@ -546,11 +639,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=ls,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "IIH failed" exception=(e, bt)
+                        log_failure(logio, "IIH", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start the iterative improvement heuristic with SCIP by
                 ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
                 if start[1, :IIHS] == 1 && length(capacity) == 2 && sum(capacity) > sum(sku_weight)
+                    try
                     sleep(0.01)
                     GC.gc()
                     time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, capacity, sku_weight,
@@ -583,12 +682,18 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=ls,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "IIHS failed" exception=(e, bt)
+                        log_failure(logio, "IIHS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Start the search for optimal solution with the solver CPLEX
                 ## Choose FULLOPTEQ if each SKUs can only be allocated once, else use
                 ## FULLOPTUEQ if SKUs can be allocated multiple times
                 if start[1, :OPT] == 1
+                    try
                     sleep(0.01)
                     GC.gc()
                     if sum(capacity) == size(trans, 2)
@@ -623,9 +728,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=gap_optimisation))
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "OPT failed" exception=(e, bt)
+                        log_failure(logio, "OPT", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    end
                 end
 
                 ## Benchmark the random allocation of SKUs
+                try
                 sleep(0.01)
                 GC.gc()
                 time_benchmark = @elapsed parcels_benchmark, flex_benchmark = RANDOMBENCH(trans_test, capacity, iterations, sku_weight, combination)
@@ -653,6 +764,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     cap_used=sum(W),
                     local_search=0,
                     gap=0))
+                catch e
+                    bt = catch_backtrace()
+                    @warn "RND failed" exception=(e, bt)
+                    log_failure(logio, "RND", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                end
 
                 # Free training/test data before next iteration
                 trans_train = nothing
@@ -668,6 +784,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     end
 
     print("\n### Finished Benchmark ###")
+
+    println(logio, "\n", "="^60)
+    println(logio, "Benchmark finished at ", Dates.now())
+    println(logio, "="^60)
+    close(logio)
 
     return benchmark::DataFrame
 end

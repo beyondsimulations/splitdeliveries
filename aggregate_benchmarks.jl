@@ -9,7 +9,7 @@ using StatsPlots
 using Statistics
 
 ## the following aggregates all results
-experiments     = ["100_benchmark","1000_benchmark","10000_benchmark","50000_benchmark"]
+experiments     = ["100_benchmark","1000_benchmark","10000_benchmark","100000_benchmark"]
 dependencies    = ["HD-VF","MD-VF","ID-VF","HD-SF","MD-SF","ID-SF"]
 
 function load_data()
