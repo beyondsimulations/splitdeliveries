@@ -109,7 +109,6 @@ for dependency in dependencies
         buff_benchmark::Vector{Float64},
         start::DataFrame,
         order_sets::Vector{Int64},
-        max_dependence::Float64,
         trials::Int64,
         stagnant::Int64,
         strategy::Int64,

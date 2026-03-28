@@ -4,7 +4,6 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     buff_benchmark::Vector{Float64},
     start::DataFrame,
     order_sets::Vector{Int64},
-    max_dependence::Float64,
     trials::Int64,
     stagnant::Int64,
     strategy::Int64,
@@ -95,11 +94,17 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     print("\n Reused transactions from previous run.")
                 else
                     print("\n Starting generation of transactions.")
-                    time = @elapsed trans = RANDOMTRANS(skus_benchmark[a], orders, skus_in_order, sku_frequency,
-                        ceil(Int64, max(skus_benchmark[a] / 20, 10)),
-                        min_dependence, max_dependence,
-                        group_link, ind_chance, one_direction,
-                        multi_relatio)
+                    max_gs = ceil(Int64, max(skus_benchmark[a] / group_size_scaling, group_size_min))
+                    mean_gs = ceil(Int64, max(max_gs / mean_group_divisor, mean_group_min))
+                    time = @elapsed trans, C, group_sizes_gen = RANDOMTRANS(
+                        skus_benchmark[a], orders,
+                        mean_order_size, min_order_size, nbd_dispersion,
+                        sku_frequency_mode, zipf_exponent,
+                        max_gs, mean_gs,
+                        ratio_strong, ratio_medium,
+                        dep_strength_strong, dep_strength_medium,
+                        group_link, one_direction, multi_relatio,
+                        dep_activation_prob)
                     print("\n Transactions generated after ", round(time, digits=3), " seconds.")
                     if skus_benchmark[a] <= 10000
                         display(histogram(sum(trans, dims=2)))

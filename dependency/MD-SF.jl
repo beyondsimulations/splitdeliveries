@@ -1,21 +1,26 @@
-# Transaction Generation Parameters
-# These parameters control the generation of random transactions when no transactional data
-# is specified under "transactions/transactions_$experiment"
+# Transaction Generation Parameters — Medium Dependencies, Static Frequency (MD-SF)
+# Dependency structure: 20% strong groups, 40% medium groups, 40% independent SKUs
+# SKU frequency: uniform (all SKUs equally likely as seed)
 
-# Order-Level Parameters
-skus_in_order  = 2.5     # This parameter sets the average expected number of unique items (SKUs) in each order. 
-                         # It is based on the shifted geometric distribution used to generate the number of unique items (SKUs)
-                         # Our probability parameter is 1/skus_in_order.
-sku_frequency  = 0.00    # Controls SKU selection probability distribution
-                         # 0.00: Uniform random selection
-                         # >0.0: Normal distribution: 1 + floor(Int64, abs(rand(Normal(0,skus/sku_frequency))))
+# Order parameters
+mean_order_size      = 2.5       # Expected number of unique items per order
+min_order_size       = 2         # Minimum items per order (single-item orders excluded)
+nbd_dispersion       = 1.0       # NBD dispersion r (r=1 → geometric; r>1 → heavier tail)
 
-# Dependency Parameters
-min_dependence = 0.00    # Minimum correlation strength between related SKUs
-max_dependence = 0.50    # Maximum correlation strength between related SKUs
+# SKU frequency distribution
+sku_frequency_mode   = :uniform  # Uniform random SKU selection
+zipf_exponent        = 1.0       # Unused when mode = :uniform
 
-# Group Structure Parameters
-group_link     = 0.03    # Ratio of SKUs that get random connections outside their group
-ind_chance     = 0.40    # Ratio of SKUs not assigned to any cluster
-one_direction  = 0.60    # Probability of one-way (vs two-way) dependencies between SKUs
-multi_relatio  = 0.40    # Depth of relations within product groups (controls multi-dimensional dependencies)
+# Dependency structure (degree-corrected SBM)
+ratio_strong         = 0.20      # 20% of SKUs in strong-dependency groups
+ratio_medium         = 0.40      # 40% of SKUs in medium-dependency groups (40% independent)
+dep_strength_strong  = (0.50, 0.80)  # Co-purchase probability range for strong groups
+dep_strength_medium  = (0.20, 0.50)  # Co-purchase probability range for medium groups
+group_size_scaling   = 20        # Max group size divisor: g_max = ⌈max(S / this, group_size_min)⌉
+group_size_min       = 10        # Minimum max group size
+mean_group_divisor   = 4         # Mean group size divisor: g_mean = ⌈max(g_max / this, mean_group_min)⌉
+mean_group_min       = 3         # Minimum mean group size
+group_link           = 0.03      # Fraction of cross-group bridge links
+one_direction        = 0.60      # Probability of asymmetric (one-way) dependency
+multi_relatio        = 0.40      # Peripheral-to-peripheral edge density within groups
+dep_activation_prob  = 0.60      # Probability that dependencies activate per seed SKU
