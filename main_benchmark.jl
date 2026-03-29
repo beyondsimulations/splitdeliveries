@@ -24,11 +24,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     dependency::String)
 
     # Open log file for this benchmark run
-    logfile = "results/benchmark_$(dependency).log"
+    logfile = "results/benchmark_$(experiment)_$(dependency).log"
     logio = open(logfile, "a")
     println(logio, "\n", "="^60)
     println(logio, "Benchmark started at ", Dates.now())
-    println(logio, "Dependency: ", dependency)
+    println(logio, "Experiment: ", experiment, " | Dependency: ", dependency)
     println(logio, "="^60)
     flush(logio)
 

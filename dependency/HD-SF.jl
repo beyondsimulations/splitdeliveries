@@ -12,7 +12,7 @@ sku_frequency_mode   = :uniform  # Uniform random SKU selection
 zipf_exponent        = 1.0       # Unused when mode = :uniform
 
 # Dependency structure (degree-corrected SBM)
-ratio_strong         = 0.50      # 50% of SKUs in strong-dependency groups
+ratio_strong         = 0.60      # 50% of SKUs in strong-dependency groups
 ratio_medium         = 0.30      # 30% of SKUs in medium-dependency groups (20% independent)
 dep_strength_strong  = (0.50, 0.80)  # Co-purchase probability range for strong groups
 dep_strength_medium  = (0.20, 0.50)  # Co-purchase probability range for medium groups

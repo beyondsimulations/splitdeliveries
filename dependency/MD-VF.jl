@@ -13,7 +13,7 @@ zipf_exponent        = 1.0       # Zipf exponent α: P(rank k) ∝ 1/k^α
 
 # Dependency structure (degree-corrected SBM)
 ratio_strong         = 0.20      # 20% of SKUs in strong-dependency groups
-ratio_medium         = 0.40      # 40% of SKUs in medium-dependency groups (40% independent)
+ratio_medium         = 0.50      # 40% of SKUs in medium-dependency groups (40% independent)
 dep_strength_strong  = (0.50, 0.80)  # Co-purchase probability range for strong groups
 dep_strength_medium  = (0.20, 0.50)  # Co-purchase probability range for medium groups
 group_size_scaling   = 20        # Max group size divisor: g_max = ⌈max(S / this, group_size_min)⌉

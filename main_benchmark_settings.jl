@@ -19,21 +19,21 @@ for dependency in dependencies
 
     # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(
-        QMK=[1], # quadratic-multiple knapsack heuristic with Gurobi as solver
-        QMKJ=[1], # quadratic-multiple knapsack heuristic with Juniper as solver
+        QMK=[0], # quadratic-multiple knapsack heuristic with Gurobi as solver
+        QMKJ=[0], # quadratic-multiple knapsack heuristic with Juniper as solver
         QMKS=[0], # quadratic-multiple knapsack heuristic with SCIP as solver
         CHIM=[1], # main chi-square heuristic without local search
-        CHI=[1], # chi-square heuristic + local search based on the QMK objective function
-        KL=[1], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        KLQ=[1], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        GO=[1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GP=[1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GS=[1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        BS=[1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        CHI=[0], # chi-square heuristic + local search based on the QMK objective function
+        KL=[0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        KLQ=[0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        GO=[0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GP=[0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GS=[0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        BS=[0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         EMCI=[1], # extended MCI for D warehouses by Lin et al. (2025)
-        IIH=[1], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
+        IIH=[0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
         IIHS=[0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
-        OPT=[1], # optimisation model to determine the optimal solution with Gurobi
+        OPT=[0], # optimisation model to determine the optimal solution with Gurobi
     )
 
     # Parameters for the KLINK heuristic
@@ -54,7 +54,7 @@ for dependency in dependencies
     ## show_opt: specify whether the status of the optimisation should be shown
     ## allowed_gap: specify the termination criterion in case a gap is allowed in the optimisation
     ## max_nodes: maximum number of nodes till termination
-    abort = 3600
+    abort = 900
     show_opt = false
     allowed_gap = 0.00000
     max_nodes = 10000000
