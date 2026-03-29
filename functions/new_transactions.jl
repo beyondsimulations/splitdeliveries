@@ -1,6 +1,5 @@
 # RANDOMTRANS: Generates synthetic transactional datasets with controlled
-#              dependency structures for benchmarking warehouse allocation
-#              heuristics. See the paper for the full algorithm description.
+#              dependency structures for benchmarking warehouse allocation heuristics.
 
 function RANDOMTRANS(skus::Int64,
                      orders::Int64,
@@ -21,7 +20,7 @@ function RANDOMTRANS(skus::Int64,
                      dep_activation_prob::Float64)
 
     # =========================================================================
-    # Phase 1: Build dependency structure (degree-corrected SBM)
+    # Phase 1: Build dependency structure
     # =========================================================================
 
     C_rows = Int64[]
@@ -116,6 +115,8 @@ function RANDOMTRANS(skus::Int64,
     end
 
     C = sparse(C_rows, C_cols, C_vals, skus, skus)
+    # Clamp values to [0,1] — sparse() sums duplicates from overlapping bridge/group edges
+    C.nzval .= min.(C.nzval, 1.0)
     C_rows = nothing
     C_cols = nothing
     C_vals = nothing
@@ -159,8 +160,8 @@ function RANDOMTRANS(skus::Int64,
         transactions = spzeros(Bool, chunk_size, skus)
 
         for i in 1:chunk_size
-            # Draw order size from NBD
-            order_size = min_order_size + rand(order_size_dist)
+            # Draw order size from NBD, capped at total number of SKUs
+            order_size = min(min_order_size + rand(order_size_dist), skus)
             items_in_order = Set{Int64}()
 
             while length(items_in_order) < order_size
@@ -173,18 +174,24 @@ function RANDOMTRANS(skus::Int64,
 
                 push!(items_in_order, seed)
 
-                # Activate dependencies of seed (with probabilistic activation gate)
-                dep_indices = findnz(C[:, seed])
-                dep_skus = dep_indices[1]
-                dep_strengths = dep_indices[2]
+                # Multi-hop dependency propagation via BFS queue
+                # Each newly added SKU can trigger its own dependents
+                queue = [seed]
+                while !isempty(queue) && length(items_in_order) < order_size
+                    current = popfirst!(queue)
+                    dep_indices = findnz(C[:, current])
+                    dep_skus = dep_indices[1]
+                    dep_strengths = dep_indices[2]
 
-                if length(dep_skus) > 0 && rand() < dep_activation_prob
-                    for j in randperm(length(dep_skus))
-                        if length(items_in_order) >= order_size
-                            break
-                        end
-                        if dep_skus[j] ∉ items_in_order && rand() < dep_strengths[j]
-                            push!(items_in_order, dep_skus[j])
+                    if length(dep_skus) > 0 && rand() < dep_activation_prob
+                        for j in randperm(length(dep_skus))
+                            if length(items_in_order) >= order_size
+                                break
+                            end
+                            if dep_skus[j] ∉ items_in_order && rand() < dep_strengths[j]
+                                push!(items_in_order, dep_skus[j])
+                                push!(queue, dep_skus[j])
+                            end
                         end
                     end
                 end
