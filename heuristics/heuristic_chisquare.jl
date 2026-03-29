@@ -60,6 +60,10 @@ function CHISQUAREHEUR(trans::SparseMatrixCSC{Bool,Int64},
         n_allocated = Ref(0)
         nor_order = sortperm(1:I, by=i -> (sum_nor[i], Float64(ordered_skus[i])), rev=true)
         nor_pos = Ref(1)
+        ## Pre-replicate bestselling SKUs to all warehouses
+        log_results && print("\n  pre-replicating bestselling SKUs.")
+        REPLICATEALL!(X, dep, Q, sum_dep, sum_nor, state_dep, state_nor,
+                      cap_left, allocated, sku_weight, nor_order, n_allocated)
         avg_sku_weight = ceil(Int64, sum(sku_weight)/length(sku_weight))
         while n_allocated[] < I
         ## select the SKU i with the highest coappearance not being allocated

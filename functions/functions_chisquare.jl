@@ -224,6 +224,144 @@ function BESTSELLING_SKUS(
     (sum(capacity_left)-sum(sku_weights))/(size(capacity_left,1)-1)
 end
 
+# function to pre-replicate the bestselling SKUs to all warehouses
+# before the Phase 1 dependency-aware allocation loop.
+# Weight-aware: budget and capacity checks use sku_weight per SKU.
+function REPLICATEALL!(
+    X::Matrix{Bool},
+    dep::SparseMatrixCSC{<:Real},
+    Q::SparseMatrixCSC{<:Real},
+    sum_dep::Vector{<:Real},
+    sum_nor::Vector{<:Real},
+    state_dep::Matrix{<:Real},
+    state_nor::Matrix{<:Real},
+    cap_left::Vector{<:Real},
+    allocated::Vector{Bool},
+    sku_weight::Vector{<:Real},
+    nor_order::Vector{Int64},
+    n_allocated::Ref{Int}
+)
+    D = size(X, 2)
+    budget = BESTSELLING_SKUS(cap_left, sku_weight)
+    if budget <= 0 || D <= 1
+        return
+    end
+
+    budget_left = budget
+    q_rows = rowvals(Q)
+    q_vals = nonzeros(Q)
+
+    for pos in 1:length(nor_order)
+        i = nor_order[pos]
+        w_i = sku_weight[i]
+
+        # Stop if this SKU exceeds remaining budget
+        budget_left - w_i < 0 && break
+
+        # Check that ALL warehouses have enough capacity
+        can_fit = true
+        @inbounds for k in 1:D
+            if cap_left[k] < w_i
+                can_fit = false
+                break
+            end
+        end
+        can_fit || continue
+
+        # Place SKU i in ALL warehouses
+        @inbounds for k in 1:D
+            X[i, k] = true
+            cap_left[k] -= w_i
+            state_dep[i, k] = 0.0
+            state_nor[i, k] = 0.0
+        end
+
+        allocated[i] = true
+        n_allocated[] += 1
+        sum_dep[i] = 0.0
+        sum_nor[i] = 0.0
+
+        # Update state for all unallocated SKUs in all warehouses
+        @inbounds for idx in nzrange(Q, i)
+            j = q_rows[idx]
+            if !allocated[j]
+                dv = dep[j, i]
+                nv = q_vals[idx] - dv
+                for k in 1:D
+                    state_dep[j, k] += dv
+                    state_nor[j, k] += nv
+                end
+            end
+        end
+
+        budget_left -= w_i
+    end
+end
+
+function REPLICATEALL!(
+    X::Matrix{Bool},
+    dep::Matrix{<:Real},
+    Q::Matrix{<:Real},
+    sum_dep::Vector{<:Real},
+    sum_nor::Vector{<:Real},
+    state_dep::Matrix{<:Real},
+    state_nor::Matrix{<:Real},
+    cap_left::Vector{<:Real},
+    allocated::Vector{Bool},
+    sku_weight::Vector{<:Real},
+    nor_order::Vector{Int64},
+    n_allocated::Ref{Int}
+)
+    D = size(X, 2)
+    budget = BESTSELLING_SKUS(cap_left, sku_weight)
+    if budget <= 0 || D <= 1
+        return
+    end
+
+    budget_left = budget
+
+    for pos in 1:length(nor_order)
+        i = nor_order[pos]
+        w_i = sku_weight[i]
+
+        budget_left - w_i < 0 && break
+
+        can_fit = true
+        @inbounds for k in 1:D
+            if cap_left[k] < w_i
+                can_fit = false
+                break
+            end
+        end
+        can_fit || continue
+
+        @inbounds for k in 1:D
+            X[i, k] = true
+            cap_left[k] -= w_i
+            state_dep[i, k] = 0.0
+            state_nor[i, k] = 0.0
+        end
+
+        allocated[i] = true
+        n_allocated[] += 1
+        sum_dep[i] = 0.0
+        sum_nor[i] = 0.0
+
+        @fastmath @inbounds @simd for j in 1:size(X, 1)
+            if !allocated[j]
+                dv = dep[j, i]
+                nv = Q[j, i] - dv
+                for k in 1:D
+                    state_dep[j, k] += dv
+                    state_nor[j, k] += nv
+                end
+            end
+        end
+
+        budget_left -= w_i
+    end
+end
+
 # function to allocate the bestselling SKUs to the weights
 function BESTSELLING_ALLOCATE!(
     sum_nor::Vector{<:Real},
@@ -412,7 +550,7 @@ end
 function REMOVEALLOC(X::Array{Bool,2},
                      Q::SparseMatrixCSC{<:Real},
                      dep::AbstractMatrix{<:Real})
-    dep_new = copy(Q)
+    dep_new = convert(SparseMatrixCSC{Float64,Int64}, copy(Q))
     if dep isa SparseMatrixCSC
         d_rows = rowvals(dep)
         d_vals = nonzeros(dep)
