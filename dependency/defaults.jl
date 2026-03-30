@@ -2,16 +2,16 @@
 # Override any of these in the specific config file after including this file
 
 # Order parameters
-mean_order_size      = 2.5       # Expected number of unique items per order
+mean_order_size      = 3.0       # Expected number of unique items per order
 min_order_size       = 2         # Minimum items per order (single-item orders excluded)
-nbd_dispersion       = 1.0       # NBD dispersion r (r=1 → geometric; r>1 → heavier tail)
+nbd_dispersion       = 2.0       # NBD dispersion r (r=1 → geometric; r>1 → heavier tail)
 
 # SKU frequency distribution
 zipf_exponent        = 1.0       # Zipf exponent α: P(rank k) ∝ 1/k^α
 
 # Dependency strength ranges
-dep_strength_strong  = (0.50, 0.80)  # Co-purchase probability range for strong groups
-dep_strength_medium  = (0.20, 0.50)  # Co-purchase probability range for medium groups
+dep_strength_strong  = (0.50, 0.90)  # Co-purchase probability range for strong groups
+dep_strength_medium  = (0.10, 0.50)  # Co-purchase probability range for medium groups
 
 # Group size scaling
 group_size_scaling   = 20        # Max group size divisor: g_max = ⌈max(S / this, group_size_min)⌉
