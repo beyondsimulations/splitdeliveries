@@ -1,4 +1,5 @@
-function MQKP(trans::SparseMatrixCSC{Bool,Int64},
+function MQKP(
+    trans::SparseMatrixCSC{Bool,Int64},
     capacity::Array{Int64,1},
     sku_weight::Vector{<:Real},
     abort::Int64,
@@ -7,7 +8,8 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     cpu_cores::Int64,
     allowed_gap::Float64,
     max_nodes::Int64,
-    mode::String)
+    mode::String,
+)
 
     # Create the Matrix for the objective of the optimisation
     if mode == "QMK"
@@ -19,7 +21,7 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     end
 
     # Sort the warehouses by decreasing capacity
-    capacity = sort(capacity, rev=true)
+    capacity = sort(capacity; rev = true)
 
     # Clean the principle diagonal
     CLEANPRINCIPLE!(Q)
@@ -36,12 +38,12 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
 
     elseif solv == "Juniper"
         ipopt = optimizer_with_attributes(Ipopt.Optimizer, "print_level" => 0)
-        highs = optimizer_with_attributes(HiGHS.Optimizer, "output_flag" => false, "threads" => cpu_cores)
+        highs = optimizer_with_attributes(
+            HiGHS.Optimizer, "output_flag" => false, "threads" => cpu_cores
+        )
         mqkp = Model(
             optimizer_with_attributes(
-                Juniper.Optimizer,
-                "nl_solver" => ipopt,
-                "mip_solver" => highs,
+                Juniper.Optimizer, "nl_solver" => ipopt, "mip_solver" => highs
             ),
         )
         set_optimizer_attribute(mqkp, "mip_gap", allowed_gap)
@@ -82,9 +84,17 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
         end
         @objective(mqkp, Max, obj)
     else
-        @objective(mqkp, Max, sum(X[i, k] .* X[j, k] .* Q[i, j] for i in GI, j in 1:i-1, k in GK))
+        @objective(
+            mqkp,
+            Max,
+            sum(X[i, k] .* X[j, k] .* Q[i, j] for i in GI, j in 1:(i - 1), k in GK)
+        )
     end
-    @constraint(mqkp, capconstraint[k in GK], sum(X[i, k] * sku_weight[i] for i in GI) == capacity[k])
+    @constraint(
+        mqkp,
+        capconstraint[k in GK],
+        sum(X[i, k] * sku_weight[i] for i in GI) == capacity[k]
+    )
     if mode == "QMK"
         @constraint(mqkp, minallocation[i in GI], sum(X[i, k] for k in GK) >= 1)
     elseif mode == "KLINK"
@@ -93,7 +103,9 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     JuMP.optimize!(mqkp)
     G = 0
     try
-        G = abs(objective_bound(mqkp) - objective_value(mqkp)) / abs(objective_value(mqkp) + 0.00000000001)
+        G =
+            abs(objective_bound(mqkp) - objective_value(mqkp)) /
+            abs(objective_value(mqkp) + 0.00000000001)
     catch
         G = 0
     end
@@ -112,9 +124,13 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
     # Check if the solution is empty (no allocations made)
     if sum(out) == 0
         if termination_status(mqkp) == MOI.INFEASIBLE
-            error("MQKP optimization resulted in an infeasible model. Please check input parameters.")
+            error(
+                "MQKP optimization resulted in an infeasible model. Please check input parameters.",
+            )
         else
-            println("MQKP optimization resulted in an empty solution. Status: $(termination_status(mqkp))")
+            println(
+                "MQKP optimization resulted in an empty solution. Status: $(termination_status(mqkp))",
+            )
             println("Attempting basic allocation as fallback...")
             # Simple greedy allocation - assign each item to the first warehouse with capacity
             remaining_capacity = copy(capacity)
@@ -129,7 +145,9 @@ function MQKP(trans::SparseMatrixCSC{Bool,Int64},
             end
             # If we still have an empty solution, it's truly infeasible
             if sum(out) == 0
-                error("Cannot create a feasible allocation with the given capacities and weights.")
+                error(
+                    "Cannot create a feasible allocation with the given capacities and weights.",
+                )
             end
         end
     end

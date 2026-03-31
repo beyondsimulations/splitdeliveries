@@ -1,0 +1,30 @@
+# JuliaFormatter configuration for git-split-deliveries
+# Style reference: https://domluna.github.io/JuliaFormatter.jl/stable/
+
+# Use the Blue style as a base – the most widely adopted Julia community standard.
+# It enforces consistent spacing, trailing commas in multi-line structures, and
+# `for x in y` syntax over `for x = y`.
+style = "blue"
+
+# Maximum line length before the formatter tries to break expressions.
+margin = 92
+
+# Number of spaces per indentation level (already consistent in the codebase).
+indent = 4
+
+# Always rewrite `for i = ...` as `for i in ...`
+always_for_in = true
+
+# Add a space after every comma, e.g. `f(a, b)` not `f(a,b)`.
+# This normalises the mixed style currently present in the codebase.
+whitespace_in_kwargs = true
+
+# Keep a trailing comma on the last argument of multi-line function signatures
+# and call expressions so that adding a new argument only touches one line.
+trailing_comma = true
+
+# Normalise line endings to Unix-style LF.
+normalize_line_endings = "unix"
+
+# Do not touch the `runs/` directory – those files are auto-generated.
+ignore = ["runs/"]

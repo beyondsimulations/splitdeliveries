@@ -23,21 +23,21 @@ for dependency in dependencies
     cpu_cores = 4
 
     # Choose Optimisations and Heuristics to evaluate in the benchmark
-    start = DataFrame(
-        QMK=[0], # quadratic-multiple knapsack heuristic with Gurobi as solver
-        QMKJ=[0], # quadratic-mulßtiple knapsack heuristic with Juniper as solver
-        QMKS=[0], # quadratic-multiple knapsack heuristic with SCIP as solver
-        CHI=[1], # main chi-square heuristic
-        KL=[0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        KLQ=[0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        GO=[1], # greedy orders heuristic bßy A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GP=[1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GS=[1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        BS=[1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        EMCI=[1], # extended MCI for D warehouses by Lin et al. (2025)
-        IIH=[0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
-        IIHS=[0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
-        OPT=[0], # optimisation model to determine the optimal solution with Gurobi
+    start = DataFrame(;
+        QMK = [0], # quadratic-multiple knapsack heuristic with Gurobi as solver
+        QMKJ = [0], # quadratic-mulßtiple knapsack heuristic with Juniper as solver
+        QMKS = [0], # quadratic-multiple knapsack heuristic with SCIP as solver
+        CHI = [1], # main chi-square heuristic
+        KL = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        KLQ = [0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        GO = [1], # greedy orders heuristic bßy A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GP = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GS = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        BS = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        EMCI = [1], # extended MCI for D warehouses by Lin et al. (2025)
+        IIH = [0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
+        IIHS = [0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
+        OPT = [0], # optimisation model to determine the optimal solution with Gurobi
     )
 
     # SKU weight mode (set before include to override)
@@ -104,8 +104,11 @@ for dependency in dependencies
         if cpu_cores < 1
             throw(ArgumentError("CPU cores must be positive"))
         end
-        if !isfile("capacity/capacity_$experiment.csv") || !isfile("capacity/skus_$experiment.csv")
-            throw(ArgumentError("Capacity or SKUs file not found for experiment: $experiment"))
+        if !isfile("capacity/capacity_$experiment.csv") ||
+            !isfile("capacity/skus_$experiment.csv")
+            throw(
+                ArgumentError("Capacity or SKUs file not found for experiment: $experiment")
+            )
         end
     end
 
@@ -117,9 +120,16 @@ for dependency in dependencies
     buff_benchmark = vec(readdlm("capacity/buff_$experiment.csv", ';', Float64))
 
     # Run the benchmark
-    print("\n\n### Benchmark of dependency ", dependency, " on experiment ", experiment, " ###")
+    print(
+        "\n\n### Benchmark of dependency ",
+        dependency,
+        " on experiment ",
+        experiment,
+        " ###",
+    )
     print("\n     benchmark started at ", now(), ".\n")
-    benchmark = BENCHMARK(capacity_benchmark::Array{Int64,2},
+    benchmark = BENCHMARK(
+        capacity_benchmark::Array{Int64,2},
         skus_benchmark::Vector{Int64},
         diff_benchmark::Vector{Float64},
         buff_benchmark::Vector{Float64},
@@ -147,7 +157,8 @@ for dependency in dependencies
         epsilon_iih::Float64,
         benchiterations::Int64,
         train_test::Float64,
-        dependency::String)
+        dependency::String,
+    )
 
     print("\nbenchmark finished at ", now(), ".")
 end

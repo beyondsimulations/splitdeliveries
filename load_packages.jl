@@ -1,5 +1,5 @@
 # activate necessary environment
-import Pkg
+using Pkg: Pkg
 Pkg.activate("splitdeliveries")
 
 # load all necessary packages (repositories)

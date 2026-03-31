@@ -12,7 +12,13 @@ X, C, group_sizes = RANDOMTRANS(
     sku_frequency_mode::Symbol,
     zipf_exponent::Float64,
     ceil(Int64, max(100 / group_size_scaling, group_size_min))::Int64,
-    ceil(Int64, max(ceil(Int64, max(100 / group_size_scaling, group_size_min)) / mean_group_divisor, mean_group_min))::Int64,
+    ceil(
+        Int64,
+        max(
+            ceil(Int64, max(100 / group_size_scaling, group_size_min)) / mean_group_divisor,
+            mean_group_min,
+        ),
+    )::Int64,
     ratio_strong::Float64,
     ratio_medium::Float64,
     dep_strength_strong::Tuple{Float64,Float64},
@@ -20,8 +26,8 @@ X, C, group_sizes = RANDOMTRANS(
     group_link::Float64,
     one_direction::Float64,
     multi_relatio::Float64,
-    dep_activation_prob::Float64)
-
+    dep_activation_prob::Float64,
+)
 
 # Convert sparse matrix to DataFrame
 df = DataFrame(Matrix(X), :auto)
