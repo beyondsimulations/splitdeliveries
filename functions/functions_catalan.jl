@@ -241,6 +241,10 @@ function BESTSELLINGSTART!(
         if capacity_left[d] < B
             i = 1
             while capacity_left[d] >= sku_weight[sales[i, 1]]
+                if sales[i, 4] == 1
+                    i += 1
+                    continue
+                end
                 # Check feasibility before committing (non-uniform weights only)
                 if nonuniform
                     capacity_left[d] -= sku_weight[sales[i, 1]]
@@ -286,6 +290,10 @@ function BESTSELLINGTOP!(
         while capacity_left[d] > capacity[d] - B &&
                   i <= size(sales, 1) &&
                   capacity_left[d] >= sku_weight[sales[i, 1]]
+            if sales[i, 4] == 1
+                i += 1
+                continue
+            end
             # Check feasibility before committing (non-uniform weights only)
             if nonuniform
                 capacity_left[d] -= sku_weight[sales[i, 1]]
