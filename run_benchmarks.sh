@@ -21,7 +21,7 @@ dependencies=(
 )
 
 # Experiments to run in parallel
-experiments=("2000")
+experiments=("100")
 
 for experiment in "${experiments[@]}"; do
     session_name="benchmarks_${experiment}_${WEIGHT_MODE}"
