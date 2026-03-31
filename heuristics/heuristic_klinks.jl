@@ -38,23 +38,22 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
         ## Start the heuristic
         stop = 0
         while stop <= stagnant
-            # select a random warehouse to test potential improvements
             stop += 1
             m = rand(1:size(X,2))
             # apply either local search strategy 1 or strategy 2
-            # -> 1: move SKU to a different warehouse if it improves the objective 
+            # -> 1: move SKU to a different warehouse if it improves the objective
             #       and the warehouse has capacity cap_left
             # -> 2: pair-wise exchange between SKUs if it improves the objective
             # -> 3: both strategies are applied with a chance of 50:50
             if strategy == 1
-                STRATEGY1!(X,m,L,capacity,stop)
+                stop = STRATEGY1!(X,m,L,capacity,stop)
             elseif strategy == 2
-                STRATEGY2!(X,m,L,capacity,stop)
+                stop = STRATEGY2!(X,m,L,capacity,stop)
             elseif strategy == 3
                 if rand() > 0.5
-                    STRATEGY1!(X,m,L,capacity,stop)
+                    stop = STRATEGY1!(X,m,L,capacity,stop)
                 else
-                    STRATEGY2!(X,m,L,capacity,stop)
+                    stop = STRATEGY2!(X,m,L,capacity,stop)
                 end
             else
                 error("Sorry, this strategy is not defined.")
@@ -75,7 +74,7 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
     end
     # Check whether all SKUs are allocated
     if any(y->y < 1,sum(cw_best,dims=2))
-        "\n Error: Not all SKUs are allocated."
+        error("KL: Not all SKUs are allocated!")
     end
     return cw_best, local_search_trials
 end

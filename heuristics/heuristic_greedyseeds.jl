@@ -20,7 +20,11 @@ function GREEDYSEEDS(
         X[sales[1,1],1] = 1
         ## Mark the SKU that is now allocated and the capacity used
         sales[1,4] = 1
-        capacity_left[1] -= sku_weight[sales[1,1]]
+        if capacity_left[1] < sku_weight[sales[1,1]]
+            SWAPREPAIR!(X, capacity_left, sku_weight, sales[1,1])
+        else
+            capacity_left[1] -= sku_weight[sales[1,1]]
+        end
         ## Start the assignment of the other SKUs
         GREEDYSEEDSTART!(sales,X,Q,capacity_left,sku_weight)
         ## For each SKUs sorted by decreasing sales that has not been allocated yet
@@ -29,13 +33,11 @@ function GREEDYSEEDS(
         FILLUP!(X,Q,capacity_left,sku_weight)
         # Check whether all SKUs are allocated
         if any(y->y < 1,sum(X,dims=2))
-            "\n Error: Not all SKUs are allocated."
+            error("GS: Not all SKUs are allocated!")
         end
         ## Return the solution
         return X
     end
 end
-
-
 
     

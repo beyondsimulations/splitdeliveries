@@ -110,8 +110,9 @@ function STRATEGY1!(X::Matrix{Bool},
     if findmax(dl_arr)[1] > 0
         X[getindex(findmax(dl_arr)[2],1),m] = 0
         X[getindex(findmax(dl_arr)[2],1),getindex(findmax(dl_arr)[2],2)] = 1
-        stop = 0
+        return 0
     end
+    return stop
 end
 
 function STRATEGY2!(X::Matrix{Bool},
@@ -147,6 +148,7 @@ function STRATEGY2!(X::Matrix{Bool},
         X[best_i, best_g] = 1
         X[best_j, best_g] = 0
         X[best_j, m] = 1
-        stop = 0
+        return 0
     end
+    return stop
 end

@@ -26,8 +26,7 @@ for dependency in dependencies
         QMK=[0],    # requires Gurobi
         QMKJ=[1],   # Juniper (no license needed)
         QMKS=[0],   # SCIP
-        CHIM=[1],   # chi-square without local search
-        CHI=[0],    # chi-square + local search (uses Gurobi obj)
+        CHI=[1],    # chi-square heuristic
         KL=[1],     # K-LINK heuristic
         KLQ=[0],    # K-LINK with Gurobi
         GO=[1],     # greedy orders

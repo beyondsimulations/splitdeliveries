@@ -13,8 +13,7 @@ Additionally, we implement six state-of-the-art competing heuristics for compari
 * **QMK**: QMK heuristic optimization model (Gurobi solver)
 * **QMKS**: QMK heuristic optimization model (SCIP solver)
 * **QMKJ**: QMK heuristic optimization model (Juniper solver)
-* **CHIM**: CHI heuristic without local search
-* **CHI**: CHI heuristic with local search
+* **CHI**: Chi-square heuristic
 
 ### Benchmark Heuristics
 * **KL**: K-LINK heuristic ([Zhu et al., 2021](https://doi.org/10.1016/j.ejor.2020.08.024))

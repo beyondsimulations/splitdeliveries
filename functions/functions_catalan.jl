@@ -99,9 +99,14 @@ function GREEDYSEEDSTART!(sales::Matrix{Int64},
                 end
             end
             # allocate the SKU to the DC
+            seed_sku = top_sales[findmin(coapp)[2],1]
+            if capacity_left[k] < sku_weight[seed_sku]
+                SWAPREPAIR!(X, capacity_left, sku_weight, seed_sku)
+            else
+                X[seed_sku,k] = 1
+                capacity_left[k] -= sku_weight[seed_sku]
+            end
             sales[top_sales[findmin(coapp)[2],2],4] = 1
-            X[top_sales[findmin(coapp)[2],1],k] = 1
-            capacity_left[k] -= sku_weight[top_sales[findmin(coapp)[2],1]]
         end
     end
 end
@@ -126,14 +131,18 @@ function GREEDYSEEDMAIN!(sales::Matrix{Int64},
                 X[sales[i,1],findmax(best_allocation)[2]] = 1
                 capacity_left[findmax(best_allocation)[2]] -= sku_weight[sales[i,1]]
             else
-                X[sales[i,1],findmax(capacity_left)[2]] = 1
-                capacity_left[findmax(capacity_left)[2]] -= sku_weight[sales[i,1]]
+                d_best = findmax(capacity_left)[2]
+                if capacity_left[d_best] < sku_weight[sales[i,1]]
+                    SWAPREPAIR!(X, capacity_left, sku_weight, sales[i,1])
+                else
+                    X[sales[i,1],d_best] = 1
+                    capacity_left[d_best] -= sku_weight[sales[i,1]]
+                end
             end
             sales[i,4] = 1
         end
     end
 end
-
 
 function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
     X::Matrix{Bool},
@@ -145,7 +154,6 @@ function GREEDYPAIRSMAIN!(pairs::Matrix{Int64},
         for j = 1:2
             for d in 1:size(capacity_left,1)
                 if capacity_left[d] >= sku_weight[pairs[i,j]]
-                    ## if SKU n is not allocated to DC j then allocate SKU s to DC d
                     if sum(X[pairs[i,j],:]) == 0
                         X[pairs[i,j],d] = 1
                         capacity_left[d] -= sku_weight[pairs[i,j]]
@@ -174,7 +182,6 @@ function GREEDYORDERSMAIN!(
             if trans[order,sku] == 1
                 for d = 1:length(capacity_left)
                     if capacity_left[d] >= sku_weight[sku]
-                        ## if the SKU is not allocated to the warehouses allocate it
                         if sum(X[sku,:]) == 0
                             X[sku,d] = 1
                             capacity_left[d] -= sku_weight[sku]
@@ -184,15 +191,14 @@ function GREEDYORDERSMAIN!(
             end
         end
     end
-    skus_assigned = sum(X,dims = 2)
     for sku in axes(trans,2)
-        if skus_assigned[sku] == 0
-            while sum(X[sku,:]) == 0
-                k = rand(1:length(capacity_left))
-                if capacity_left[k] >= sku_weight[sku]
-                    X[sku,k] = 1
-                    capacity_left[k] -= sku_weight[sku]
-                end
+        if sum(X[sku,:]) == 0
+            d_best = argmax(capacity_left)
+            if capacity_left[d_best] < sku_weight[sku]
+                SWAPREPAIR!(X, capacity_left, sku_weight, sku)
+            else
+                X[sku,d_best] = 1
+                capacity_left[d_best] -= sku_weight[sku]
             end
         end
     end
@@ -215,13 +221,30 @@ function BESTSELLINGSTART!(
     X::Matrix{Bool},
     sku_weight::Vector{<:Real},
 )
+    nonuniform = !all(w -> w == sku_weight[1], sku_weight)
+    if nonuniform
+        remaining_w = sort([sku_weight[sales[j,1]] for j in axes(sales,1) if sales[j,4] == 0], rev=true)
+    end
     for d in axes(capacity_left,1)
         if capacity_left[d] < B
             i = 1
             while capacity_left[d] >= sku_weight[sales[i,1]]
+                # Check feasibility before committing (non-uniform weights only)
+                if nonuniform
+                    capacity_left[d] -= sku_weight[sales[i,1]]
+                    w_i = sku_weight[sales[i,1]]
+                    idx_rm = searchsortedfirst(remaining_w, w_i, rev=true)
+                    deleteat!(remaining_w, idx_rm)
+                    if !FEASIBLE_REMAINING(capacity_left, remaining_w)
+                        capacity_left[d] += w_i
+                        insert!(remaining_w, idx_rm, w_i)
+                        break
+                    end
+                else
+                    capacity_left[d] -= sku_weight[sales[i,1]]
+                end
                 X[sales[i,1],d] = 1
                 sales[sales[i,2],4] = 1
-                capacity_left[d] -= sku_weight[sales[i,1]]
                 i += 1
             end
         end
@@ -237,15 +260,31 @@ function BESTSELLINGTOP!(sales::Matrix{Int64},
                          B::Int64,
                          X::Matrix{Bool}, 
                          sku_weight::Vector{<:Real})
+    nonuniform = !all(w -> w == sku_weight[1], sku_weight)
+    if nonuniform
+        remaining_w = sort([sku_weight[sales[j,1]] for j in axes(sales,1) if sales[j,4] == 0], rev=true)
+    end
     for d in axes(capacity_left,1)
         i = 1
-        while capacity_left[d] > capacity[d] - B && i <= size(sales,1)
+        while capacity_left[d] > capacity[d] - B && i <= size(sales,1) && capacity_left[d] >= sku_weight[sales[i,1]]
+            # Check feasibility before committing (non-uniform weights only)
+            if nonuniform
+                capacity_left[d] -= sku_weight[sales[i,1]]
+                w_i = sku_weight[sales[i,1]]
+                idx_rm = searchsortedfirst(remaining_w, w_i, rev=true)
+                deleteat!(remaining_w, idx_rm)
+                if !FEASIBLE_REMAINING(capacity_left, remaining_w)
+                    capacity_left[d] += w_i
+                    insert!(remaining_w, idx_rm, w_i)
+                    break
+                end
+            else
+                capacity_left[d] -= sku_weight[sales[i,1]]
+            end
             X[sales[i,1],d] = 1
             sales[sales[i,2],4] = 1
-            capacity_left[d] -= sku_weight[sales[i,1]]
             i += 1
         end
     end
 end
-
 

@@ -7,7 +7,7 @@ min_order_size       = 2         # Minimum items per order (single-item orders e
 nbd_dispersion       = 2.0       # NBD dispersion r (r=1 → geometric; r>1 → heavier tail)
 
 # SKU frequency distribution
-zipf_exponent        = 1.0       # Zipf exponent α: P(rank k) ∝ 1/k^α
+zipf_exponent        = 0.9       # Zipf exponent α: P(rank k) ∝ 1/k^α
 
 # Dependency strength ranges
 dep_strength_strong  = (0.50, 0.90)  # Co-purchase probability range for strong groups

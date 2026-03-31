@@ -1,3 +1,38 @@
+function RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, capacity, combination,
+                 max_ls, mode_name, dependency, skus, wareh, diff, buffer, wmode, benchnr, orders, train_test, time_Q_ls, time_alg)
+    W_ls = copy(W)
+    sleep(0.01)
+    GC.gc()
+    time_ls = time_alg + time_Q_ls + @elapsed ls_count = LOCALSEARCHCHI!(trans_train, W_ls, Q_ls, capacity, false, 0, max_ls)
+    parcels_test = PARCELSSEND(trans_test, W_ls, capacity, combination)
+    parcels_train = PARCELSSEND(trans_train, W_ls, capacity, combination)
+    flex = FLEXIBILITY(trans_test, W_ls)
+    ls_mode = "$(mode_name)_LS"
+    print("\n    ", ls_mode, ": parcels test data: ", parcels_test,
+        " / parcels training data: ", parcels_train,
+        " / flex: ", flex,
+        " / time: ", round(time_ls, digits=3),
+        " / local search: ", ls_count,
+        " / warehouse: ", sum(W_ls, dims=1))
+    push!(benchmark, (dependency=dependency,
+        skus=skus,
+        wareh=wareh,
+        diff=diff,
+        buffer=buffer,
+        weight_mode=wmode,
+        mode=ls_mode,
+        benchiter=benchnr,
+        orders=orders,
+        train_test=train_test,
+        parcel_train=parcels_train,
+        parcel_test=parcels_test,
+        flexibility=flex,
+        duration=time_ls,
+        cap_used=sum(W_ls),
+        local_search=ls_count,
+        gap=0))
+end
+
 function BENCHMARK(capacity_benchmark::Array{Int64,2},
     skus_benchmark::Vector{Int64},
     diff_benchmark::Vector{Float64},
@@ -17,6 +52,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     sig_levels::Vector{Float64},
     max_ls::Int64,
     chistatus::Bool,
+    min_effect::Float64,
+    ls_neighborhood::Float64,
+    apply_ls::Bool,
+    weight_mode::Symbol,
+    weight_range::UnitRange{Int64},
     max_iih_iterations::Int64,
     epsilon_iih::Float64,
     benchiterations::Int64,
@@ -32,10 +72,11 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
     println(logio, "="^60)
     flush(logio)
 
-    function log_failure(io::IO, mode::String, e, bt, benchnr, skus, capacity, orders)
+    function log_failure(io::IO, mode::String, e, bt, benchnr, skus, capacity, eff_capacity, orders, wmode)
         println(io, "\n[", Dates.now(), "] FAILURE: ", mode)
         println(io, "  benchiter=", benchnr, " skus=", skus, " wareh=", length(capacity),
-            " capacity=", capacity, " orders=", orders)
+            " capacity=", capacity, " effective_capacity=", eff_capacity,
+            " orders=", orders, " weight_mode=", wmode)
         println(io, "  Error: ", e)
         for line in split(sprint(showerror, e, bt), '\n')[1:min(end, 20)]
             println(io, "  ", line)
@@ -50,6 +91,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
         wareh=Int64[],
         diff=Float64[],
         buffer=Float64[],
+        weight_mode=String[],
         mode=String[],
         benchiter=Int64[],
         orders=Int64[],
@@ -77,6 +119,12 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
             for b in axes(capacity, 1)
                 capacity[b] = capacity_benchmark[a, b]
             end
+            # Skip zero-buffer constellations for non-uniform weights
+            if weight_mode != :uniform && buff_benchmark[a] <= 0.0
+                @warn "Skipping constellation $a (zero buffer with non-uniform weights)"
+                continue
+            end
+
             print("\n Benchmark ", benchnr, " of ", benchiterations,
                 "/ Constellation: ", a, " of ", size(capacity_benchmark, 1),
                 "\n Capacity: ", capacity)
@@ -124,7 +172,44 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 print("\n Number of transactions for validation ", size(trans_test, 1), ".")
 
                 # SKU weight
-                sku_weight = zeros(Int64, size(trans_train, 2)) .= 1
+                if weight_mode == :frequency
+                    sku_weight = vec(Int64.(sum(trans_train, dims=1)))
+                    sku_weight = max.(sku_weight, 1)  # ensure minimum weight of 1
+                elseif weight_mode == :random
+                    rng_w = MersenneTwister(benchnr * 1000 + a * 100 + order_set)
+                    sku_weight = rand(rng_w, weight_range, size(trans_train, 2))
+                else
+                    sku_weight = ones(Int64, size(trans_train, 2))
+                end
+
+                # Scale capacity for non-uniform weights
+                if weight_mode != :uniform
+                    avg_weight = sum(sku_weight) / length(sku_weight)
+                    # Scale factor must ensure largest warehouse >= heaviest SKU
+                    scale = max(avg_weight, maximum(sku_weight) / maximum(capacity))
+                    effective_capacity = round.(Int64, capacity .* scale)
+                    # Ensure total capacity >= total weight
+                    while sum(effective_capacity) < sum(sku_weight)
+                        effective_capacity[argmax(effective_capacity)] += 1
+                    end
+                    effective_combination = COMBINEWAREHOUSES(effective_capacity)
+                    print("\n Weight mode: ", weight_mode,
+                        " / avg weight: ", round(avg_weight, digits=2),
+                        " / effective capacity: ", effective_capacity)
+                else
+                    effective_capacity = capacity
+                    effective_combination = combination
+                end
+
+                # Compute coappearance matrix for general local search
+                can_ls = apply_ls && all(y->y==sku_weight[1], sku_weight)
+                time_Q_ls = 0.0
+                if can_ls
+                    time_Q_ls = @elapsed begin
+                        Q_ls = COAPPEARENCE(trans_train, sku_weight)
+                        CLEANPRINCIPLE!(Q_ls)
+                    end
+                end
 
                 #  Start the heuristics and optmisations
 
@@ -133,10 +218,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "Gurobi", show_opt,
+                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, effective_capacity, sku_weight, abort, "Gurobi", show_opt,
                         cpu_cores, allowed_gap, max_nodes, "QMK")
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n    QMK: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -150,6 +235,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="QMK",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -164,7 +250,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "QMK failed" exception=(e, bt)
-                        log_failure(logio, "QMK", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "QMK", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -173,10 +259,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "Juniper", show_opt,
+                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, effective_capacity, sku_weight, abort, "Juniper", show_opt,
                         cpu_cores, allowed_gap, max_nodes, "QMK")
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n   QMKJ: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -190,6 +276,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="QMKJ",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -204,7 +291,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "QMKJ failed" exception=(e, bt)
-                        log_failure(logio, "QMKJ", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "QMKJ", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -213,10 +300,10 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "scip", show_opt,
+                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, effective_capacity, sku_weight, abort, "scip", show_opt,
                         cpu_cores, allowed_gap, max_nodes, "QMK")
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n   QMKS: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -230,6 +317,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="QMKS",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -244,63 +332,21 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "QMKS failed" exception=(e, bt)
-                        log_failure(logio, "QMKS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "QMKS", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
                 ## Start chi square heuristic without local search
-                if start[1, :CHIM] == 1
-                    try
-                    for sig in sig_levels
-                        sleep(0.01)
-                        GC.gc()
-                        time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train, capacity, sig, 0, sku_weight, chistatus)
-                        parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                        parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
-                        flex_benchmark = FLEXIBILITY(trans_test, W)
-                        print("\n   CHIM: parcels test data: ", parcels_benchmark,
-                            " / parcels training data: ", parcels_train,
-                            " / flex: ", flex_benchmark,
-                            " / time: ", round(time_benchmark, digits=3),
-                            " / local search: ", ls,
-                            " / sig: ", sig,
-                            " / warehouse: ", sum(W, dims=1))
-
-                        push!(benchmark, (dependency=dependency,
-                            skus=skus_benchmark[a],
-                            wareh=length(capacity),
-                            diff=diff_benchmark[a],
-                            buffer=buff_benchmark[a],
-                            mode="CHIM_$sig",
-                            benchiter=benchnr,
-                            orders=size(trans, 1),
-                            train_test=train_test,
-                            parcel_train=parcels_train,
-                            parcel_test=parcels_benchmark,
-                            flexibility=flex_benchmark,
-                            duration=time_benchmark,
-                            cap_used=sum(W),
-                            local_search=ls,
-                            gap=0))
-                    end
-                    catch e
-                        bt = catch_backtrace()
-                        @warn "CHIM failed" exception=(e, bt)
-                        log_failure(logio, "CHIM", e, bt, benchnr, skus_benchmark[a], capacity, orders)
-                    end
-                end
-
-                ## Start chi square heuristic with local search
                 if start[1, :CHI] == 1
                     try
                     for sig in sig_levels
                         sleep(0.01)
                         GC.gc()
-                        time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train, capacity, sig, max_ls, sku_weight, chistatus)
-                        parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                        parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                        time_benchmark = @elapsed W, ls = CHISQUAREHEUR(trans_train, effective_capacity, sig, 0, sku_weight, chistatus, min_effect, ls_neighborhood)
+                        parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                        parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                         flex_benchmark = FLEXIBILITY(trans_test, W)
-                        print("\n    CHI: parcels test data: ", parcels_benchmark,
+                        print("\n   CHI: parcels test data: ", parcels_benchmark,
                             " / parcels training data: ", parcels_train,
                             " / flex: ", flex_benchmark,
                             " / time: ", round(time_benchmark, digits=3),
@@ -313,6 +359,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                             wareh=length(capacity),
                             diff=diff_benchmark[a],
                             buffer=buff_benchmark[a],
+                            weight_mode=string(weight_mode),
                             mode="CHI_$sig",
                             benchiter=benchnr,
                             orders=size(trans, 1),
@@ -324,23 +371,28 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                             cap_used=sum(W),
                             local_search=ls,
                             gap=0))
+                        if can_ls
+                            RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                    max_ls, "CHI_$sig", dependency, skus_benchmark[a], length(capacity),
+                                    diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                        end
                     end
                     catch e
                         bt = catch_backtrace()
                         @warn "CHI failed" exception=(e, bt)
-                        log_failure(logio, "CHI", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "CHI", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
                 ## Start our reproduction of the  K-LINKS heuristic by
                 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-                if start[1, :KL] == 1 && sum(capacity) == length(sku_weight)
+                if start[1, :KL] == 1 && all(w->w==sku_weight[1], sku_weight) && sum(effective_capacity) == sum(sku_weight)
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, ls = KLINKS(trans_train, capacity, trials, stagnant, strategy, abort, klinkstatus)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    time_benchmark = @elapsed W, ls = KLINKS(trans_train, effective_capacity, trials, stagnant, strategy, abort, klinkstatus)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n     KL: parcels train data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -354,6 +406,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="KL",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -365,23 +418,28 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=ls,
                         gap=0))
+                    if can_ls
+                        RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                max_ls, "KL", dependency, skus_benchmark[a], length(capacity),
+                                diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                    end
                     catch e
                         bt = catch_backtrace()
                         @warn "KL failed" exception=(e, bt)
-                        log_failure(logio, "KL", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "KL", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
                 ## Start our reproduction of the  K-LINKS optimization with SBB by
                 ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
-                if start[1, :KLQ] == 1 && sum(capacity) == length(sku_weight)
+                if start[1, :KLQ] == 1 && all(w->w==sku_weight[1], sku_weight) && sum(effective_capacity) == sum(sku_weight)
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, capacity, sku_weight, abort, "Gurobi", show_opt,
+                    time_benchmark = @elapsed W, gap_optimisation = MQKP(trans_train, effective_capacity, sku_weight, abort, "Gurobi", show_opt,
                         cpu_cores, allowed_gap, max_nodes, "QMK")
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n    KLQ: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -395,6 +453,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="KLQ",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -409,7 +468,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "KLQ failed" exception=(e, bt)
-                        log_failure(logio, "KLQ", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "KLQ", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -419,9 +478,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = GREEDYORDERS(trans_train, capacity, sku_weight)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    time_benchmark = @elapsed W = GREEDYORDERS(trans_train, effective_capacity, sku_weight)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n     GO: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -434,6 +493,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="GO",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -445,10 +505,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    if can_ls
+                        RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                max_ls, "GO", dependency, skus_benchmark[a], length(capacity),
+                                diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                    end
                     catch e
                         bt = catch_backtrace()
                         @warn "GO failed" exception=(e, bt)
-                        log_failure(logio, "GO", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "GO", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -458,9 +523,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train, capacity, sku_weight)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    time_benchmark = @elapsed W = GREEDYPAIRS(trans_train, effective_capacity, sku_weight)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n     GP: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -473,6 +538,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="GP",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -484,10 +550,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    if can_ls
+                        RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                max_ls, "GP", dependency, skus_benchmark[a], length(capacity),
+                                diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                    end
                     catch e
                         bt = catch_backtrace()
                         @warn "GP failed" exception=(e, bt)
-                        log_failure(logio, "GP", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "GP", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -497,9 +568,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train, capacity, sku_weight)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    time_benchmark = @elapsed W = GREEDYSEEDS(trans_train, effective_capacity, sku_weight)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n     GS: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -512,6 +583,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="GS",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -523,10 +595,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    if can_ls
+                        RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                max_ls, "GS", dependency, skus_benchmark[a], length(capacity),
+                                diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                    end
                     catch e
                         bt = catch_backtrace()
                         @warn "GS failed" exception=(e, bt)
-                        log_failure(logio, "GS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "GS", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -536,9 +613,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = BESTSELLING(trans_train, capacity, sku_weight)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    time_benchmark = @elapsed W = BESTSELLING(trans_train, effective_capacity, sku_weight)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n     BS: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -551,6 +628,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="BS",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -562,10 +640,15 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    if can_ls
+                        RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                max_ls, "BS", dependency, skus_benchmark[a], length(capacity),
+                                diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                    end
                     catch e
                         bt = catch_backtrace()
                         @warn "BS failed" exception=(e, bt)
-                        log_failure(logio, "BS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "BS", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -575,9 +658,9 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W = EMCIALLOC(trans_train, capacity, sku_weight)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    time_benchmark = @elapsed W = EMCIALLOC(trans_train, effective_capacity, sku_weight)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n   EMCI: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -590,6 +673,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="EMCI",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -601,24 +685,29 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         cap_used=sum(W),
                         local_search=0,
                         gap=0))
+                    if can_ls
+                        RUN_LS!(benchmark, W, trans_train, trans_test, Q_ls, effective_capacity, effective_combination,
+                                max_ls, "EMCI", dependency, skus_benchmark[a], length(capacity),
+                                diff_benchmark[a], buff_benchmark[a], string(weight_mode), benchnr, size(trans, 1), train_test, time_Q_ls, time_benchmark)
+                    end
                     catch e
                         bt = catch_backtrace()
                         @warn "EMCI failed" exception=(e, bt)
-                        log_failure(logio, "EMCI", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "EMCI", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
                 ## Start the iterative improvement heuristic with Gurobi by
                 ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
-                if start[1, :IIH] == 1 && length(capacity) == 2 && sum(capacity) > sum(sku_weight)
+                if start[1, :IIH] == 1 && all(w->w==sku_weight[1], sku_weight) && length(effective_capacity) == 2 && sum(effective_capacity) > sum(sku_weight)
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, capacity, sku_weight,
+                    time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, effective_capacity, sku_weight,
                         abort, "Gurobi", show_opt, cpu_cores, allowed_gap, max_nodes,
                         max_iih_iterations, epsilon_iih)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n    IIH: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -633,6 +722,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="IIH",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -647,21 +737,21 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "IIH failed" exception=(e, bt)
-                        log_failure(logio, "IIH", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "IIH", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
                 ## Start the iterative improvement heuristic with SCIP by
                 ## Lin et al. (2025) https://doi.org/10.1111/poms.14114
-                if start[1, :IIHS] == 1 && length(capacity) == 2 && sum(capacity) > sum(sku_weight)
+                if start[1, :IIHS] == 1 && all(w->w==sku_weight[1], sku_weight) && length(effective_capacity) == 2 && sum(effective_capacity) > sum(sku_weight)
                     try
                     sleep(0.01)
                     GC.gc()
-                    time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, capacity, sku_weight,
+                    time_benchmark = @elapsed W, gap_optimisation, ls = IIH(trans_train, effective_capacity, sku_weight,
                         abort, "scip", show_opt, cpu_cores, allowed_gap, max_nodes,
                         max_iih_iterations, epsilon_iih)
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n   IIHS: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -676,6 +766,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="IIHS",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -690,26 +781,26 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "IIHS failed" exception=(e, bt)
-                        log_failure(logio, "IIHS", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "IIHS", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
                 ## Start the search for optimal solution with the solver CPLEX
                 ## Choose FULLOPTEQ if each SKUs can only be allocated once, else use
                 ## FULLOPTUEQ if SKUs can be allocated multiple times
-                if start[1, :OPT] == 1
+                if start[1, :OPT] == 1 && all(w->w==sku_weight[1], sku_weight)
                     try
                     sleep(0.01)
                     GC.gc()
-                    if sum(capacity) == size(trans, 2)
-                        time_benchmark = @elapsed W, gap_optimisation, popt = FULLOPTEQ(trans_train, capacity, abort, show_opt,
+                    if sum(effective_capacity) == size(trans, 2)
+                        time_benchmark = @elapsed W, gap_optimisation, popt = FULLOPTEQ(trans_train, effective_capacity, abort, show_opt,
                             cpu_cores, allowed_gap, max_nodes)
                     else
-                        time_benchmark = @elapsed W, gap_optimisation, popt = FULLOPTUEQ(trans_train, capacity, abort, show_opt,
+                        time_benchmark = @elapsed W, gap_optimisation, popt = FULLOPTUEQ(trans_train, effective_capacity, abort, show_opt,
                             cpu_cores, allowed_gap, max_nodes)
                     end
-                    parcels_benchmark = PARCELSSEND(trans_test, W, capacity, combination)
-                    parcels_train = PARCELSSEND(trans_train, W, capacity, combination)
+                    parcels_benchmark = PARCELSSEND(trans_test, W, effective_capacity, effective_combination)
+                    parcels_train = PARCELSSEND(trans_train, W, effective_capacity, effective_combination)
                     flex_benchmark = FLEXIBILITY(trans_test, W)
                     print("\n    OPT: parcels test data: ", parcels_benchmark,
                         " / parcels training data: ", parcels_train,
@@ -722,6 +813,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                         wareh=length(capacity),
                         diff=diff_benchmark[a],
                         buffer=buff_benchmark[a],
+                        weight_mode=string(weight_mode),
                         mode="OPT",
                         benchiter=benchnr,
                         orders=size(trans, 1),
@@ -736,7 +828,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     catch e
                         bt = catch_backtrace()
                         @warn "OPT failed" exception=(e, bt)
-                        log_failure(logio, "OPT", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                        log_failure(logio, "OPT", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                     end
                 end
 
@@ -744,8 +836,8 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 try
                 sleep(0.01)
                 GC.gc()
-                time_benchmark = @elapsed parcels_benchmark, flex_benchmark = RANDOMBENCH(trans_test, capacity, iterations, sku_weight, combination)
-                parcels_train, _ = RANDOMBENCH(trans_train, capacity, iterations, sku_weight, combination)
+                time_benchmark = @elapsed parcels_benchmark, flex_benchmark = RANDOMBENCH(trans_test, effective_capacity, iterations, sku_weight, effective_combination)
+                parcels_train, _ = RANDOMBENCH(trans_train, effective_capacity, iterations, sku_weight, effective_combination)
                 print("\n    RND: parcels test data: ", parcels_benchmark,
                     " / parcels training data: ", parcels_train,
                     " / flex: ", flex_benchmark,
@@ -758,6 +850,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                     wareh=length(capacity),
                     diff=diff_benchmark[a],
                     buffer=buff_benchmark[a],
+                    weight_mode=string(weight_mode),
                     mode="RND",
                     benchiter=benchnr,
                     orders=size(trans, 1),
@@ -772,7 +865,7 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 catch e
                     bt = catch_backtrace()
                     @warn "RND failed" exception=(e, bt)
-                    log_failure(logio, "RND", e, bt, benchnr, skus_benchmark[a], capacity, orders)
+                    log_failure(logio, "RND", e, bt, benchnr, skus_benchmark[a], capacity, effective_capacity, orders, weight_mode)
                 end
 
                 # Free training/test data before next iteration
@@ -780,10 +873,12 @@ function BENCHMARK(capacity_benchmark::Array{Int64,2},
                 trans_test = nothing
                 sku_weight = nothing
                 W = nothing
+                can_ls && (Q_ls = nothing)
                 GC.gc()
 
                 # Export the results after each stage
-                CSV.write("results/$(experiment)_benchmark_$dependency.csv", benchmark)
+                wm_suffix = weight_mode == :uniform ? "" : "_$(weight_mode)"
+                CSV.write("results/$(experiment)_benchmark_$(dependency)$(wm_suffix).csv", benchmark)
             end
         end
     end

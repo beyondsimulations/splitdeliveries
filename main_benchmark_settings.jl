@@ -3,6 +3,11 @@ include("load_packages.jl")
 
 ren_lock = ReentrantLock()
 
+# Default weight mode (override by setting weight_mode before include)
+if !@isdefined(weight_mode)
+    weight_mode = :uniform
+end
+
 # iterate over all dependencies
 for dependency in dependencies
 
@@ -12,7 +17,7 @@ for dependency in dependencies
     #  Specify the number of orders and the ratio between test
     ## and training data for the generated transactional data sets
     train_test = 0.50
-    order_sets = [4, 8, 12]
+    order_sets = [2, 10, 20]
 
     # Set the number of cpu cores your computer has at its disposal
     cpu_cores = 4
@@ -20,21 +25,30 @@ for dependency in dependencies
     # Choose Optimisations and Heuristics to evaluate in the benchmark
     start = DataFrame(
         QMK=[0], # quadratic-multiple knapsack heuristic with Gurobi as solver
-        QMKJ=[0], # quadratic-multiple knapsack heuristic with Juniper as solver
+        QMKJ=[0], # quadratic-mulßtiple knapsack heuristic with Juniper as solver
         QMKS=[0], # quadratic-multiple knapsack heuristic with SCIP as solver
-        CHIM=[1], # main chi-square heuristic without local search
-        CHI=[0], # chi-square heuristic + local search based on the QMK objective function
+        CHI=[1], # main chi-square heuristic
         KL=[0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         KLQ=[0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        GO=[0], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GP=[0], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        GS=[0], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
-        BS=[0], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GO=[1], # greedy orders heuristic bßy A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GP=[1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GS=[1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        BS=[1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         EMCI=[1], # extended MCI for D warehouses by Lin et al. (2025)
         IIH=[0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
         IIHS=[0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
         OPT=[0], # optimisation model to determine the optimal solution with Gurobi
     )
+
+    # SKU weight mode (set before include to override)
+    ## :uniform  — all weights = 1 (default, classic benchmark)
+    ## :frequency — weight = number of orders containing that SKU in training data
+    ## :random   — weight sampled uniformly from weight_range
+    weight_range = 1:10
+
+    # Parameters for the local search heuristic
+    ## apply_ls: apply the local search heuristic after the greedy heuristics
+    apply_ls = true
 
     # Parameters for the KLINK heuristic
     ## trials: number of different trials with a completly new random solution
@@ -63,9 +77,11 @@ for dependency in dependencies
     ## sig_levels:  significance levels alpha to apply with the chi-square tests
     ## max_ls:      maximum number of local search runs before termination
     ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
-    sig_levels = [1.0e-2]
+    sig_levels = [1.0e-5]
     max_ls = 100
     chistatus = false
+    min_effect = 0.01
+    ls_neighborhood = 1.0
 
     # Parameters for IIH (Lin et al. 2025)
     ## max_iih_iterations: maximum number of alternating optimization rounds
@@ -75,7 +91,7 @@ for dependency in dependencies
 
     # Parameters for RANDOM
     ## iterations: number of different random allocations for the comparison
-    iterations = 100
+    iterations = 2
 
     # Parameters for the whole Benchmark
     benchiterations = 1
@@ -122,6 +138,11 @@ for dependency in dependencies
         sig_levels::Vector{Float64},
         max_ls::Int64,
         chistatus::Bool,
+        min_effect::Float64,
+        ls_neighborhood::Float64,
+        apply_ls::Bool,
+        weight_mode::Symbol,
+        weight_range::UnitRange{Int64},
         max_iih_iterations::Int64,
         epsilon_iih::Float64,
         benchiterations::Int64,

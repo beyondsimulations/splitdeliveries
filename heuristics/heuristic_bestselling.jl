@@ -28,7 +28,11 @@ function BESTSELLING(
 
             ## Mark the SKU that is now allocated and the capacity used
             sales[1,4] = 1
-            capacity_left[1] -= sku_weight[sales[1,1]]
+            if capacity_left[1] < sku_weight[sales[1,1]]
+                SWAPREPAIR!(X, capacity_left, sku_weight, sales[1,1])
+            else
+                capacity_left[1] -= sku_weight[sales[1,1]]
+            end
 
             ## Start the assignment of the other SKUs
             GREEDYSEEDSTART!(sales,X,Q,capacity_left,sku_weight)
@@ -52,7 +56,7 @@ function BESTSELLING(
         end
         # Check whether all SKUs are allocated
         if any(y->y < 1,sum(X,dims=2))
-            "\n Error: Not all SKUs are allocated."
+            error("BS: Not all SKUs are allocated!")
         end
         return X
     end
