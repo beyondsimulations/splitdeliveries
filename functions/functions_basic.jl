@@ -21,15 +21,36 @@ function SWAPREPAIR!(
 )
     w_heavy = sku_weight[heavy_sku]
 
-    for d in sortperm(cap_left; rev = true)
-        # Find single-assigned SKUs in d (safe to move), sorted lightest first
-        candidates = [
-            (j, sku_weight[j]) for
-            j in 1:size(X, 1) if X[j, d] && sum(@view(X[j, :])) == 1 && j != heavy_sku
-        ]
-        sort!(candidates; by = x->x[2])
+    # First pass: remove copies of multi-assigned SKUs (no re-placement needed)
+    for d in sortperm(cap_left, rev=true)
+        candidates = [(j, sku_weight[j]) for j in 1:size(X,1)
+                      if X[j,d] && sum(@view(X[j,:])) >= 2 && j != heavy_sku]
+        sort!(candidates, by=x->x[2])
 
-        # Determine which SKUs to evict
+        freed = 0.0
+        to_remove = Int[]
+        for (j, w) in candidates
+            cap_left[d] + freed >= w_heavy && break
+            freed += w
+            push!(to_remove, j)
+        end
+        cap_left[d] + freed < w_heavy && continue
+
+        for j in to_remove
+            X[j, d] = false
+            cap_left[d] += sku_weight[j]
+        end
+        X[heavy_sku, d] = true
+        cap_left[d] -= w_heavy
+        return d, Int[], Int[], Int[]
+    end
+
+    # Second pass: evict single-assigned SKUs and re-place them elsewhere
+    for d in sortperm(cap_left, rev=true)
+        candidates = [(j, sku_weight[j]) for j in 1:size(X,1)
+                      if X[j,d] && sum(@view(X[j,:])) == 1 && j != heavy_sku]
+        sort!(candidates, by=x->x[2])
+
         freed = 0.0
         to_evict = Int[]
         for (j, w) in candidates
