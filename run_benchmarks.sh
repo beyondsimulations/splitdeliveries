@@ -1,8 +1,14 @@
 #!/bin/bash
 
-# ./run_benchmarks.sh
-# Runs experiments 100 and 1000 in parallel, each in its own tmux session.
-# Within each experiment, all 6 dependencies run in parallel (tmux windows).
+# ./run_benchmarks.sh [weight_mode]
+# Runs benchmarks in parallel via tmux.
+# Usage:
+#   ./run_benchmarks.sh              # uniform weights (default)
+#   ./run_benchmarks.sh frequency    # frequency-based weights
+#   ./run_benchmarks.sh random       # random weights
+
+# Weight mode (default: uniform)
+WEIGHT_MODE="${1:-uniform}"
 
 # Array of dependencies
 dependencies=(
@@ -15,10 +21,10 @@ dependencies=(
 )
 
 # Experiments to run in parallel
-experiments=("100" "1000")
+experiments=("100000")
 
 for experiment in "${experiments[@]}"; do
-    session_name="benchmarks_${experiment}"
+    session_name="benchmarks_${experiment}_${WEIGHT_MODE}"
     tmux new-session -d -s $session_name
 
     for i in "${!dependencies[@]}"; do
@@ -27,18 +33,20 @@ for experiment in "${experiments[@]}"; do
         # Create a new window
         tmux new-window -t $session_name -n "$dep"
 
-        # Use experiment-specific filename to avoid conflicts between parallel runs
-        cat > "run_${experiment}_${dep}.jl" << EOL
-    include("load_packages.jl")
+        # Generate run script in runs/ folder
+        PROJDIR="$(pwd)"
+        cat > "runs/run_${experiment}_${dep}_${WEIGHT_MODE}.jl" << EOL
+    include("${PROJDIR}/load_packages.jl")
     dependencies=["${dep}"]
     experiment = "${experiment}"
-    include("main_benchmark_settings.jl")
+    weight_mode = :${WEIGHT_MODE}
+    include("${PROJDIR}/main_benchmark_settings.jl")
 EOL
 
-        tmux send-keys -t $session_name:$dep "julia run_${experiment}_${dep}.jl" C-m
+        tmux send-keys -t $session_name:$dep "cd $(pwd) && julia runs/run_${experiment}_${dep}_${WEIGHT_MODE}.jl" C-m
     done
 
-    echo "Started experiment=${experiment} in tmux session '${session_name}'"
+    echo "Started experiment=${experiment} weight_mode=${WEIGHT_MODE} in tmux session '${session_name}'"
 done
 
-echo "All experiments launched. Attach with: tmux attach -t benchmarks_100"
+echo "All experiments launched. Attach with: tmux attach -t benchmarks_${experiments[0]}_${WEIGHT_MODE}"

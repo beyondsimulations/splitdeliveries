@@ -1,21 +1,25 @@
 # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) doi:10.1016/j.ejor.2019.07.004
-function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
-                capacity::Array{Int64,1},
-                trials::Int64,
-                stagnant::Int64,
-                strategy::Int64,
-                abort::Int64,
-                klinkstatus::Bool)
+function KLINKS(
+    trans::SparseMatrixCSC{Bool,Int64},
+    capacity::Array{Int64,1},
+    trials::Int64,
+    stagnant::Int64,
+    strategy::Int64,
+    abort::Int64,
+    klinkstatus::Bool,
+)
     # Sort the warehouses by decreasing capacity
-    capacity = sort(capacity, rev=true)   
+    capacity = sort(capacity; rev = true)
     # Introduce the equal weights for all SKUs
-    sku_weight = zeros(Int64,size(trans,2)) .= 1
+    sku_weight = zeros(Int64, size(trans, 2)) .= 1
     ## Calculation of links based on orders
     N = size(trans, 2)
     if Int128(N) * N > 2_000_000_000
-        error("KLINKS: N=$(N) too large for dense N×N LINKS matrix (would require $(round(Int128(N)*N*8/1e9, digits=1)) GB).")
+        error(
+            "KLINKS: N=$(N) too large for dense N×N LINKS matrix (would require $(round(Int128(N)*N*8/1e9, digits=1)) GB).",
+        )
     end
-    L  = LINKS(trans,LINKADJUST(trans))
+    L = LINKS(trans, LINKADJUST(trans))
     ## Set trial = 0
     besttrial = 0
     lw_trial = zeros(Float64, trials)
@@ -27,44 +31,40 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
     start = Dates.now()
     time_elapsed = Minute(0)
     local_search_trials = 0
-    for y = 1:trials
+    for y in 1:trials
         ## Random initialisation of the category distribution
-        X = RANDOMALLOCONCE(capacity,sku_weight)
+        X = RANDOMALLOCONCE(capacity, sku_weight)
         ## Get the matrix CW trial, Calculate the LW trial
-        lw_trial[y] = LW(L,X)
+        lw_trial[y] = LW(L, X)
         if klinkstatus == true
-            print(y,"/ ")
+            print(y, "/ ")
         end
         ## Start the heuristic
         stop = 0
         while stop <= stagnant
-            # select a random warehouse to test potential improvements
             stop += 1
-            m = rand(1:size(X,2))
+            m = rand(1:size(X, 2))
             # apply either local search strategy 1 or strategy 2
-            # -> 1: move SKU to a different warehouse if it improves the objective 
+            # -> 1: move SKU to a different warehouse if it improves the objective
             #       and the warehouse has capacity cap_left
             # -> 2: pair-wise exchange between SKUs if it improves the objective
             # -> 3: both strategies are applied with a chance of 50:50
             if strategy == 1
-                improved = STRATEGY1!(X,m,L,capacity)
+                stop = STRATEGY1!(X, m, L, capacity, stop)
             elseif strategy == 2
-                improved = STRATEGY2!(X,m,L,capacity)
+                stop = STRATEGY2!(X, m, L, capacity, stop)
             elseif strategy == 3
                 if rand() > 0.5
-                    improved = STRATEGY1!(X,m,L,capacity)
+                    stop = STRATEGY1!(X, m, L, capacity, stop)
                 else
-                    improved = STRATEGY2!(X,m,L,capacity)
+                    stop = STRATEGY2!(X, m, L, capacity, stop)
                 end
             else
                 error("Sorry, this strategy is not defined.")
             end
-            if improved
-                stop = 0
-            end
         end
         # Save the results from the trial
-        lw_trial[y] = LW(L,X)
+        lw_trial[y] = LW(L, X)
         if lw_trial[y] >= lw_trial[max(1, besttrial)]
             besttrial = y
             copyto!(cw_best, X)
@@ -77,8 +77,8 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
         end
     end
     # Check whether all SKUs are allocated
-    if any(y->y < 1,sum(cw_best,dims=2))
-        "\n Error: Not all SKUs are allocated."
+    if any(y->y < 1, sum(cw_best; dims = 2))
+        error("KL: Not all SKUs are allocated!")
     end
     return cw_best, local_search_trials
 end

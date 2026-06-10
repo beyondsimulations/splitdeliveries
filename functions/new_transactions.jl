@@ -1,23 +1,25 @@
 # RANDOMTRANS: Generates synthetic transactional datasets with controlled
 #              dependency structures for benchmarking warehouse allocation heuristics.
 
-function RANDOMTRANS(skus::Int64,
-                     orders::Int64,
-                     mean_order_size::Float64,
-                     min_order_size::Int64,
-                     nbd_dispersion::Float64,
-                     sku_frequency_mode::Symbol,
-                     zipf_exponent::Float64,
-                     max_group_size::Int64,
-                     mean_group_size::Int64,
-                     ratio_strong::Float64,
-                     ratio_medium::Float64,
-                     dep_strength_strong::Tuple{Float64,Float64},
-                     dep_strength_medium::Tuple{Float64,Float64},
-                     group_link::Float64,
-                     one_direction::Float64,
-                     multi_relatio::Float64,
-                     dep_activation_prob::Float64)
+function RANDOMTRANS(
+    skus::Int64,
+    orders::Int64,
+    mean_order_size::Float64,
+    min_order_size::Int64,
+    nbd_dispersion::Float64,
+    sku_frequency_mode::Symbol,
+    zipf_exponent::Float64,
+    max_group_size::Int64,
+    mean_group_size::Int64,
+    ratio_strong::Float64,
+    ratio_medium::Float64,
+    dep_strength_strong::Tuple{Float64,Float64},
+    dep_strength_medium::Tuple{Float64,Float64},
+    group_link::Float64,
+    one_direction::Float64,
+    multi_relatio::Float64,
+    dep_activation_prob::Float64,
+)
 
     # =========================================================================
     # Phase 1: Build dependency structure
@@ -43,8 +45,8 @@ function RANDOMTRANS(skus::Int64,
 
     # Step 2: Build groups within each dependency pool
     if ratio_strong > 0.0 || ratio_medium > 0.0
-        for (tier, dep_strength) in [(:strong, dep_strength_strong),
-                                      (:medium, dep_strength_medium)]
+        for (tier, dep_strength) in
+            [(:strong, dep_strength_strong), (:medium, dep_strength_medium)]
             remaining = findall(pool .== tier)
             if isempty(remaining)
                 continue
@@ -52,9 +54,11 @@ function RANDOMTRANS(skus::Int64,
 
             while length(remaining) >= 2
                 # Group size from geometric distribution (many small, few large)
-                gsize = min(2 + rand(Geometric(1.0 / (mean_group_size - 1))),
-                            max_group_size,
-                            length(remaining))
+                gsize = min(
+                    2 + rand(Geometric(1.0 / (mean_group_size - 1))),
+                    max_group_size,
+                    length(remaining),
+                )
 
                 # Sample group members without replacement (using randperm)
                 perm = randperm(length(remaining))
@@ -73,9 +77,13 @@ function RANDOMTRANS(skus::Int64,
                 # Anchor connects to ALL peripherals
                 for p in peripherals
                     strength = rand(Uniform(dep_strength[1], dep_strength[2]))
-                    push!(C_rows, p); push!(C_cols, anchor); push!(C_vals, strength)
+                    push!(C_rows, p);
+                    push!(C_cols, anchor);
+                    push!(C_vals, strength)
                     if rand() > one_direction
-                        push!(C_rows, anchor); push!(C_cols, p); push!(C_vals, strength)
+                        push!(C_rows, anchor);
+                        push!(C_cols, p);
+                        push!(C_vals, strength)
                     end
                 end
 
@@ -84,9 +92,13 @@ function RANDOMTRANS(skus::Int64,
                     for j in (i + 1):length(peripherals)
                         if rand() < multi_relatio
                             strength = rand(Uniform(dep_strength[1], dep_strength[2]))
-                            push!(C_rows, peripherals[j]); push!(C_cols, peripherals[i]); push!(C_vals, strength)
+                            push!(C_rows, peripherals[j]);
+                            push!(C_cols, peripherals[i]);
+                            push!(C_vals, strength)
                             if rand() > one_direction
-                                push!(C_rows, peripherals[i]); push!(C_cols, peripherals[j]); push!(C_vals, strength)
+                                push!(C_rows, peripherals[i]);
+                                push!(C_cols, peripherals[j]);
+                                push!(C_vals, strength)
                             end
                         end
                     end
@@ -105,9 +117,13 @@ function RANDOMTRANS(skus::Int64,
                 j = rand(candidates)
                 if i != j
                     strength = rand(Uniform(min_strength, max_strength))
-                    push!(C_rows, i); push!(C_cols, j); push!(C_vals, strength)
+                    push!(C_rows, i);
+                    push!(C_cols, j);
+                    push!(C_vals, strength)
                     if rand() > one_direction
-                        push!(C_rows, j); push!(C_cols, i); push!(C_vals, strength)
+                        push!(C_rows, j);
+                        push!(C_cols, i);
+                        push!(C_vals, strength)
                     end
                 end
             end

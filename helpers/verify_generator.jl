@@ -26,23 +26,35 @@ for config in configs
     max_gs = ceil(Int64, max(skus / group_size_scaling, group_size_min))
     mean_gs = ceil(Int64, max(max_gs / mean_group_divisor, mean_group_min))
     trans, C, group_sizes_gen = RANDOMTRANS(
-        skus, orders,
-        mean_order_size, min_order_size, nbd_dispersion,
-        sku_frequency_mode, zipf_exponent,
-        max_gs, mean_gs,
-        ratio_strong, ratio_medium,
-        dep_strength_strong, dep_strength_medium,
-        group_link, one_direction, multi_relatio,
-        dep_activation_prob)
+        skus,
+        orders,
+        mean_order_size,
+        min_order_size,
+        nbd_dispersion,
+        sku_frequency_mode,
+        zipf_exponent,
+        max_gs,
+        mean_gs,
+        ratio_strong,
+        ratio_medium,
+        dep_strength_strong,
+        dep_strength_medium,
+        group_link,
+        one_direction,
+        multi_relatio,
+        dep_activation_prob,
+    )
 
     # Compute basic statistics
-    order_sizes = vec(sum(trans, dims=2))
-    sku_freqs = vec(sum(trans, dims=1))
+    order_sizes = vec(sum(trans; dims = 2))
+    sku_freqs = vec(sum(trans; dims = 1))
 
     # --- Summary statistics ---
     println("\nConfig: $config")
     println("  Orders: $(size(trans,1)), SKUs: $(size(trans,2))")
-    println("  Mean order size: $(round(mean(order_sizes), digits=2)) (target: $mean_order_size)")
+    println(
+        "  Mean order size: $(round(mean(order_sizes), digits=2)) (target: $mean_order_size)",
+    )
     println("  Min order size: $(minimum(order_sizes)) (target: $min_order_size)")
     println("  Max order size: $(maximum(order_sizes))")
     println("  Median order size: $(median(order_sizes))")
@@ -57,27 +69,48 @@ for config in configs
     end
 
     # --- Plot 1: Order size histogram ---
-    p1 = histogram(order_sizes,
-        title="Order Size ($config)",
-        xlabel="Items per order", ylabel="Frequency",
-        legend=false, bins=maximum(order_sizes) - min_order_size + 1,
-        color=:steelblue, linecolor=:white)
-    vline!(p1, [mean_order_size], color=:red, linestyle=:dash, linewidth=2,
-        label="Target mean")
+    p1 = histogram(
+        order_sizes;
+        title = "Order Size ($config)",
+        xlabel = "Items per order",
+        ylabel = "Frequency",
+        legend = false,
+        bins = maximum(order_sizes) - min_order_size + 1,
+        color = :steelblue,
+        linecolor = :white,
+    )
+    vline!(
+        p1,
+        [mean_order_size];
+        color = :red,
+        linestyle = :dash,
+        linewidth = 2,
+        label = "Target mean",
+    )
     savefig(p1, "results/verification/$(config)_order_sizes.png")
 
     # --- Plot 2: SKU frequency (sorted descending) ---
-    p2 = bar(sort(sku_freqs, rev=true),
-        title="SKU Frequency ($config)",
-        xlabel="SKU (sorted by frequency)", ylabel="Appearances",
-        legend=false, color=:darkorange, linecolor=:white)
+    p2 = bar(
+        sort(sku_freqs; rev = true);
+        title = "SKU Frequency ($config)",
+        xlabel = "SKU (sorted by frequency)",
+        ylabel = "Appearances",
+        legend = false,
+        color = :darkorange,
+        linecolor = :white,
+    )
     savefig(p2, "results/verification/$(config)_sku_frequency.png")
 
     # --- Plot 3: Dependency matrix C heatmap ---
-    p3 = heatmap(Matrix(C),
-        title="Dependency Matrix C ($config)",
-        xlabel="SKU", ylabel="SKU", color=:viridis,
-        aspect_ratio=:equal, size=(600,500))
+    p3 = heatmap(
+        Matrix(C);
+        title = "Dependency Matrix C ($config)",
+        xlabel = "SKU",
+        ylabel = "SKU",
+        color = :viridis,
+        aspect_ratio = :equal,
+        size = (600, 500),
+    )
     savefig(p3, "results/verification/$(config)_dependency_matrix.png")
 
     # --- Plot 4: Empirical co-purchase correlation matrix ---
@@ -86,35 +119,54 @@ for config in configs
     diag_vals = sqrt.(diag(cooccurrence) .+ 1.0)
     D_inv = Diagonal(1.0 ./ diag_vals)
     corr = D_inv * cooccurrence * D_inv
-    p4 = heatmap(corr,
-        title="Co-purchase Correlation ($config)",
-        xlabel="SKU", ylabel="SKU", color=:viridis,
-        aspect_ratio=:equal, size=(600,500))
+    p4 = heatmap(
+        corr;
+        title = "Co-purchase Correlation ($config)",
+        xlabel = "SKU",
+        ylabel = "SKU",
+        color = :viridis,
+        aspect_ratio = :equal,
+        size = (600, 500),
+    )
     savefig(p4, "results/verification/$(config)_copurchase_correlation.png")
 
     # --- Plot 5: Group size distribution ---
     if length(group_sizes_gen) > 0
-        p5 = histogram(group_sizes_gen,
-            title="Group Size Distribution ($config)",
-            xlabel="Group size", ylabel="Count",
-            legend=false, color=:seagreen, linecolor=:white)
+        p5 = histogram(
+            group_sizes_gen;
+            title = "Group Size Distribution ($config)",
+            xlabel = "Group size",
+            ylabel = "Count",
+            legend = false,
+            color = :seagreen,
+            linecolor = :white,
+        )
         savefig(p5, "results/verification/$(config)_group_sizes.png")
     end
 
     # --- Plot 6: Degree distribution in C ---
-    degrees = vec(sum(C .> 0, dims=1))
+    degrees = vec(sum(C .> 0; dims = 1))
     if any(degrees .> 0)
-        p6 = histogram(degrees[degrees .> 0],
-            title="SKU Out-Degree in C ($config)",
-            xlabel="Number of connections", ylabel="Count",
-            legend=false, color=:mediumpurple, linecolor=:white)
+        p6 = histogram(
+            degrees[degrees .> 0];
+            title = "SKU Out-Degree in C ($config)",
+            xlabel = "Number of connections",
+            ylabel = "Count",
+            legend = false,
+            color = :mediumpurple,
+            linecolor = :white,
+        )
         savefig(p6, "results/verification/$(config)_degree_distribution.png")
     end
 
     # --- Combined summary plot ---
     plots_to_combine = [p1, p2, p3, p4]
-    p_combined = plot(plots_to_combine..., layout=(2,2), size=(1200,1000),
-        plot_title="Transaction Generator Verification: $config")
+    p_combined = plot(
+        plots_to_combine...;
+        layout = (2, 2),
+        size = (1200, 1000),
+        plot_title = "Transaction Generator Verification: $config",
+    )
     savefig(p_combined, "results/verification/$(config)_summary.png")
 
     println("  Plots saved to results/verification/$(config)_*.png")

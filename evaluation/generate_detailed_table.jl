@@ -16,7 +16,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
-    "EMCI" => "MCI"
+    "EMCI" => "MCI",
 )
 
 # Filter for relevant modes and map to standard names
@@ -30,7 +30,9 @@ heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "MCI", "OPT"]
 sku_levels = sort(unique(filtered_df.skus))
 
 # Calculate results for each SKU level and heuristic
-results = DataFrame(skus=Int[], heuristic=String[], avg_duration=Any[], success_rate=Any[])
+results = DataFrame(;
+    skus = Int[], heuristic = String[], avg_duration = Any[], success_rate = Any[]
+)
 
 println("Computation time analysis:")
 println("="^50)
@@ -39,16 +41,18 @@ for sku in sku_levels
     println("\nSKU level: $sku")
 
     for heur in heuristics
-        subset = filtered_df[(filtered_df.skus.==sku).&(filtered_df.heuristic.==heur), :]
+        subset = filtered_df[
+            (filtered_df.skus .== sku) .& (filtered_df.heuristic .== heur), :,
+        ]
 
         if nrow(subset) > 0
             # Calculate success rate and average duration
-            successful_runs = subset.duration[subset.duration.<3600]  # Assuming 3600s timeout
+            successful_runs = subset.duration[subset.duration .< 3600]  # Assuming 3600s timeout
             total_runs = nrow(subset)
             success_rate = length(successful_runs) / total_runs * 100
 
             if length(successful_runs) > 0
-                avg_duration = round(mean(successful_runs), digits=1)
+                avg_duration = round(mean(successful_runs); digits = 1)
             else
                 avg_duration = "^a"
                 success_rate = ""  # Empty for ^a cases
@@ -69,7 +73,15 @@ for sku in sku_levels
             success_rate_str = ""
         end
 
-        push!(results, (skus=sku, heuristic=heur, avg_duration=avg_duration, success_rate=success_rate_str))
+        push!(
+            results,
+            (
+                skus = sku,
+                heuristic = heur,
+                avg_duration = avg_duration,
+                success_rate = success_rate_str,
+            ),
+        )
     end
 end
 
@@ -87,12 +99,12 @@ println("\\midrule")
 
 # Print data rows
 for sku in sku_levels
-    sku_results = results[results.skus.==sku, :]
+    sku_results = results[results.skus .== sku, :]
     if nrow(sku_results) > 0
         # Computation times row
         print("$sku")
         for heur in heuristics
-            heur_data = sku_results[sku_results.heuristic.==heur, :]
+            heur_data = sku_results[sku_results.heuristic .== heur, :]
             if nrow(heur_data) > 0
                 duration = heur_data[1, :avg_duration]
 
@@ -101,7 +113,9 @@ for sku in sku_levels
                 elseif duration isa Number
                     # Format the duration
                     if duration >= 1000
-                        formatted = replace(string(duration), r"(?<=\d)(?=(\d{3})+(?!\d))" => ",")
+                        formatted = replace(
+                            string(duration), r"(?<=\d)(?=(\d{3})+(?!\d))" => ","
+                        )
                         print(" & \$$formatted\$")
                     else
                         print(" & \$$duration\$")
@@ -118,7 +132,7 @@ for sku in sku_levels
         # Second row: success rates in smaller font
         print(" ")
         for heur in heuristics
-            heur_data = sku_results[sku_results.heuristic.==heur, :]
+            heur_data = sku_results[sku_results.heuristic .== heur, :]
             if nrow(heur_data) > 0
                 success_rate = heur_data[1, :success_rate]
                 if success_rate == ""
@@ -139,7 +153,11 @@ println("\\bottomrule")
 println("\\end{tabular}")
 println("\\begin{tablenotes}")
 println("      \\smaller")
-println("      \\item \\textit{Notes.} The computation time is displayed in seconds in the first row, with the success rate shown in the second row. We used an octa-core AMD 5800X3D CPU with 64 GB RAM.")
-println("      \\item \$^a\$ Excluded from further benchmarking, as feasible solution could not be computed within 3,600 seconds.")
+println(
+    "      \\item \\textit{Notes.} The computation time is displayed in seconds in the first row, with the success rate shown in the second row. We used an octa-core AMD 5800X3D CPU with 64 GB RAM.",
+)
+println(
+    "      \\item \$^a\$ Excluded from further benchmarking, as feasible solution could not be computed within 3,600 seconds.",
+)
 println("\\end{tablenotes}")
 println("\\end{threeparttable}")

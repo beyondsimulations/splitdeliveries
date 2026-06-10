@@ -1,3 +1,6 @@
+name = "SplitDeliveries"
+uuid = "e8f2c1a0-5b3e-4d6f-9a1c-7e8b3f2d4a5c"
+
 [deps]
 AmplNLWriter = "7c4d4715-977e-5154-bfe0-e096adeac482"
 Bonmin_jll = "29cba6d7-6840-5cf2-a2fa-9bdfccfe29ea"

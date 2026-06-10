@@ -1,5 +1,5 @@
 # activate necessary environment
-import Pkg
+using Pkg: Pkg
 Pkg.activate("splitdeliveries")
 
 # load all necessary packages (repositories)
@@ -31,6 +31,7 @@ include("functions/functions_basic.jl")
 include("functions/functions_catalan.jl")
 include("functions/functions_k-links.jl")
 include("functions/functions_chisquare.jl")
+include("functions/functions_localsearch.jl")
 include("functions/new_transactions.jl")
 include("functions/functions_lin.jl")
 
@@ -47,5 +48,6 @@ include("heuristics/heuristic_chisquare.jl")
 include("heuristics/heuristic_mci.jl")
 include("heuristics/heuristic_iih.jl")
 
-## import the main comparison function
+## import benchmark helpers and main comparison function
+include("functions/functions_benchmark_helpers.jl")
 include("main_benchmark.jl")

@@ -16,7 +16,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
-    "RND" => "RND"
+    "RND" => "RND",
 )
 
 # Filter for relevant modes and map to standard names
@@ -41,8 +41,9 @@ for prefix in ["ID", "MD", "HD"]
 end
 
 # Calculate results for each dependency structure and heuristic
-results = DataFrame(dependency=String[], heuristic=String[],
-    split_ratio=Any[], sample_size=Int[])
+results = DataFrame(;
+    dependency = String[], heuristic = String[], split_ratio = Any[], sample_size = Int[]
+)
 
 println("Dataset structure analysis:")
 println("="^60)
@@ -51,21 +52,25 @@ for dep in dependency_levels
     println("\nDependency structure: $dep")
 
     for heur in heuristics
-        subset = filtered_df[(filtered_df.dependency.==dep).&(filtered_df.heuristic.==heur), :]
+        subset = filtered_df[
+            (filtered_df.dependency .== dep) .& (filtered_df.heuristic .== heur), :,
+        ]
 
         if nrow(subset) > 0
             # Calculate success rate and average split ratio
-            successful_runs = subset.duration[subset.duration.<3600]
-            successful_ratios = subset.split_ratio[subset.duration.<3600]
+            successful_runs = subset.duration[subset.duration .< 3600]
+            successful_ratios = subset.split_ratio[subset.duration .< 3600]
             total_runs = nrow(subset)
             success_rate = length(successful_runs) / total_runs * 100
 
-            println("  $heur: $(length(successful_ratios))/$(total_runs) successful ($(round(success_rate, digits=1))%)")
+            println(
+                "  $heur: $(length(successful_ratios))/$(total_runs) successful ($(round(success_rate, digits=1))%)",
+            )
 
             if length(successful_ratios) > 0
                 # Calculate actual split ratio as percentage
                 avg_ratio = mean(successful_ratios)
-                split_ratio = round(avg_ratio * 100, digits=2)
+                split_ratio = round(avg_ratio * 100; digits = 2)
                 sample_size = length(successful_ratios)
             else
                 split_ratio = nothing
@@ -78,8 +83,15 @@ for dep in dependency_levels
 
         # Add to results if we have a valid result
         if split_ratio !== nothing
-            push!(results, (dependency=dep, heuristic=heur,
-                split_ratio=split_ratio, sample_size=sample_size))
+            push!(
+                results,
+                (
+                    dependency = dep,
+                    heuristic = heur,
+                    split_ratio = split_ratio,
+                    sample_size = sample_size,
+                ),
+            )
         end
     end
 end
@@ -100,7 +112,7 @@ println("\\midrule")
 
 # Print data rows
 for (i, dep) in enumerate(dependency_levels)
-    dep_results = results[results.dependency.==dep, :]
+    dep_results = results[results.dependency .== dep, :]
 
     # Format dependency name
     dep_formatted = dep * "\$^b\$"
@@ -108,7 +120,7 @@ for (i, dep) in enumerate(dependency_levels)
     # Split ratios
     print("$dep_formatted")
     for heur in heuristics
-        heur_data = dep_results[dep_results.heuristic.==heur, :]
+        heur_data = dep_results[dep_results.heuristic .== heur, :]
         if nrow(heur_data) > 0
             ratio = heur_data[1, :split_ratio]
             sample_size = heur_data[1, :sample_size]
@@ -139,8 +151,12 @@ println("\\bottomrule")
 println("\\end{tabular}")
 println("\\begin{tablenotes}")
 println("      \\smaller")
-println("      \\item \\textit{Notes.} The split ratio is calculated using the number of split parcels and the number of orders.")
-println("      \\item \$^a\$ Smaller sample size, as some larger instances could not be solved.")
+println(
+    "      \\item \\textit{Notes.} The split ratio is calculated using the number of split parcels and the number of orders.",
+)
+println(
+    "      \\item \$^a\$ Smaller sample size, as some larger instances could not be solved."
+)
 println("      \\item \$^b\$ Further details are described in Table \\ref{tab:datasets}.")
 println("\\end{tablenotes}")
 println("\\end{threeparttable}")
