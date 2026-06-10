@@ -47,17 +47,20 @@ function KLINKS(trans::SparseMatrixCSC{Bool, Int64},
             # -> 2: pair-wise exchange between SKUs if it improves the objective
             # -> 3: both strategies are applied with a chance of 50:50
             if strategy == 1
-                STRATEGY1!(X,m,L,capacity,stop)
+                improved = STRATEGY1!(X,m,L,capacity)
             elseif strategy == 2
-                STRATEGY2!(X,m,L,capacity,stop)
+                improved = STRATEGY2!(X,m,L,capacity)
             elseif strategy == 3
                 if rand() > 0.5
-                    STRATEGY1!(X,m,L,capacity,stop)
+                    improved = STRATEGY1!(X,m,L,capacity)
                 else
-                    STRATEGY2!(X,m,L,capacity,stop)
+                    improved = STRATEGY2!(X,m,L,capacity)
                 end
             else
                 error("Sorry, this strategy is not defined.")
+            end
+            if improved
+                stop = 0
             end
         end
         # Save the results from the trial

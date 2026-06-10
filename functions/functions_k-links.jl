@@ -62,8 +62,11 @@ function LINKADJUST(trans::SparseMatrixCSC{Bool, Int64})
     ov = zeros(Float64,size(trans,1))
     transposed = trans'
     for i in axes(trans,1)
-        if sum(transposed[:,i]) > 1
-            ov[i] = sum(transposed[:,i])-1/(factorial(big(sum(transposed[:,i])))/factorial(2)*factorial(big(sum(transposed[:,i])-2)))
+        n = sum(transposed[:,i])
+        if n > 1
+            # contribution effect coefficient of Zhu et al. (2021): an order with n
+            # SKUs can cause at most n-1 splits, spread over binomial(n,2) pairs
+            ov[i] = (n - 1) / binomial(n, 2)
         end
     end
     return ov::Vector{Float64}
@@ -95,8 +98,7 @@ end
 function STRATEGY1!(X::Matrix{Bool},
                     m::Int64,
                     L::Matrix{Float64},
-                    capacity::Vector{Int64},
-                    stop::Int64)
+                    capacity::Vector{Int64})
     dl_arr = zeros(Float64,size(X,1),size(X,2))
     for i in 1:size(X,1)
         if X[i,m] == 1
@@ -110,15 +112,15 @@ function STRATEGY1!(X::Matrix{Bool},
     if findmax(dl_arr)[1] > 0
         X[getindex(findmax(dl_arr)[2],1),m] = 0
         X[getindex(findmax(dl_arr)[2],1),getindex(findmax(dl_arr)[2],2)] = 1
-        stop = 0
+        return true
     end
+    return false
 end
 
 function STRATEGY2!(X::Matrix{Bool},
                     m::Int64,
                     L::Matrix{Float64},
-                    capacity::Vector{Int64},
-                    stop::Int64)
+                    capacity::Vector{Int64})
     best_val = 0.0
     best_i = 0
     best_j = 0
@@ -147,6 +149,7 @@ function STRATEGY2!(X::Matrix{Bool},
         X[best_i, best_g] = 1
         X[best_j, best_g] = 0
         X[best_j, m] = 1
-        stop = 0
+        return true
     end
+    return false
 end

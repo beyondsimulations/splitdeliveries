@@ -17,46 +17,40 @@ function SORTSALES(trans::SparseMatrixCSC{Bool, Int64}, sku_weight::Vector{<:Rea
     return sales::Matrix{Int64}
 end
 
-## function to sort the SKU pairs after the highest number of coappearances
+## function to sort the SKU pairs after the highest number of coappearances,
+## weighted by the average storage requirement: p_ij = q_ij / ((s_i + s_j)/2)
 function SORTPAIRS(Q::AbstractMatrix{<:Real}, sku_weight::Vector{<:Real})
+    pair_i = Int64[]
+    pair_j = Int64[]
+    pair_v = Float64[]
     if Q isa SparseMatrixCSC
         rows_q = rowvals(Q)
         vals_q = nonzeros(Q)
-        pair_i = Int64[]
-        pair_j = Int64[]
-        pair_v = Int64[]
         for col in 1:size(Q, 2)
             for idx in nzrange(Q, col)
                 row = rows_q[idx]
                 if row > col
                     push!(pair_i, row)
                     push!(pair_j, col)
-                    push!(pair_v, round(Int64, vals_q[idx] / (sku_weight[row] + sku_weight[col]) / 2))
+                    push!(pair_v, vals_q[idx] / ((sku_weight[row] + sku_weight[col]) / 2))
                 end
             end
         end
-        npairs = length(pair_i)
-        pairs = Matrix{Int64}(undef, npairs, 3)
-        pairs[:, 1] = pair_i
-        pairs[:, 2] = pair_j
-        pairs[:, 3] = pair_v
     else
-        n = size(Q, 1)
-        npairs = div(n * (n - 1), 2)
-        pairs = Matrix{Int64}(undef, npairs, 3)
-        idx = 1
-        @inbounds for i = 2:n
+        @inbounds for i = 2:size(Q, 1)
             weight_i = sku_weight[i]
-            @simd for j = 1:i-1
-                pairs[idx, 1] = i
-                pairs[idx, 2] = j
-                pairs[idx, 3] = round(Int64, Q[i, j] / (weight_i + sku_weight[j]) / 2)
-                idx += 1
+            for j = 1:i-1
+                push!(pair_i, i)
+                push!(pair_j, j)
+                push!(pair_v, Q[i, j] / ((weight_i + sku_weight[j]) / 2))
             end
         end
     end
-
-    return sortslices(pairs, dims=1, by=x->x[3], rev=true)::Matrix{Int64}
+    order = sortperm(pair_v, rev=true)
+    pairs = Matrix{Int64}(undef, length(order), 2)
+    pairs[:, 1] = pair_i[order]
+    pairs[:, 2] = pair_j[order]
+    return pairs::Matrix{Int64}
 end
 
 ## function to check the number of coappearances in the selected warehouse
@@ -88,15 +82,18 @@ function GREEDYSEEDSTART!(sales::Matrix{Int64},
     for k = 2:size(capacity_left,1)
         if capacity_left[k] > 0
             # list all SKUs that have not been allocated yet and
-            top_sales = sales[sales[:,4] .== 0,:] 
+            top_sales = sales[sales[:,4] .== 0,:]
             # discard from the list those SKUs that are not in the top decile
-            top_sales = top_sales[1:round(Int64, size(top_sales,1)/10),:]
-            # find the SKU from the list with the least coappearances to the allocated SKUs
+            top_sales = top_sales[1:max(1, round(Int64, size(top_sales,1)/10)),:]
+            # find the SKU from the list with the least coappearances to the
+            # seeds already placed in the other warehouses
             coapp = zeros(Float64,size(top_sales,1))
             for i in 1:size(top_sales,1)
-                for j in 1:size(capacity_left,1)-1
-                    coapp[i] = CURRENTCOAPP(X,j,i,Q)/sku_weight[i]
+                sku = top_sales[i,1]
+                for j in 1:size(capacity_left,1)
+                    coapp[i] += CURRENTCOAPP(X,j,sku,Q)
                 end
+                coapp[i] /= sku_weight[sku]
             end
             # allocate the SKU to the DC
             sales[top_sales[findmin(coapp)[2],2],4] = 1
