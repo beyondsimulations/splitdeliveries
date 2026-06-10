@@ -64,8 +64,6 @@ function LINKADJUST(trans::SparseMatrixCSC{Bool, Int64})
     for i in axes(trans,1)
         n = sum(transposed[:,i])
         if n > 1
-            # contribution effect coefficient of Zhu et al. (2021): an order with n
-            # SKUs can cause at most n-1 splits, spread over binomial(n,2) pairs
             ov[i] = (n - 1) / binomial(n, 2)
         end
     end
