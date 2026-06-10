@@ -16,7 +16,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
-    "RND" => "RND"
+    "RND" => "RND",
 )
 
 # Filter for relevant modes and map to standard names
@@ -41,9 +41,14 @@ println("Diff levels: ", diff_levels)
 println("Buffer levels: ", buffer_levels)
 
 # Calculate results for each combination
-results = DataFrame(
-    wareh=Int[], diff=Float64[], buffer=Float64[], heuristic=String[],
-    split_ratio=Any[], success_rate=Float64[], sample_size=Int[]
+results = DataFrame(;
+    wareh = Int[],
+    diff = Float64[],
+    buffer = Float64[],
+    heuristic = String[],
+    split_ratio = Any[],
+    success_rate = Float64[],
+    sample_size = Int[],
 )
 
 for wareh in warehouse_levels
@@ -51,29 +56,38 @@ for wareh in warehouse_levels
         for buffer in buffer_levels
             for heur in heuristics
                 subset = filtered_df[
-                    (filtered_df.wareh.==wareh).&(filtered_df.diff.==diff).&(filtered_df.buffer.==buffer).&(filtered_df.heuristic.==heur), :]
+                    (filtered_df.wareh .== wareh) .& (filtered_df.diff .== diff) .& (filtered_df.buffer .== buffer) .& (filtered_df.heuristic .== heur),
+                    :,
+                ]
 
                 if nrow(subset) > 0
                     # Calculate success rate and average split ratio
-                    successful_runs = subset.duration[subset.duration.<3600]
-                    successful_ratios = subset.split_ratio[subset.duration.<3600]
+                    successful_runs = subset.duration[subset.duration .< 3600]
+                    successful_ratios = subset.split_ratio[subset.duration .< 3600]
                     total_runs = nrow(subset)
                     success_rate = length(successful_runs) / total_runs * 100
 
                     if length(successful_ratios) > 0
                         avg_ratio = mean(successful_ratios)
-                        split_ratio = round(avg_ratio * 100, digits=1)
+                        split_ratio = round(avg_ratio * 100; digits = 1)
                         sample_size = length(successful_ratios)
                     else
                         split_ratio = nothing
                         sample_size = 0
                     end
 
-                    push!(results, (
-                        wareh=wareh, diff=diff, buffer=buffer, heuristic=heur,
-                        split_ratio=split_ratio, success_rate=success_rate,
-                        sample_size=sample_size
-                    ))
+                    push!(
+                        results,
+                        (
+                            wareh = wareh,
+                            diff = diff,
+                            buffer = buffer,
+                            heuristic = heur,
+                            split_ratio = split_ratio,
+                            success_rate = success_rate,
+                            sample_size = sample_size,
+                        ),
+                    )
                 end
             end
         end
@@ -91,17 +105,14 @@ println("Warehouses & Diff & Buffer & QMK & CHI & KL & GO & GP & GS & BS & RND \
 println("\\midrule")
 
 # All four combinations for each warehouse level
-config_combinations = [
-    (0.0, 0.0),
-    (0.0, 0.2),
-    (0.2, 0.0),
-    (0.2, 0.2)
-]
+config_combinations = [(0.0, 0.0), (0.0, 0.2), (0.2, 0.0), (0.2, 0.2)]
 
 for (w_idx, wareh) in enumerate(warehouse_levels)
     for (c_idx, (diff, buffer)) in enumerate(config_combinations)
         config_results = results[
-            (results.wareh.==wareh).&(results.diff.==diff).&(results.buffer.==buffer), :]
+            (results.wareh .== wareh) .& (results.diff .== diff) .& (results.buffer .== buffer),
+            :,
+        ]
 
         # Print warehouse number only for first configuration
         if c_idx == 1
@@ -116,7 +127,7 @@ for (w_idx, wareh) in enumerate(warehouse_levels)
         print(" & $diff_str & $buffer_str")
 
         for heur in heuristics
-            heur_data = config_results[config_results.heuristic.==heur, :]
+            heur_data = config_results[config_results.heuristic .== heur, :]
             if nrow(heur_data) > 0
                 ratio = heur_data[1, :split_ratio]
                 success_rate = heur_data[1, :success_rate]
@@ -147,7 +158,9 @@ println("\\bottomrule")
 println("\\end{tabular}")
 println("\\begin{tablenotes}")
 println("      \\smaller")
-println("      \\item \\textit{Notes.} Split ratios are percentages (lower is better). Diff and Buffer columns show the size difference and buffer parameters respectively.")
+println(
+    "      \\item \\textit{Notes.} Split ratios are percentages (lower is better). Diff and Buffer columns show the size difference and buffer parameters respectively.",
+)
 println("      \\item \$^a\$ Reduced sample size due to timeouts on larger instances.")
 println("      \\item \$^b\$ No solutions found within the time limit.")
 println("      \\item \$^c\$ Algorithm not evaluated for this configuration.")
@@ -162,19 +175,25 @@ for wareh in warehouse_levels
     println("% Warehouse $wareh:")
     for (diff, buffer) in config_combinations
         config_results = results[
-            (results.wareh.==wareh).&(results.diff.==diff).&(results.buffer.==buffer), :]
+            (results.wareh .== wareh) .& (results.diff .== diff) .& (results.buffer .== buffer),
+            :,
+        ]
 
         if nrow(config_results) > 0
             println("%   Config ($(diff), $(buffer)):")
             for heur in heuristics
-                heur_data = config_results[config_results.heuristic.==heur, :]
+                heur_data = config_results[config_results.heuristic .== heur, :]
                 if nrow(heur_data) > 0
                     ratio = heur_data[1, :split_ratio]
                     success_rate = heur_data[1, :success_rate]
                     if ratio !== nothing
-                        println("%     $heur: $ratio% ($(round(success_rate, digits=1))% success)")
+                        println(
+                            "%     $heur: $ratio% ($(round(success_rate, digits=1))% success)",
+                        )
                     else
-                        println("%     $heur: No solutions ($(round(success_rate, digits=1))% success)")
+                        println(
+                            "%     $heur: No solutions ($(round(success_rate, digits=1))% success)",
+                        )
                     end
                 else
                     println("%     $heur: Not tested")

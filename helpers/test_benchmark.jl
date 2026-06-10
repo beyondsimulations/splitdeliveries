@@ -13,7 +13,6 @@ include(joinpath(PROJECT_ROOT, "load_packages.jl"))
 ren_lock = ReentrantLock()
 
 for dependency in dependencies
-
     include(joinpath(PROJECT_ROOT, "dependency/$dependency.jl"))
 
     train_test = 0.50
@@ -22,22 +21,21 @@ for dependency in dependencies
     benchiterations = 1
 
     # Disable all Gurobi-dependent heuristics
-    start = DataFrame(
-        QMK=[0],    # requires Gurobi
-        QMKJ=[1],   # Juniper (no license needed)
-        QMKS=[0],   # SCIP
-        CHIM=[1],   # chi-square without local search
-        CHI=[0],    # chi-square + local search (uses Gurobi obj)
-        KL=[1],     # K-LINK heuristic
-        KLQ=[0],    # K-LINK with Gurobi
-        GO=[1],     # greedy orders
-        GP=[1],     # greedy pairs
-        GS=[1],     # greedy seeds
-        BS=[1],     # bestselling
-        EMCI=[1],   # extended MCI
-        IIH=[0],    # requires Gurobi
-        IIHS=[0],   # requires SCIP
-        OPT=[0],    # exact optimization (Gurobi)
+    start = DataFrame(;
+        QMK = [0],    # requires Gurobi
+        QMKJ = [1],   # Juniper (no license needed)
+        QMKS = [0],   # SCIP
+        CHI = [1],    # chi-square heuristic
+        KL = [1],     # K-LINK heuristic
+        KLQ = [0],    # K-LINK with Gurobi
+        GO = [1],     # greedy orders
+        GP = [1],     # greedy pairs
+        GS = [1],     # greedy seeds
+        BS = [1],     # bestselling
+        EMCI = [1],   # extended MCI
+        IIH = [0],    # requires Gurobi
+        IIHS = [0],   # requires SCIP
+        OPT = [0],    # exact optimization (Gurobi)
     )
 
     trials = 10
@@ -67,7 +65,8 @@ for dependency in dependencies
     print("\n\n### Test Benchmark: $dependency on experiment $experiment ###")
     print("\n     started at ", now(), ".\n")
 
-    benchmark = BENCHMARK(capacity_benchmark,
+    benchmark = BENCHMARK(
+        capacity_benchmark,
         skus_benchmark,
         diff_benchmark,
         buff_benchmark,
@@ -90,7 +89,8 @@ for dependency in dependencies
         epsilon_iih,
         benchiterations,
         train_test,
-        dependency)
+        dependency,
+    )
 
     print("\n$dependency finished at ", now(), ".\n")
 end

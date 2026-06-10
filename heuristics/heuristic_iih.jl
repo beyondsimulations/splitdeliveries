@@ -2,7 +2,8 @@
 ## "Multi-Warehouse Assortment Selection: Minimizing Order Splitting in E-Commerce Logistics"
 ## Implements Algorithm 1 from the main paper (2-warehouse overlapping only)
 
-function IIH(trans::SparseMatrixCSC{Bool,Int64},
+function IIH(
+    trans::SparseMatrixCSC{Bool,Int64},
     capacity::Vector{<:Real},
     sku_weight::Vector{<:Real},
     abort::Int64,
@@ -12,7 +13,8 @@ function IIH(trans::SparseMatrixCSC{Bool,Int64},
     allowed_gap::Float64,
     max_nodes::Int64,
     max_iih_iterations::Int64,
-    epsilon_iih::Float64)
+    epsilon_iih::Float64,
+)
 
     # IIH requires uniform sku_weight (unit weights only)
     if !all(w -> w == sku_weight[1], sku_weight)
@@ -20,7 +22,7 @@ function IIH(trans::SparseMatrixCSC{Bool,Int64},
     end
 
     # Sort warehouses by decreasing capacity
-    capacity = sort(capacity, rev=true)
+    capacity = sort(capacity; rev = true)
     D = length(capacity)
     N = size(trans, 2)
     M = size(trans, 1)
@@ -48,9 +50,19 @@ function IIH(trans::SparseMatrixCSC{Bool,Int64},
         end
     end
 
-    selected_2_init, _ = OFRM_SUBPROBLEM(trans, uncovered_by_1_init, K2,
-        collect(must_include_2_init), candidate_2_init,
-        solver_name, abort, show_opt, cpu_cores, allowed_gap, max_nodes)
+    selected_2_init, _ = OFRM_SUBPROBLEM(
+        trans,
+        uncovered_by_1_init,
+        K2,
+        collect(must_include_2_init),
+        candidate_2_init,
+        solver_name,
+        abort,
+        show_opt,
+        cpu_cores,
+        allowed_gap,
+        max_nodes,
+    )
 
     W[:, 2] .= false
     for p in selected_2_init
@@ -90,9 +102,19 @@ function IIH(trans::SparseMatrixCSC{Bool,Int64},
             end
         end
 
-        selected_1, gap_1 = OFRM_SUBPROBLEM(trans, uncovered_by_2, K1,
-            collect(must_include_1), candidate_1,
-            solver_name, abort, show_opt, cpu_cores, allowed_gap, max_nodes)
+        selected_1, gap_1 = OFRM_SUBPROBLEM(
+            trans,
+            uncovered_by_2,
+            K1,
+            collect(must_include_1),
+            candidate_1,
+            solver_name,
+            abort,
+            show_opt,
+            cpu_cores,
+            allowed_gap,
+            max_nodes,
+        )
 
         # Update W for warehouse 1
         W[:, 1] .= false
@@ -121,9 +143,19 @@ function IIH(trans::SparseMatrixCSC{Bool,Int64},
             end
         end
 
-        selected_2, gap_2 = OFRM_SUBPROBLEM(trans, uncovered_by_1, K2,
-            collect(must_include_2), candidate_2,
-            solver_name, abort, show_opt, cpu_cores, allowed_gap, max_nodes)
+        selected_2, gap_2 = OFRM_SUBPROBLEM(
+            trans,
+            uncovered_by_1,
+            K2,
+            collect(must_include_2),
+            candidate_2,
+            solver_name,
+            abort,
+            show_opt,
+            cpu_cores,
+            allowed_gap,
+            max_nodes,
+        )
 
         # Update W for warehouse 2
         W[:, 2] .= false

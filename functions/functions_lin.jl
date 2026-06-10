@@ -15,7 +15,7 @@ function MCIRANKING(trans::SparseMatrixCSC{Bool,Int64})
     end
 
     # Return product indices sorted by decreasing omega
-    return sortperm(omega, rev=true)
+    return sortperm(omega; rev = true)
 end
 
 ## OFRM_SUBPROBLEM: Solve the Order Fulfillment Rate Maximization subproblem (Problem 6 in Lin et al.)
@@ -27,7 +27,8 @@ end
 ## Variables: x[1:N] binary (product selection), y[1:M_uncovered] continuous (order fulfillment)
 ## Objective: max sum(y_j) -- maximize fulfilled uncovered orders
 ## Constraints: sum(x) = K, y_j <= x_i for each product i in order j, x_i=1 for must_include
-function OFRM_SUBPROBLEM(trans::SparseMatrixCSC{Bool,Int64},
+function OFRM_SUBPROBLEM(
+    trans::SparseMatrixCSC{Bool,Int64},
     uncovered_orders::Vector{Int64},
     K::Int64,
     must_include::Vector{Int64},
@@ -37,14 +38,16 @@ function OFRM_SUBPROBLEM(trans::SparseMatrixCSC{Bool,Int64},
     show_opt::Bool,
     cpu_cores::Int64,
     allowed_gap::Float64,
-    max_nodes::Int64)
-
+    max_nodes::Int64,
+)
     N_candidates = length(candidate_products)
     M_uncovered = length(uncovered_orders)
 
     # Defensive check: must_include cannot exceed capacity
     if length(must_include) > K
-        error("OFRM_SUBPROBLEM: |must_include| = $(length(must_include)) > K = $K. Infeasible.")
+        error(
+            "OFRM_SUBPROBLEM: |must_include| = $(length(must_include)) > K = $K. Infeasible.",
+        )
     end
 
     # Short-circuit: if no uncovered orders, just pick K most popular products
@@ -74,7 +77,9 @@ function OFRM_SUBPROBLEM(trans::SparseMatrixCSC{Bool,Int64},
         set_optimizer_attribute(model, "limits/time", abort)
         set_optimizer_attribute(model, "parallel/maxnthreads", cpu_cores)
     else
-        error("OFRM_SUBPROBLEM: Only Gurobi or SCIP solvers are supported. Got: $solver_name")
+        error(
+            "OFRM_SUBPROBLEM: Only Gurobi or SCIP solvers are supported. Got: $solver_name"
+        )
     end
 
     if !show_opt
@@ -127,7 +132,9 @@ function OFRM_SUBPROBLEM(trans::SparseMatrixCSC{Bool,Int64},
     # Extract gap
     gap = 0.0
     try
-        gap = abs(objective_bound(model) - objective_value(model)) / abs(objective_value(model) + 1e-11)
+        gap =
+            abs(objective_bound(model) - objective_value(model)) /
+            abs(objective_value(model) + 1e-11)
     catch
         gap = 0.0
     end

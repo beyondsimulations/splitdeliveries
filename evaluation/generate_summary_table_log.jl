@@ -19,7 +19,7 @@ mode_mapping = Dict(
     "EMCI" => "MCI",
     "IIH" => "IIH",
     "IIHS" => "IIHS",
-    "RND" => "RND"
+    "RND" => "RND",
 )
 
 println("=== DIAGNOSTIC ANALYSIS ===")
@@ -42,7 +42,9 @@ filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
 # Check for any invalid split ratios
 invalid_ratios = sum(isnan.(filtered_df.split_ratio) .| isinf.(filtered_df.split_ratio))
 println("Invalid split ratios: $invalid_ratios")
-println("Split ratio range: $(minimum(filtered_df.split_ratio)) to $(maximum(filtered_df.split_ratio))")
+println(
+    "Split ratio range: $(minimum(filtered_df.split_ratio)) to $(maximum(filtered_df.split_ratio))",
+)
 println()
 
 # Define heuristics in order for table
@@ -50,16 +52,22 @@ heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "MCI", "IIH", "IIHS", 
 
 println("=== SAMPLE SIZE ANALYSIS ===")
 for heur in heuristics
-    total_instances = nrow(filtered_df[filtered_df.heuristic.==heur, :])
-    successful_instances = nrow(filtered_df[(filtered_df.heuristic.==heur).&(filtered_df.duration.<3600), :])
+    total_instances = nrow(filtered_df[filtered_df.heuristic .== heur, :])
+    successful_instances = nrow(
+        filtered_df[(filtered_df.heuristic .== heur) .& (filtered_df.duration .< 3600), :]
+    )
     timeout_instances = total_instances - successful_instances
 
     if total_instances > 0
         success_rate = (successful_instances / total_instances) * 100
-        println("$heur: $successful_instances/$total_instances successful ($(round(success_rate, digits=1))%)")
+        println(
+            "$heur: $successful_instances/$total_instances successful ($(round(success_rate, digits=1))%)",
+        )
 
         if timeout_instances > 0
-            timeout_subset = filtered_df[(filtered_df.heuristic.==heur).&(filtered_df.duration.>=3600), :]
+            timeout_subset = filtered_df[
+                (filtered_df.heuristic .== heur) .& (filtered_df.duration .>= 3600), :,
+            ]
             if nrow(timeout_subset) > 0
                 println("  Timeouts by SKU: $(sort(unique(timeout_subset.skus)))")
             end
@@ -73,7 +81,9 @@ println()
 println("=== SPLIT RATIO ANALYSIS ===")
 # Calculate statistics for each heuristic
 for heur in heuristics
-    subset = filtered_df[(filtered_df.heuristic.==heur).&(filtered_df.duration.<3600), :]
+    subset = filtered_df[
+        (filtered_df.heuristic .== heur) .& (filtered_df.duration .< 3600), :,
+    ]
 
     if nrow(subset) > 0
         split_ratios = subset.split_ratio * 100  # Convert to percentage
@@ -88,10 +98,12 @@ for heur in heuristics
         # Check distribution by dataset characteristics
         println("  By SKU levels:")
         for sku in sort(unique(subset.skus))
-            sku_subset = subset[subset.skus.==sku, :]
+            sku_subset = subset[subset.skus .== sku, :]
             if nrow(sku_subset) > 0
                 sku_mean = mean(sku_subset.split_ratio) * 100
-                println("    SKU $sku: $(round(sku_mean, digits=2))% (n=$(nrow(sku_subset)))")
+                println(
+                    "    SKU $sku: $(round(sku_mean, digits=2))% (n=$(nrow(sku_subset)))"
+                )
             end
         end
         println()
@@ -103,12 +115,16 @@ end
 
 println("=== INSTANCE-WISE IMPROVEMENT ANALYSIS ===")
 # Get RND baseline
-rnd_subset = filtered_df[(filtered_df.heuristic.=="RND").&(filtered_df.duration.<3600), :]
+rnd_subset = filtered_df[
+    (filtered_df.heuristic .== "RND") .& (filtered_df.duration .< 3600), :,
+]
 if nrow(rnd_subset) > 0
     println("RND baseline: $(nrow(rnd_subset)) total instances")
 
     for heur in filter(h -> h != "RND", heuristics)
-        subset = filtered_df[(filtered_df.heuristic.==heur).&(filtered_df.duration.<3600), :]
+        subset = filtered_df[
+            (filtered_df.heuristic .== heur) .& (filtered_df.duration .< 3600), :,
+        ]
 
         if nrow(subset) > 0
             # Instance-by-instance comparison
@@ -133,7 +149,9 @@ if nrow(rnd_subset) > 0
             end
 
             if length(improvements) > 0
-                println("$heur - Instance-wise improvements vs RND (n=$(length(improvements))):")
+                println(
+                    "$heur - Instance-wise improvements vs RND (n=$(length(improvements))):"
+                )
                 println("  Mean: $(round(mean(improvements), digits=2))%")
                 println("  Median: $(round(median(improvements), digits=2))%")
                 println("  Min: $(round(minimum(improvements), digits=2))%")
@@ -160,7 +178,7 @@ function analyze_best_performers(df)
 
     # Group by instance configuration and find winner for each
     instance_groups = groupby(all_successful, [:skus, :wareh, :diff, :buffer, :dependency])
-    winners = Dict{String, Float64}()
+    winners = Dict{String,Float64}()
 
     # Count competing instances and winners
     num_competing = 0
@@ -180,14 +198,18 @@ function analyze_best_performers(df)
     end
 
     println("Instances with multiple competing heuristics: $num_competing")
-    println("\nBest performer frequency (instances where this heuristic achieved lowest split ratio):")
+    println(
+        "\nBest performer frequency (instances where this heuristic achieved lowest split ratio):",
+    )
 
     # Sort heuristics by win count
-    sorted_winners = sort(collect(winners), by=x->x[2], rev=true)
+    sorted_winners = sort(collect(winners); by = x->x[2], rev = true)
 
     for (heuristic, wins) in sorted_winners
         win_percentage = (wins / num_competing) * 100
-        println("  $heuristic: $(round(wins, digits=1))/$num_competing instances ($(round(win_percentage, digits=1))%)")
+        println(
+            "  $heuristic: $(round(wins, digits=1))/$num_competing instances ($(round(win_percentage, digits=1))%)",
+        )
     end
 
     println("\n=== INSTANCE PROPERTIES WHERE EACH HEURISTIC EXCELS ===")
@@ -206,9 +228,15 @@ function analyze_best_performers(df)
                 end
 
                 # Create a key for this winning instance
-                instance_key = (heuristic=heuristic, skus=row.skus, wareh=row.wareh,
-                              diff=row.diff, buffer=row.buffer, dependency=row.dependency,
-                              split_ratio=row.split_ratio)
+                instance_key = (
+                    heuristic = heuristic,
+                    skus = row.skus,
+                    wareh = row.wareh,
+                    diff = row.diff,
+                    buffer = row.buffer,
+                    dependency = row.dependency,
+                    split_ratio = row.split_ratio,
+                )
 
                 # We'll collect these for analysis
             end
@@ -254,7 +282,9 @@ function analyze_best_performers(df)
             end
             for (wareh, count) in sort(collect(wareh_counts))
                 pct = (count / length(winning_instances)) * 100
-                println("    $wareh warehouses: $count instances ($(round(pct, digits=1))%)")
+                println(
+                    "    $wareh warehouses: $count instances ($(round(pct, digits=1))%)"
+                )
             end
 
             println("  Difficulty distribution:")
@@ -280,7 +310,8 @@ function analyze_best_performers(df)
             println("  Dependency distribution:")
             dep_counts = Dict()
             for instance in winning_instances
-                dep_counts[instance.dependency] = get(dep_counts, instance.dependency, 0) + 1
+                dep_counts[instance.dependency] =
+                    get(dep_counts, instance.dependency, 0) + 1
             end
             for (dep, count) in sort(collect(dep_counts))
                 pct = (count / length(winning_instances)) * 100
@@ -304,9 +335,17 @@ println("\n=== INSTANCE OVERLAP ANALYSIS ===")
 instance_keys = []
 for row in eachrow(filtered_df)
     if row.duration < 3600
-        push!(instance_keys, (heuristic=row.heuristic,
-            skus=row.skus, wareh=row.wareh, diff=row.diff,
-            buffer=row.buffer, dependency=row.dependency))
+        push!(
+            instance_keys,
+            (
+                heuristic = row.heuristic,
+                skus = row.skus,
+                wareh = row.wareh,
+                diff = row.diff,
+                buffer = row.buffer,
+                dependency = row.dependency,
+            ),
+        )
     end
 end
 
@@ -324,4 +363,6 @@ for config in instance_configs
     push!(config_coverage, length(heuristics_for_config))
 end
 
-println("Heuristics per configuration - Min: $(minimum(config_coverage)), Max: $(maximum(config_coverage)), Mean: $(round(mean(config_coverage), digits=1))")
+println(
+    "Heuristics per configuration - Min: $(minimum(config_coverage)), Max: $(maximum(config_coverage)), Mean: $(round(mean(config_coverage), digits=1))",
+)
