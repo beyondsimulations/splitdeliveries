@@ -135,6 +135,14 @@ function BENCHMARK(
                     print("\n Reused transactions from previous run.")
                 else
                     print("\n Starting generation of transactions.")
+                    # Deterministic instance seeding: each scenario (scale,
+                    # dependency, order density, constellation, repetition)
+                    # regenerates the identical transactions on any machine,
+                    # backing the reproducibility claim in the paper
+                    Random.seed!(
+                        skus_benchmark[a] + 31 * order_set + 1_009 * a +
+                        65_537 * sum(Int, codeunits(dependency)) + 7 * benchnr,
+                    )
                     max_gs = ceil(
                         Int64, max(skus_benchmark[a] / group_size_scaling, group_size_min)
                     )

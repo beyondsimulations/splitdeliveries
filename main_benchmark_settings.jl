@@ -23,21 +23,25 @@ for dependency in dependencies
     cpu_cores = 4
 
     # Choose Optimisations and Heuristics to evaluate in the benchmark
+    # Solver-based methods and KL only run at the small scales; the scalable
+    # heuristics run everywhere. The experiment variable is set by the run
+    # scripts generated through run_benchmarks.sh.
+    small_scales = experiment in ("100", "1000")
     start = DataFrame(;
         QMK = [0], # quadratic-multiple knapsack heuristic with Gurobi as solver
-        QMKJ = [0], # quadratic-mulßtiple knapsack heuristic with Juniper as solver
+        QMKJ = [small_scales ? 1 : 0], # quadratic-multiple knapsack heuristic with Juniper as solver
         QMKS = [0], # quadratic-multiple knapsack heuristic with SCIP as solver
         CHI = [1], # main chi-square heuristic
-        KL = [0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        KL = [small_scales ? 1 : 0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         KLQ = [0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        GO = [1], # greedy orders heuristic bßy A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
+        GO = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         GP = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         GS = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         BS = [1], # bestselling heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         EMCI = [1], # extended MCI for D warehouses by Lin et al. (2025)
-        IIH = [0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
+        IIH = [small_scales ? 1 : 0], # iterative improvement heuristic with Gurobi by Lin et al. (2025) -- 2-warehouse overlapping
         IIHS = [0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
-        OPT = [0], # optimisation model to determine the optimal solution with Gurobi
+        OPT = [small_scales ? 1 : 0], # optimisation model to determine the optimal solution with Gurobi
     )
 
     # SKU weight mode (set before include to override)
