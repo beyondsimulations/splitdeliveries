@@ -1,0 +1,64 @@
+
+============================================================
+Benchmark started at 2026-04-01T17:15:50.667
+Experiment: 1000 | Dependency: MD-SF
+============================================================
+
+============================================================
+Benchmark finished at 2026-04-06T20:24:48.622
+============================================================
+===================================
+
+[2026-04-02T17:45:15.710] FAILURE: QMK
+  benchiter=1 skus=1000 wareh=10 capacity=[120, 120, 120, 120, 120, 120, 120, 120, 120, 120] effective_capacity=[3579, 3579, 3579, 3579, 3579, 3579, 3579, 3579, 3579
+============================================================
+Benchmark finished at 2026-04-02T22:23:31.067
+============================================================
+ult index of attribute MathOptInterface.VariablePrimal(1) out of bounds. There are currently 0 solution(s) in the model.
+  Stacktrace:
+    [1] check_result_index_bounds
+      @ ~/.julia/packages/MathOptInterface/2THZO/src/attributes.jl:238 [inlined]
+    [2] get(model::Gurobi.Optimizer, attr::MathOptInterface.VariablePrimal, x::MathOptInterface.VariableIndex)
+      @ Gurobi ~/.julia/packages/Gurobi/K2XSK/src/MOI_wrapper/MOI_wrapper.jl:3058
+    [3] get(b::MathOptInterface.Bridges.LazyBridgeOptimizer{Gurobi.Optimizer}, attr::MathOptInterface.VariablePrimal, index::MathOptInterface.VariableIndex)
+      @ MathOptInterface.Bridges ~/.julia/packages/MathOptInterface/2THZO/src/Bridges/bridge_optimizer.jl:1401
+    [4] get(model::MathOptInterface.Utilities.CachingOptimizer{MathOptInterface.Bridges.LazyBridgeOptimizer{Gurobi.Optimizer}, MathOptInterface.Utilities.UniversalFallback{MathOptInterface.Utilities.Model{Float64}}}, attr::MathOptInterface.VariablePrimal, index::MathOptInterface.VariableIndex)
+      @ MathOptInterface.Utilities ~/.julia/packages/MathOptInterface/2THZO/src/Utilities/cachingoptimizer.jl:934
+    [5] _moi_get_result(::MathOptInterface.Utilities.CachingOptimizer{MathOptInterface.Bridges.LazyBridgeOptimizer{Gurobi.Optimizer}, MathOptInterface.Utilities.UniversalFallback{MathOptInterface.Utilities.Model{Float64}}}, ::MathOptInterface.VariablePrimal, ::Vararg{Any})
+      @ JuMP ~/.julia/packages/JuMP/0tD10/src/optimizer_interface.jl:1200
+    [6] get(model::Model, attr::MathOptInterface.VariablePrimal, v::VariableRef)
+      @ JuMP ~/.julia/packages/JuMP/0tD10/src/optimizer_interface.jl:1240
+    [7] value(v::VariableRef; result::Int64)
+      @ JuMP ~/.julia/packages/JuMP/0tD10/src/variables.jl:2092
+    [8] value
+      @ ~/.julia/packages/JuMP/0tD10/src/variables.jl:2091 [inlined]
+    [9] _broadcast_getindex_evalf
+      @ ./broadcast.jl:699 [inlined]
+
+[2026-04-02T19:37:51.654] FAILURE: QMK
+  benchiter=1 skus=1000 wareh=10 capacity=[144, 139, 133, 128, 123, 117, 112, 107, 101, 96] effective_capacity=[4288, 4139, 3960, 3811, 3662, 3484, 3335, 3186, 3007, 2858] orders=20000 weight_mode=frequency
+  Error: MathOptInterface.ResultIndexBoundsError{MathOptInterface.VariablePrimal}(MathOptInterface.VariablePrimal(1), 0)
+  Result index of attribute MathOptInterface.VariablePrimal(1) out of bounds. There are currently 0 solution(s) in the model.
+  Stacktrace:
+    [1] check_result_index_bounds
+      @ ~/.julia/packages/MathOptInterface/2THZO/src/attributes.jl:238 [inlined]
+    [2] get(model::Gurobi.Optimizer, attr::MathOptInterface.VariablePrimal, x::MathOptInterface.VariableIndex)
+      @ Gurobi ~/.julia/packages/Gurobi/K2XSK/src/MOI_wrapper/MOI_wrapper.jl:3058
+    [3] get(b::MathOptInterface.Bridges.LazyBridgeOptimizer{Gurobi.Optimizer}, attr::MathOptInterface.VariablePrimal, index::MathOptInterface.VariableIndex)
+      @ MathOptInterface.Bridges ~/.julia/packages/MathOptInterface/2THZO/src/Bridges/bridge_optimizer.jl:1401
+    [4] get(model::MathOptInterface.Utilities.CachingOptimizer{MathOptInterface.Bridges.LazyBridgeOptimizer{Gurobi.Optimizer}, MathOptInterface.Utilities.UniversalFallback{MathOptInterface.Utilities.Model{Float64}}}, attr::MathOptInterface.VariablePrimal, index::MathOptInterface.VariableIndex)
+      @ MathOptInterface.Utilities ~/.julia/packages/MathOptInterface/2THZO/src/Utilities/cachingoptimizer.jl:934
+    [5] _moi_get_result(::MathOptInterface.Utilities.CachingOptimizer{MathOptInterface.Bridges.LazyBridgeOptimizer{Gurobi.Optimizer}, MathOptInterface.Utilities.UniversalFallback{MathOptInterface.Utilities.Model{Float64}}}, ::MathOptInterface.VariablePrimal, ::Vararg{Any})
+      @ JuMP ~/.julia/packages/JuMP/0tD10/src/optimizer_interface.jl:1200
+    [6] get(model::Model, attr::MathOptInterface.VariablePrimal, v::VariableRef)
+      @ JuMP ~/.julia/packages/JuMP/0tD10/src/optimizer_interface.jl:1240
+    [7] value(v::VariableRef; result::Int64)
+      @ JuMP ~/.julia/packages/JuMP/0tD10/src/variables.jl:2092
+    [8] value
+      @ ~/.julia/packages/JuMP/0tD10/src/variables.jl:2091 [inlined]
+    [9] _broadcast_getindex_evalf
+      @ ./broadcast.jl:699 [inlined]
+
+============================================================
+Benchmark finished at 2026-04-02T19:55:31.471
+============================================================
