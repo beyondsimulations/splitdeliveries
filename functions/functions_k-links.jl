@@ -47,15 +47,11 @@ function LINKADJUST(trans::SparseMatrixCSC{Bool,Int64})
     ov = zeros(Float64, size(trans, 1))
     transposed = trans'
     for i in axes(trans, 1)
-        if sum(transposed[:, i]) > 1
-            ov[i] =
-                sum(
-                    transposed[:, i]
-                )-1/(
-                    factorial(
-                        big(sum(transposed[:, i]))
-                    )/factorial(2)*factorial(big(sum(transposed[:, i])-2))
-                )
+        n = sum(transposed[:, i])
+        if n > 1
+            # contribution effect coefficient of Zhu et al. (2021): an order with n
+            # SKUs can cause at most n-1 splits, spread over binomial(n,2) pairs
+            ov[i] = (n - 1) / binomial(n, 2)
         end
     end
     return ov::Vector{Float64}
