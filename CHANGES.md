@@ -15,12 +15,19 @@ budget" — the extra capacity beyond what is needed to store each SKU once.
 **Budget formula:** `N_tilde / (D-1)` where `N_tilde = sum(capacity) - sum(sku_weight)`,
 computed via the existing `BESTSELLING_SKUS()` function from Catalan & Fisher (2012).
 
-**Ranking:** SKUs are ranked by `ordered_skus[i] / sku_weight[i]` (pure transaction
-frequency per unit weight), NOT by `sum_nor` (coappearance sum). This distinction
-matters because `sum_nor` weights each order by `(|order| - 1)`, inflating the
-ranking of SKUs that appear in large orders. For the replication decision, pure
-frequency is the correct metric — it measures how many orders benefit from the
-SKU being available in every warehouse, regardless of order size.
+**Ranking:** SKUs are ranked by `sum_nor` (the independent coappearance sum
+t^E, per unit weight), with transaction frequency as tie-break — the same
+order used for the Phase 1 allocation (`nor_order`). An earlier intermediate
+version ranked the replication by pure transaction frequency instead, arguing
+that `sum_nor` inflates SKUs appearing in large orders. A paired A/B test
+(2026-06-11; 2,000 SKUs, 20,000 orders, all six dependency configs, K in
+{2, 4, 10}, 20% buffer, 5 seeds) showed the t^E ranking is the better choice:
+it wins clearly on uniform-frequency dependency data (up to ~7 pp lower split
+ratio on HD-SF, ~2-4 pp on MD-SF) and is statistically tied everywhere else
+(frequency's only edge is ~0.1 pp on ID-VF). Intuition: the replication
+budget should prioritize SKUs whose coappearance mass cannot be captured by
+co-locating a dependency cluster; t^E excludes the dependency premium and
+does exactly that.
 
 **Weight-awareness:** Each SKU's `sku_weight[i]` is checked against remaining
 warehouse capacity before placement. The budget is consumed in weight units.
@@ -136,6 +143,8 @@ random benchmark took up to 124 seconds. The fix reduces this to seconds.
 
 Configuration: `sig = 1e-5`, `min_effect = 0.01`, freq-order REPLICATEALL!,
 nor-order Phase 1, WHWEIGHT recomputed after replication.
+(Note: the final implementation uses the nor-order ranking for REPLICATEALL!
+as well, which performs equal or better per the A/B test described in item 1.)
 
 | Dependency | CHI wins | EMCI wins | Avg diff% |
 |------------|-----------|-----------|-----------|
