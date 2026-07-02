@@ -1,5 +1,5 @@
 # Medium Dependencies, Static Frequency (MD-SF)
-# 20% strong groups, 50% medium groups, 30% independent SKUs
+# 20% strong groups, 60% medium groups, 20% independent SKUs
 # SKU frequency: uniform (all SKUs equally likely as seed)
 include(joinpath(@__DIR__, "defaults.jl"))
 

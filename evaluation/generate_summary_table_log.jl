@@ -5,12 +5,22 @@ using CSV, DataFrames, Statistics
 # Read the CSV file
 df = CSV.read("results/overall_results.csv", DataFrame)
 
+# Uniform-weight tables only; the weighted modes get dedicated tables (B3).
+df = df[df.weight_mode .== "uniform", :]
+
+# Success definition (B2): a run counts as successful if it returned a feasible
+# allocation within the practical wall-clock cap. The solver time limit is
+# 900 s; the cap adds tolerance for model building. DECISION PENDING
+# (publication_checklist.md, B2): whether OPT should additionally require
+# gap == 0 to be reported, and the exact cap value.
+SUCCESS_CAP = 1.5 * 900
+
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
     "OPT" => "OPT",
     "QMK" => "QMK-OPT",
     "QMKJ" => "QMK",
-    "CHI_0.01" => "CHI",
+    "CHI_1.0e-5" => "CHI",
     "KL" => "KL",
     "GO" => "GO",
     "GP" => "GP",
@@ -54,7 +64,7 @@ println("=== SAMPLE SIZE ANALYSIS ===")
 for heur in heuristics
     total_instances = nrow(filtered_df[filtered_df.heuristic .== heur, :])
     successful_instances = nrow(
-        filtered_df[(filtered_df.heuristic .== heur) .& (filtered_df.duration .< 3600), :]
+        filtered_df[(filtered_df.heuristic .== heur) .& (filtered_df.duration .< SUCCESS_CAP), :]
     )
     timeout_instances = total_instances - successful_instances
 
@@ -66,7 +76,7 @@ for heur in heuristics
 
         if timeout_instances > 0
             timeout_subset = filtered_df[
-                (filtered_df.heuristic .== heur) .& (filtered_df.duration .>= 3600), :,
+                (filtered_df.heuristic .== heur) .& (filtered_df.duration .>= SUCCESS_CAP), :,
             ]
             if nrow(timeout_subset) > 0
                 println("  Timeouts by SKU: $(sort(unique(timeout_subset.skus)))")
@@ -82,7 +92,7 @@ println("=== SPLIT RATIO ANALYSIS ===")
 # Calculate statistics for each heuristic
 for heur in heuristics
     subset = filtered_df[
-        (filtered_df.heuristic .== heur) .& (filtered_df.duration .< 3600), :,
+        (filtered_df.heuristic .== heur) .& (filtered_df.duration .< SUCCESS_CAP), :,
     ]
 
     if nrow(subset) > 0
@@ -116,14 +126,14 @@ end
 println("=== INSTANCE-WISE IMPROVEMENT ANALYSIS ===")
 # Get RND baseline
 rnd_subset = filtered_df[
-    (filtered_df.heuristic .== "RND") .& (filtered_df.duration .< 3600), :,
+    (filtered_df.heuristic .== "RND") .& (filtered_df.duration .< SUCCESS_CAP), :,
 ]
 if nrow(rnd_subset) > 0
     println("RND baseline: $(nrow(rnd_subset)) total instances")
 
     for heur in filter(h -> h != "RND", heuristics)
         subset = filtered_df[
-            (filtered_df.heuristic .== heur) .& (filtered_df.duration .< 3600), :,
+            (filtered_df.heuristic .== heur) .& (filtered_df.duration .< SUCCESS_CAP), :,
         ]
 
         if nrow(subset) > 0
@@ -173,7 +183,7 @@ function analyze_best_performers(df)
     println("Analyzing which heuristic achieves the lowest split ratio per instance...")
 
     # Create DataFrame with all successful instances
-    all_successful = df[df.duration .< 3600, :]
+    all_successful = df[df.duration .< SUCCESS_CAP, :]
     println("Total successful instance-heuristic combinations: $(nrow(all_successful))")
 
     # Group by instance configuration and find winner for each
@@ -334,7 +344,7 @@ println("\n=== INSTANCE OVERLAP ANALYSIS ===")
 # Check what instances each heuristic successfully solves
 instance_keys = []
 for row in eachrow(filtered_df)
-    if row.duration < 3600
+    if row.duration < SUCCESS_CAP
         push!(
             instance_keys,
             (

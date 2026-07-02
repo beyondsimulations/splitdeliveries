@@ -1,5 +1,5 @@
 # Medium Dependencies, Variable Frequency (MD-VF)
-# 20% strong groups, 50% medium groups, 30% independent SKUs
+# 20% strong groups, 60% medium groups, 20% independent SKUs
 # SKU frequency: variable (some SKUs much more popular than others)
 include(joinpath(@__DIR__, "defaults.jl"))
 
