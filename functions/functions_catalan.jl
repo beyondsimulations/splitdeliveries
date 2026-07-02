@@ -123,11 +123,12 @@ function GREEDYSEEDMAIN!(
     for i in axes(Q, 1)
         if sales[i, 4] == 0
             best_allocation = zeros(Float64, size(capacity_left, 1))
+            sku = sales[i, 1]
             for d in axes(capacity_left, 1)
-                if capacity_left[d] >= sku_weight[i]
+                if capacity_left[d] >= sku_weight[sku]
                     # retrieve the list of SKUs allocated to d so far
                     # calculate the average of coapperances with the SKUs in d
-                    best_allocation[d] = CURRENTCOAPP(X, d, i, Q)/sku_weight[i]
+                    best_allocation[d] = CURRENTCOAPP(X, d, sku, Q)/sku_weight[sku]
                 end
             end
             if findmax(best_allocation)[1] > 0

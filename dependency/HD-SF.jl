@@ -1,5 +1,5 @@
 # High Dependencies, Static Frequency (HD-SF)
-# 60% strong groups, 30% medium groups, 10% independent SKUs
+# 60% strong groups, 20% medium groups, 20% independent SKUs
 # SKU frequency: uniform (all SKUs equally likely as seed)
 include(joinpath(@__DIR__, "defaults.jl"))
 

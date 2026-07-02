@@ -5,12 +5,22 @@ using CSV, DataFrames, Statistics
 # Read the CSV file
 df = CSV.read("results/overall_results.csv", DataFrame)
 
+# Uniform-weight tables only; the weighted modes get dedicated tables (B3).
+df = df[df.weight_mode .== "uniform", :]
+
+# Success definition (B2): a run counts as successful if it returned a feasible
+# allocation within the practical wall-clock cap. The solver time limit is
+# 900 s; the cap adds tolerance for model building. DECISION PENDING
+# (publication_checklist.md, B2): whether OPT should additionally require
+# gap == 0 to be reported, and the exact cap value.
+SUCCESS_CAP = 1.5 * 900
+
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
     "OPT" => "OPT",
     "QMK" => "QMK-OPT",
     "QMKJ" => "QMK",
-    "CHI_0.01" => "CHI",
+    "CHI_1.0e-5" => "CHI",
     "KL" => "KL",
     "GO" => "GO",
     "GP" => "GP",
@@ -58,8 +68,8 @@ for dep in dependency_levels
 
         if nrow(subset) > 0
             # Calculate success rate and average split ratio
-            successful_runs = subset.duration[subset.duration .< 3600]
-            successful_ratios = subset.split_ratio[subset.duration .< 3600]
+            successful_runs = subset.duration[subset.duration .< SUCCESS_CAP]
+            successful_ratios = subset.split_ratio[subset.duration .< SUCCESS_CAP]
             total_runs = nrow(subset)
             success_rate = length(successful_runs) / total_runs * 100
 

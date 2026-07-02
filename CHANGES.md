@@ -225,7 +225,7 @@ matching CHISQUAREHEUR's approach in `FILLUP!`.
 **What:** Three SKU weight modes, controlled by `weight_mode` setting:
 - `:uniform` — all weights = 1 (default, classic benchmark)
 - `:frequency` — weight = number of orders containing that SKU in training data
-- `:random` — weight sampled uniformly from `weight_range` (default 1:3)
+- `:random` — weight sampled uniformly from `weight_range` (default 1:10)
 
 **Capacity scaling:** For non-uniform weights, capacity is scaled by average
 weight to preserve the same fill ratio:
