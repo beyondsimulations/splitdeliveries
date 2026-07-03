@@ -388,15 +388,16 @@ function REMOVEALLOC(
             dval = (d_pos <= d_end && d_rows[d_pos] == row) ? Float64(d_vals[d_pos]) : 0.0
 
             if dval > 0
-                current = dval
+                # a pair stored together in ANY warehouse has realised its
+                # dependency premium; credit only the baseline coappearance
+                colocated = false
                 for k in 1:size(X, 2)
-                    if X[row, k] == 1 && X[col, k] == 1 && current > 0
-                        current = qval - current
-                    else
-                        current = qval
+                    if X[row, k] && X[col, k]
+                        colocated = true
+                        break
                     end
                 end
-                new_vals[q_idx] = Float32(current)
+                new_vals[q_idx] = Float32(colocated ? qval - dval : qval)
             else
                 new_vals[q_idx] = Float32(qval)
             end
@@ -529,6 +530,16 @@ function ALLOCATEONE!(
                             state_dep[m, d_new[ei]] += dv
                             state_nor[m, d_new[ei]] += nv
                         end
+                    end
+                end
+                # credit SKU i's own coappearances to its new warehouse so
+                # later dependency chaining sees the placement
+                @inbounds for idx in nzrange(Q, i)
+                    m = q_rows[idx]
+                    if !allocated[m]
+                        dv = dep[m, i]
+                        state_dep[m, d_placed] += dv
+                        state_nor[m, d_placed] += q_vals[idx] - dv
                     end
                 end
                 allocated[i] = true
