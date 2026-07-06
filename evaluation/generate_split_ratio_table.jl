@@ -5,14 +5,12 @@ using CSV, DataFrames, Statistics
 # Read the CSV file
 df = CSV.read("results/overall_results.csv", DataFrame)
 
-# Uniform-weight tables only; the weighted modes get dedicated tables (B3).
+# Uniform-weight tables only; the weighted modes get dedicated tables.
 df = df[df.weight_mode .== "uniform", :]
 
-# Success definition (B2): a run counts as successful if it returned a feasible
+# Success definition: a run counts as successful if it returned a feasible
 # allocation within the practical wall-clock cap. The solver time limit is
-# 900 s; the cap adds tolerance for model building. DECISION PENDING
-# (publication_checklist.md, B2): whether OPT should additionally require
-# gap == 0 to be reported, and the exact cap value.
+# 900 s; the cap adds tolerance for model building.
 SUCCESS_CAP = 1.5 * 900
 
 # Define mapping from mode names to table headers
