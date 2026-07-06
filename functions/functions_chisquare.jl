@@ -113,6 +113,64 @@ function HYOPTHESISTEST_SPARSE(
     return sparse(dep_rows, dep_cols, dep_vals, I, I)
 end
 
+## CURVEBALL: margin-preserving randomization of the transaction matrix
+## (Strona et al. 2014). Every transaction keeps its size and every SKU its
+## frequency, while pairwise dependencies are destroyed. Serves as the
+## independence baseline for the dependency gate in CHISQUAREHEUR. Uses a
+## private generator so the global random stream is untouched.
+function CURVEBALL(trans::SparseMatrixCSC{Bool,Int64}; trades_per_order::Int64 = 10)
+    rng = MersenneTwister(4242)
+    M, S = size(trans)
+    orders = [Int32[] for _ in 1:M]
+    rows = rowvals(trans)
+    for j in 1:S, idx in nzrange(trans, j)
+        push!(orders[rows[idx]], Int32(j))
+    end
+    for _ in 1:(trades_per_order * M)
+        a = rand(rng, 1:M)
+        b = rand(rng, 1:M)
+        a == b && continue
+        A, B = orders[a], orders[b]
+        (isempty(A) || isempty(B)) && continue
+        sA, sB = Set(A), Set(B)
+        onlyA = Int32[x for x in A if !(x in sB)]
+        onlyB = Int32[x for x in B if !(x in sA)]
+        (isempty(onlyA) || isempty(onlyB)) && continue
+        pool = vcat(onlyA, onlyB)
+        shuffle!(rng, pool)
+        kA = length(onlyA)
+        shared = Int32[x for x in A if x in sB]
+        orders[a] = vcat(shared, pool[1:kA])
+        orders[b] = vcat(shared, pool[(kA + 1):end])
+    end
+    nnz_total = sum(length, orders)
+    I_ = Vector{Int64}(undef, nnz_total)
+    J_ = Vector{Int64}(undef, nnz_total)
+    k = 0
+    for (i, lst) in enumerate(orders), j in lst
+        k += 1
+        I_[k] = i
+        J_[k] = Int64(j)
+    end
+    return sparse(I_, J_, trues(nnz_total), M, S)
+end
+
+## SUPPORTEDDEPMASS: dependency premium carried by flagged SKU pairs that
+## coappear in at least two transactions. Pairs observed together only once
+## are excluded, since their flagged mass grows with catalog size on
+## independent data and carries no diagnostic information.
+function SUPPORTEDDEPMASS(dep::SparseMatrixCSC, Q::AbstractMatrix{<:Real})
+    rows_d = rowvals(dep)
+    vals_d = nonzeros(dep)
+    mass = 0.0
+    for c in 1:size(dep, 2), idx in nzrange(dep, c)
+        r = rows_d[idx]
+        r < c || continue
+        Q[r, c] >= 2 && (mass += Float64(vals_d[idx]))
+    end
+    return mass
+end
+
 # function to find the bestselling SKUs, borrowed from Catalán and Fisher (2021)
 function BESTSELLING_SKUS(capacity_left::Vector{<:Real}, sku_weights::Vector{<:Real})
     (sum(capacity_left)-sum(sku_weights))/(size(capacity_left, 1)-1)
