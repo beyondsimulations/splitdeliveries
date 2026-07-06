@@ -30,8 +30,9 @@ casestudy_plots
 
 # Irrelevant files
 cprep.jl
+# apply_cbench.jl stays private: it contains the retailer's confidential
+# warehouse capacities and identifiers
 apply_cbench.jl
-benchmarkc.jl
 playground.jl
 archive
 run_H*
