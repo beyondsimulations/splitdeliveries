@@ -118,8 +118,9 @@ end
 ## frequency, while pairwise dependencies are destroyed. Serves as the
 ## independence baseline for the dependency gate in CHISQUAREHEUR. Uses a
 ## private generator so the global random stream is untouched.
-function CURVEBALL(trans::SparseMatrixCSC{Bool,Int64}; trades_per_order::Int64 = 10)
-    rng = MersenneTwister(4242)
+function CURVEBALL(trans::SparseMatrixCSC{Bool,Int64}; trades_per_order::Int64 = 10,
+                   seed::Int64 = 4242)
+    rng = MersenneTwister(seed)
     M, S = size(trans)
     orders = [Int32[] for _ in 1:M]
     rows = rowvals(trans)
