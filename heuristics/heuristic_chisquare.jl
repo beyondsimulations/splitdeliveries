@@ -35,21 +35,27 @@ function CHISQUAREHEUR(
         log_results == true ? print("\n  starting chi-square tests.") : nothing
         dep = HYOPTHESISTEST_SPARSE(Q, I, J, sig, ordered_skus, min_effect)
         ## Independence gate: compare the dependency premium carried by
-        ## well-supported flagged pairs against the same statistic on a
-        ## margin-preserving randomization of the transactions. Since the
-        ## randomization preserves all order sizes and SKU frequencies, the
-        ## total coappearance mass is identical and the two masses compare
-        ## directly. If the observed mass is within gate_ratio times its
+        ## well-supported flagged pairs against the mean of the same
+        ## statistic on ten margin-preserving randomizations of the
+        ## transactions. Since each randomization preserves all order sizes
+        ## and SKU frequencies, the total coappearance mass is identical and
+        ## the masses compare directly; averaging stabilizes the chance
+        ## level, whose single-draw variance is large when few pairs carry
+        ## support. If the observed mass is within gate_ratio times its
         ## chance level, the flagged dependencies are statistically
         ## indistinguishable from noise and the allocation proceeds on
-        ## expected coappearances alone. Set gate_ratio = 0.0 to disable.
+        ## expected coappearances alone.
         if gate_ratio > 0.0
             log_results == true ? print("\n  evaluating independence gate.") : nothing
-            Q0 = COAPPEARENCE(CURVEBALL(trans), sku_weight)
-            ordered_skus0 = [Q0[i, i] for i in axes(Q0, 1)]
-            CLEANPRINCIPLE!(Q0)
-            dep0 = HYOPTHESISTEST_SPARSE(Q0, I, J, sig, ordered_skus0, min_effect)
-            if SUPPORTEDDEPMASS(dep, Q) <= gate_ratio * SUPPORTEDDEPMASS(dep0, Q0)
+            null_mass = 0.0
+            for r in 1:10
+                Q0 = COAPPEARENCE(CURVEBALL(trans; seed = 4242 + r), sku_weight)
+                ordered_skus0 = [Q0[i, i] for i in axes(Q0, 1)]
+                CLEANPRINCIPLE!(Q0)
+                dep0 = HYOPTHESISTEST_SPARSE(Q0, I, J, sig, ordered_skus0, min_effect)
+                null_mass += SUPPORTEDDEPMASS(dep0, Q0)
+            end
+            if SUPPORTEDDEPMASS(dep, Q) <= gate_ratio * null_mass / 10
                 dep = sparse(Int32[], Int32[], Float32[], I, I)
             end
         end
