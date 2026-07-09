@@ -81,11 +81,13 @@ for dependency in dependencies
     ## sig_levels:  significance levels alpha to apply with the chi-square tests
     ## max_ls:      maximum number of local search runs before termination
     ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
+    ## gate_ratio:  factor kappa of the aggregate independence gate (0.0 disables the gate)
     sig_levels = [1.0e-5]
     max_ls = 100
     chistatus = false
     min_effect = 0.01
     ls_neighborhood = 1.0
+    gate_ratio = 2.0
 
     # Parameters for IIH (Lin et al. 2025)
     ## max_iih_iterations: maximum number of alternating optimization rounds
@@ -161,7 +163,8 @@ for dependency in dependencies
         epsilon_iih::Float64,
         benchiterations::Int64,
         train_test::Float64,
-        dependency::String,
+        dependency::String;
+        gate_ratio = gate_ratio,
     )
 
     print("\nbenchmark finished at ", now(), ".")

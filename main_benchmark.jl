@@ -27,7 +27,8 @@ function BENCHMARK(
     epsilon_iih::Float64,
     benchiterations::Int64,
     train_test::Float64,
-    dependency::String,
+    dependency::String;
+    gate_ratio::Float64 = 2.0,
 )
 
     # Open log file for this benchmark run
@@ -487,6 +488,7 @@ function BENCHMARK(
                                 chistatus,
                                 min_effect,
                                 ls_neighborhood,
+                                gate_ratio,
                             )
                             parcels_benchmark = PARCELSSEND(
                                 trans_test, W, effective_capacity, effective_combination
