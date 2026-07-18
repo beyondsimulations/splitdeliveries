@@ -29,6 +29,7 @@ function BENCHMARK(
     train_test::Float64,
     dependency::String;
     gate_ratio::Float64 = 2.0,
+    only_pairs::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
 )
 
     # Open log file for this benchmark run
@@ -99,6 +100,12 @@ function BENCHMARK(
 
         # Iterate all capacity constellations
         for a in axes(capacity_benchmark, 1)
+            # Restrict to selected (constellation, order_set) pairs; the
+            # constellation index a stays the ORIGINAL row index so the
+            # deterministic instance seeding matches the full runs
+            if only_pairs !== nothing && !any(os -> (a, os) in only_pairs, order_sets)
+                continue
+            end
             ## Load the capacity of each individual run
             ### Note: It has to be sorted starting with the largest capacity
             capacity = Array{Int64,1}(undef, count(x -> x > 0, capacity_benchmark[a, :]))
@@ -130,6 +137,12 @@ function BENCHMARK(
             ## Iterate over different number of orders
             for order_set in order_sets
                 orders = order_set * skus_benchmark[a]
+                if only_pairs !== nothing
+                    (a, order_set) in only_pairs || continue
+                    # force fresh generation: the reuse check below compares
+                    # dimensions only, which is unsafe once pairs are skipped
+                    trans = spzeros(Bool, 0, 0)
+                end
 
                 ## Generate artificial random transactions without dependencies if there is no transactional dataset
                 if size(trans, 2) == skus_benchmark[a] && size(trans, 1) == orders

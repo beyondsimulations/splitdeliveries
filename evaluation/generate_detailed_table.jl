@@ -8,10 +8,22 @@ df = CSV.read("results/overall_results.csv", DataFrame)
 # Uniform-weight tables only; the weighted modes get dedicated tables.
 df = df[df.weight_mode .== "uniform", :]
 
-# Success definition: a run counts as successful if it returned a feasible
-# allocation within the practical wall-clock cap. The solver time limit is
-# 900 s; the cap adds tolerance for model building.
+# Success definition: constructive heuristics count as successful if they
+# returned a feasible allocation (every written row is one). For the
+# solver-based methods (OPT, QMK) and KL, the run must additionally finish
+# within the practical wall-clock cap; the solver time limit is 900 s and
+# the cap adds tolerance for model building. OPT further requires a proven
+# optimum (gap <= 1e-6).
 SUCCESS_CAP = 1.5 * 900
+CAPPED_MODES = ["OPT", "QMK", "QMKJ", "KL"]
+function is_success(row)
+    if row.mode in CAPPED_MODES
+        row.duration < SUCCESS_CAP || return false
+        row.mode == "OPT" && return row.gap <= 1e-6
+        return true
+    end
+    return true
+end
 
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
@@ -24,7 +36,8 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
-    "EMCI" => "MCI",
+    "EMCI" => "EMCI",
+    "IIH" => "IIH",
 )
 
 # Filter for relevant modes and map to standard names
@@ -32,7 +45,7 @@ filtered_df = df[in.(df.mode, Ref(keys(mode_mapping))), :]
 filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 
 # Define heuristics in order for table
-heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "MCI", "OPT"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "EMCI", "IIH", "OPT"]
 
 # Get unique SKU levels and sort them
 sku_levels = sort(unique(filtered_df.skus))
@@ -55,7 +68,7 @@ for sku in sku_levels
 
         if nrow(subset) > 0
             # Calculate success rate and average duration
-            successful_runs = subset.duration[subset.duration .< SUCCESS_CAP]  # success cap, see header
+            successful_runs = subset.duration[is_success.(eachrow(subset))]  # success definition, see header
             total_runs = nrow(subset)
             success_rate = length(successful_runs) / total_runs * 100
 
@@ -96,7 +109,7 @@ end
 # Display the table
 println("\n\n")
 println("\\begin{threeparttable}")
-println("\\begin{tabular}{lrrrrrrrrrr}")
+println("\\begin{tabular}{l" * "r"^length(heuristics) * "}")
 println("\\toprule")
 print("\$|\\mathcal{I}|\$")
 for heur in heuristics
@@ -165,7 +178,7 @@ println(
     "      \\item \\textit{Notes.} The computation time is displayed in seconds in the first row, with the success rate shown in the second row. We used an octa-core AMD 5800X3D CPU with 64 GB RAM.",
 )
 println(
-    "      \\item \$^a\$ Excluded from further benchmarking, as feasible solution could not be computed within 3,600 seconds.",
+    "      \\item \$^a\$ Excluded from further benchmarking, as no feasible solution could be computed within the time limit of 900 seconds.",
 )
 println("\\end{tablenotes}")
 println("\\end{threeparttable}")
