@@ -8,10 +8,22 @@ df = CSV.read("results/overall_results.csv", DataFrame)
 # Uniform-weight tables only; the weighted modes get dedicated tables.
 df = df[df.weight_mode .== "uniform", :]
 
-# Success definition: a run counts as successful if it returned a feasible
-# allocation within the practical wall-clock cap. The solver time limit is
-# 900 s; the cap adds tolerance for model building.
+# Success definition: constructive heuristics count as successful if they
+# returned a feasible allocation (every written row is one). For the
+# solver-based methods (OPT, QMK) and KL, the run must additionally finish
+# within the practical wall-clock cap; the solver time limit is 900 s and
+# the cap adds tolerance for model building. OPT further requires a proven
+# optimum (gap <= 1e-6).
 SUCCESS_CAP = 1.5 * 900
+CAPPED_MODES = ["OPT", "QMK", "QMKJ", "KL"]
+function is_success(row)
+    if row.mode in CAPPED_MODES
+        row.duration < SUCCESS_CAP || return false
+        row.mode == "OPT" && return row.gap <= 1e-6
+        return true
+    end
+    return true
+end
 
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
@@ -24,6 +36,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
+    "EMCI" => "EMCI",
     "RND" => "RND",
 )
 
@@ -37,7 +50,7 @@ filtered_df.test_split_ratio = filtered_df.parcel_test ./ filtered_df.orders
 filtered_df.train_split_ratio = filtered_df.parcel_train ./ filtered_df.orders
 
 # Define heuristics in order for table (including RND for comparison)
-heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "EMCI", "RND"]
 
 # Get unique SKU levels and sort them
 sku_levels = sort(unique(filtered_df.skus))
@@ -49,6 +62,7 @@ results = DataFrame(;
     heuristic = String[],
     test_split_ratio = Any[],
     train_split_ratio = Any[],
+    reduced_sample = Bool[],
 )
 
 println(
@@ -72,23 +86,23 @@ for sku in sku_levels
                     :,
                 ]
 
+                reduced_sample = false
                 if nrow(subset) > 0
                     # Calculate success rate and average split ratios
-                    successful_runs = subset.duration[subset.duration .< SUCCESS_CAP]
-                    successful_test_ratios = subset.test_split_ratio[subset.duration .< SUCCESS_CAP]
-                    successful_train_ratios = subset.train_split_ratio[subset.duration .< SUCCESS_CAP]
+                    success_mask = is_success.(eachrow(subset))
+                    successful_test_ratios = subset.test_split_ratio[success_mask]
+                    successful_train_ratios = subset.train_split_ratio[success_mask]
                     total_runs = nrow(subset)
-                    success_rate = length(successful_runs) / total_runs * 100
+                    success_rate = sum(success_mask) / total_runs * 100
 
-                    # Only include results if 100% success rate
-                    if success_rate == 100.0 && length(successful_test_ratios) > 0
-                        # Calculate actual split ratios
+                    if length(successful_test_ratios) > 0
+                        # Calculate actual split ratios; mark cells with failures
+                        reduced_sample = success_rate < 100.0
                         avg_test_ratio = mean(successful_test_ratios)
                         avg_train_ratio = mean(successful_train_ratios)
                         actual_test_ratio = round(avg_test_ratio * 100; digits = 2)
                         actual_train_ratio = round(avg_train_ratio * 100; digits = 2)
                     else
-                        # Skip this result if not 100% success
                         actual_test_ratio = nothing
                         actual_train_ratio = nothing
                     end
@@ -107,6 +121,7 @@ for sku in sku_levels
                             heuristic = heur,
                             test_split_ratio = actual_test_ratio,
                             train_split_ratio = actual_train_ratio,
+                            reduced_sample = reduced_sample,
                         ),
                     )
                 end
@@ -118,7 +133,7 @@ end
 # Display the table
 println("\n\n")
 println("\\begin{threeparttable}")
-println("\\begin{tabular}{lrrrrrrrrrrrr}")
+println("\\begin{tabular}{ll" * "r"^length(heuristics) * "}")
 println("\\toprule")
 print("\$|\\mathcal{I}|\$ & Ratio")
 for heur in heuristics
@@ -142,10 +157,11 @@ for sku in sku_levels
                 heur_data = ratio_results[ratio_results.heuristic .== heur, :]
                 if nrow(heur_data) > 0
                     test_ratio = heur_data[1, :test_split_ratio]
+                    marker = heur_data[1, :reduced_sample] ? "\$^a\$" : ""
                     if test_ratio isa Number
-                        print(" & \$$test_ratio\$")
+                        print(" & \$$test_ratio\$$marker")
                     else
-                        print(" & $test_ratio")
+                        print(" & $test_ratio$marker")
                     end
                 else
                     print(" & -")
@@ -153,7 +169,7 @@ for sku in sku_levels
             end
             println(" \\\\")
 
-            # Train split ratio row
+            # Train split ratio row (all heuristics)
             print(" & {\\footnotesize (train)}")
             for heur in heuristics
                 heur_data = ratio_results[ratio_results.heuristic .== heur, :]
@@ -165,7 +181,7 @@ for sku in sku_levels
                         print(" & {\\footnotesize $train_ratio}")
                     end
                 else
-                    print(" & -")
+                    print(" & ")
                 end
             end
             println(" \\\\")
@@ -179,10 +195,10 @@ println("\\end{tabular}")
 println("\\begin{tablenotes}")
 println("      \\smaller")
 println(
-    "      \\item \\textit{Notes.} Split ratios as percentages are shown for each algorithm (lower is better). Test performance is shown in the first row, training performance in the second row (smaller font). Only algorithms with 100\\% success rates are shown. We used an octa-core AMD 5800X3D CPU with 64 GB RAM.",
+    "      \\item \\textit{Notes.} Split ratios as percentages are shown for each algorithm (lower is better). Test performance is shown in the first row and training performance in the smaller-font second row. A dash marks methods that are not applicable at the respective scale.",
 )
 println(
-    "      \\item Results are only displayed for algorithms that successfully solved all instances within 3,600 seconds.",
+    "      \\item \$^a\$ Mean over successfully solved instances only (reduced sample size, cf.\\ the success definition in Section~5.1).",
 )
 println("\\end{tablenotes}")
 println("\\end{threeparttable}")

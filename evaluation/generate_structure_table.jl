@@ -8,10 +8,22 @@ df = CSV.read("results/overall_results.csv", DataFrame)
 # Uniform-weight tables only; the weighted modes get dedicated tables.
 df = df[df.weight_mode .== "uniform", :]
 
-# Success definition: a run counts as successful if it returned a feasible
-# allocation within the practical wall-clock cap. The solver time limit is
-# 900 s; the cap adds tolerance for model building.
+# Success definition: constructive heuristics count as successful if they
+# returned a feasible allocation (every written row is one). For the
+# solver-based methods (OPT, QMK) and KL, the run must additionally finish
+# within the practical wall-clock cap; the solver time limit is 900 s and
+# the cap adds tolerance for model building. OPT further requires a proven
+# optimum (gap <= 1e-6).
 SUCCESS_CAP = 1.5 * 900
+CAPPED_MODES = ["OPT", "QMK", "QMKJ", "KL"]
+function is_success(row)
+    if row.mode in CAPPED_MODES
+        row.duration < SUCCESS_CAP || return false
+        row.mode == "OPT" && return row.gap <= 1e-6
+        return true
+    end
+    return true
+end
 
 # Define mapping from mode names to table headers
 mode_mapping = Dict(
@@ -24,6 +36,7 @@ mode_mapping = Dict(
     "GP" => "GP",
     "GS" => "GS",
     "BS" => "BS",
+    "EMCI" => "EMCI",
     "RND" => "RND",
 )
 
@@ -35,7 +48,7 @@ filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
 
 # Define heuristics in order for table
-heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "RND"]
+heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "EMCI", "RND"]
 
 # Get unique dependency structures in desired order (ID, MD, HD)
 all_deps = unique(filtered_df.dependency)
@@ -66,10 +79,10 @@ for dep in dependency_levels
 
         if nrow(subset) > 0
             # Calculate success rate and average split ratio
-            successful_runs = subset.duration[subset.duration .< SUCCESS_CAP]
-            successful_ratios = subset.split_ratio[subset.duration .< SUCCESS_CAP]
+            success_mask = is_success.(eachrow(subset))
+            successful_ratios = subset.split_ratio[success_mask]
             total_runs = nrow(subset)
-            success_rate = length(successful_runs) / total_runs * 100
+            success_rate = sum(success_mask) / total_runs * 100
 
             println(
                 "  $heur: $(length(successful_ratios))/$(total_runs) successful ($(round(success_rate, digits=1))%)",
@@ -109,7 +122,7 @@ println("\n\n")
 println("\\caption{Average split ratio (in \\%) depending on the dataset structure}")
 println("\\label{tab:dep}")
 println("\\begin{threeparttable}")
-println("\\begin{tabular}{lrrrrrrrr}")
+println("\\begin{tabular}{l" * "r"^length(heuristics) * "}")
 println("\\toprule")
 print("\t \t")
 for heur in heuristics
