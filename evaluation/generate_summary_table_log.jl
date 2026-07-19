@@ -18,7 +18,7 @@ SUCCESS_CAP = 1.5 * 900
 CAPPED_MODES = ["OPT", "QMK", "QMKJ", "KL"]
 function is_success(row)
     if row.mode in CAPPED_MODES
-        is_success(row) || return false
+        row.duration < SUCCESS_CAP || return false
         row.mode == "OPT" && return row.gap <= 1e-6
         return true
     end

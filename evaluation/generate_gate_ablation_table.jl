@@ -18,6 +18,15 @@ end
 gated = chi_frame(df_gated)
 ungated = chi_frame(df_ungated)
 
+# Compare on identical scenario grids only: the re-run of the 14 crashed
+# tail scenarios had CHI disabled, so they exist gated-only and would skew
+# the per-cell means.
+scen = [:dependency, :skus, :wareh, :diff, :buffer, :orders]
+common = innerjoin(unique(gated[:, scen]), unique(ungated[:, scen]); on = scen)
+gated = innerjoin(gated, common; on = scen)
+ungated = innerjoin(ungated, common; on = scen)
+println("scenarios compared: $(nrow(common)) (gate-only scenarios dropped)")
+
 # Get unique dependency structures in desired order (ID, MD, HD)
 all_deps = unique(gated.dependency)
 dependency_levels = []
