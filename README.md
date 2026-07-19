@@ -97,7 +97,7 @@ bash run_benchmarks.sh random       # random
    julia evaluation/generate_weighted_table.jl        # heterogeneous storage requirements
    julia evaluation/generate_gate_ablation_table.jl
    ```
-Instance generation is seeded deterministically from the scenario parameters, so re-runs produce identical instances. `run_missing_tail.jl` documents how a specific subset of scenarios can be re-run in isolation while preserving these seeds.
+Instance generation is seeded deterministically from the scenario parameters, so re-runs produce identical instances. The `only_pairs` keyword of the `BENCHMARK` function additionally allows re-running a subset of scenarios in isolation while preserving these seeds.
 
 ## Dependencies
 The following Julia packages are required:
