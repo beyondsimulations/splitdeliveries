@@ -41,3 +41,8 @@ run_M*
 open/
 runs/
 student_data/
+
+# Editor and OS artifacts
+.DS_Store
+.zed/
+.claude/

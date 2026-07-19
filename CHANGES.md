@@ -267,7 +267,7 @@ on success, `return stop` otherwise), and the caller captures it:
 `stop = STRATEGY1!(X, m, L, capacity, stop)`.
 
 **Impact:** The algorithm now correctly resets the stagnation counter when a
-beneficial move is found, matching the intended behavior from Zhang et al. (2021).
+beneficial move is found, matching the intended behavior from Zhu et al. (2021).
 Previously, the algorithm always terminated after exactly `stagnant` iterations
 regardless of whether improvements were still being found.
 

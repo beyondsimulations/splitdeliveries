@@ -1,10 +1,13 @@
-# Targeted re-run of the 14 uniform 1,000-SKU scenarios missing from run 2
-# (the K = 8/10 buffered tail; constellations 17-20 of capacity_1000.csv).
-# CHI stays OFF: its rows come from the gated re-run in results_chigate/ and
+# Targeted re-run of an individual subset of uniform 1,000-SKU scenarios
+# (here: the K = 8/10 buffered scenarios of constellations 17-20 in
+# capacity_1000.csv). The per-scenario instance seeds depend on the original
+# constellation row indices, which the only_pairs mechanism preserves, so the
+# scenarios reproduce exactly the instances of a full run.
+# CHI stays OFF: its rows come from the gated run in results_chigate/ and
 # are swapped in by aggregate_benchmarks.jl. Everything else mirrors
 # main_benchmark_settings.jl for experiment "1000" with uniform weights.
 #
-# Run from the repo root on the benchmark machine:
+# Run from the repository root:
 #   julia run_missing_tail.jl
 #
 # The run writes its own files (results/1000fix_benchmark_*.csv, kept as a
@@ -14,8 +17,7 @@
 
 include("load_packages.jl")
 
-# (dependency, wareh, diff, buffer, order_set) of every missing scenario,
-# as identified from overall_results.csv on 2026-07-17
+# (dependency, wareh, diff, buffer, order_set) of every scenario to re-run
 missing_scenarios = [
     ("HD-VF", 10, 0.0, 0.2, 20),
     ("HD-VF", 10, 0.2, 0.2, 2),
@@ -33,8 +35,7 @@ missing_scenarios = [
     ("ID-VF", 10, 0.2, 0.2, 20),
 ]
 
-# Filenames carry "1000fix"; the instance seeds depend on the ORIGINAL
-# constellation row indices, which only_pairs preserves
+# Filenames carry "1000fix" to keep the re-run separate from the main files
 experiment = "1000fix"
 weight_mode = :uniform
 

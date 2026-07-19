@@ -10,6 +10,9 @@
 # Weight mode (default: uniform)
 WEIGHT_MODE="${1:-uniform}"
 
+# Folder for the generated per-dependency run scripts
+mkdir -p runs
+
 # Array of dependencies
 dependencies=(
     "ID-SF"
