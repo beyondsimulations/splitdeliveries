@@ -15,16 +15,23 @@ weight_suffixes = ["", "_frequency", "_random"]
 
 function load_data(folder::String)
     frame = DataFrame[]
+    files = 0
     for experiment in experiments
         for dependency in dependencies
             for suffix in weight_suffixes
                 file = "$folder/$(experiment)_$dependency$suffix.csv"
                 isfile(file) || continue
+                files += 1
                 loadframe = CSV.read(file, DataFrame; stringtype = String)
                 isempty(frame) ? frame = loadframe : frame = append!(frame, loadframe)
             end
         end
     end
+    files > 0 || error(
+        "no benchmark csv files found in $(joinpath(pwd(), folder)) - " *
+        "run this script from the repository root and check the folder exists",
+    )
+    print("$folder: loaded $files files, $(nrow(frame)) rows\n")
     return frame
 end
 
