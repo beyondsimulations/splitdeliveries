@@ -36,7 +36,7 @@ Configuration of heuristics and parameters can be adjusted in `main_benchmark_se
 * `results/` - benchmark outputs of the main runs; `results_chigate/` - CHI re-run with the independence gate enabled
 * `aggregate_benchmarks.jl` - merges all runs into `results/overall_results.csv`
 * `evaluation/` - scripts that generate the result tables of the article
-* `helpers/` - small utilities (generator verification, test data)
+* `helpers/` - installation smoke test (`test_benchmark.jl`, runs without Gurobi) and generator verification (`verify_generator.jl`)
 
 ## Required Solvers
 * [Gurobi](https://www.gurobi.com) - Required for QMK, KLQ, IIH, and OPT modes
