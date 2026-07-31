@@ -280,6 +280,9 @@ function REPLICATEALL!(
 end
 
 # function to allocate the bestselling SKUs to the weights
+# sum_nor already holds the per-storage-unit independent coappearances of each
+# SKU (the caller divides by the storage size), so it is used as is. The storage
+# sizes sku_weights only enter the capacity accounting.
 function BESTSELLING_ALLOCATE!(
     sum_nor::Vector{<:Real},
     capacity_left::Vector{<:Real},
@@ -288,10 +291,10 @@ function BESTSELLING_ALLOCATE!(
     nor_order::Vector{Int64},
 )
     bestselling = BESTSELLING_SKUS(capacity_left, sku_weights)
-    normal_weight = sum_nor ./ sku_weights
+    normal_weight = Float64.(sum_nor)
     for k in axes(capacity_left, 1)
         if capacity_left[k] > bestselling
-            normal_weight .= sum_nor ./ sku_weights
+            normal_weight .= sum_nor
             bestselling_space_left = copy(bestselling)
             pos = 1
             while pos <= length(nor_order) &&
@@ -311,12 +314,14 @@ end
 # function to calculate the weight of each warehouse. It shows us the density of 
 # the independent coappearances in each warehouse if we were to allocate
 # all SKUs according to the highest independent coappearances.
+# As in BESTSELLING_ALLOCATE!, sum_nor is already expressed per storage unit and
+# sku_weights is only used to book the consumed capacity.
 function WHWEIGHT(
     capacity::Vector{Int64}, sum_nor::Vector{<:Real}, sku_weights::Vector{<:Real}
 )
     free_capacity::Vector{Float64} = copy(capacity)
     weight = zeros(Float64, size(free_capacity))
-    nor_order = sortperm(sum_nor ./ sku_weights; rev = true)
+    nor_order = sortperm(sum_nor; rev = true)
     normal = BESTSELLING_ALLOCATE!(sum_nor, free_capacity, weight, sku_weights, nor_order)
     normal_weight = copy(normal)
     pos = 1
@@ -336,7 +341,7 @@ function WHWEIGHT(
             pos += 1
         end
     end
-    weight .= weight ./ sum(sum_nor ./ sku_weights)
+    weight .= weight ./ sum(sum_nor)
     return weight::Vector{Float64}
 end
 
