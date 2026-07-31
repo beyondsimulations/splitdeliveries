@@ -358,3 +358,32 @@ values (`qij - independent`) don't need 15 digits of precision for a heuristic.
 entire Q matrix. Now allocates only a new `Float32` values array and reuses Q's
 sparsity structure (`colptr`, `rowval`). Uses merge-scan over Q and dep nonzeros
 instead of random sparse lookups.
+
+## 15. Double Storage-Size Normalization Fix in `WHWEIGHT`
+
+**Files:** `functions/functions_chisquare.jl` (`WHWEIGHT`, `BESTSELLING_ALLOCATE!`)
+
+**What:** Both functions divided the incoming `sum_nor` vector by `sku_weights`
+a second time. The caller (`heuristics/heuristic_chisquare.jl`) already passes
+`sum_nor = t^E / s_i`, so the warehouse weights `w^E` were effectively built
+from `t^E / s_i^2` — in the SKU ranking (`sortperm`), in the accumulated weight
+per warehouse, and in the normalizing denominator (four division sites in
+total). The second division is removed; `sum_nor` is now used as passed, and
+`sku_weights` is retained solely for capacity accounting
+(`free_capacity[k] -= sku_weights[i]`, `BESTSELLING_SKUS`).
+
+**Impact:** Only runs with non-uniform storage sizes are affected. With
+`sku_weight ≡ 1` the removed operations were divisions by one, so all
+uniform-weight results are bit-identical before and after the fix (verified on
+200 random instances: identical bit patterns for uniform weights, and identical
+to the corrected reference for non-uniform weights).
+
+**Case study:** 57 evaluation days, two warehouses of 400,000 storage units,
+non-uniform category-brand storage sizes: aggregate split ratio (splits/orders)
+1.7535% -> 1.7531%, i.e. -0.0004 pp and 71,133 -> 71,117 split parcels; the
+allocation differs on 5 of the 9 re-optimisation days (at most 82 of 17,950
+matrix entries). The direction and magnitude of the published result are
+unchanged.
+
+**Follow-up:** The weighted (variable-weight) benchmark tables and the case-study
+result CSVs need to be regenerated; uniform-weight benchmark output does not.
