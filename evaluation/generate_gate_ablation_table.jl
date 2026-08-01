@@ -10,8 +10,8 @@ df_ungated = CSV.read("results/overall_results_chiungated.csv", DataFrame)
 
 function chi_frame(df)
     out = df[(df.mode .== "CHI_1.0e-5") .& (df.weight_mode .== "uniform"), :]
-    out.split_ratio = out.parcel_test ./ out.orders
-    out.train_split_ratio = out.parcel_train ./ out.orders
+    out.split_ratio = out.parcel_test ./ (out.orders .* (1 .- out.train_test))
+    out.train_split_ratio = out.parcel_train ./ (out.orders .* out.train_test)
     return out
 end
 

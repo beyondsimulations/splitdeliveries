@@ -93,7 +93,7 @@ function MQKP(
     @constraint(
         mqkp,
         capconstraint[k in GK],
-        sum(X[i, k] * sku_weight[i] for i in GI) == capacity[k]
+        sum(X[i, k] * sku_weight[i] for i in GI) <= capacity[k]
     )
     if mode == "QMK"
         @constraint(mqkp, minallocation[i in GI], sum(X[i, k] for k in GK) >= 1)

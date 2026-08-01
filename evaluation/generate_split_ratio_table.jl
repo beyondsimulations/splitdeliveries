@@ -46,8 +46,8 @@ filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 
 # Add order/SKU ratio and split ratio calculations for both test and train
 filtered_df.order_sku_ratio = filtered_df.orders ./ filtered_df.skus
-filtered_df.test_split_ratio = filtered_df.parcel_test ./ filtered_df.orders
-filtered_df.train_split_ratio = filtered_df.parcel_train ./ filtered_df.orders
+filtered_df.test_split_ratio = filtered_df.parcel_test ./ (filtered_df.orders .* (1 .- filtered_df.train_test))
+filtered_df.train_split_ratio = filtered_df.parcel_train ./ (filtered_df.orders .* filtered_df.train_test)
 
 # Define heuristics in order for table (including RND for comparison)
 heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "EMCI", "RND"]

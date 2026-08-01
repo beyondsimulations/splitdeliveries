@@ -728,9 +728,11 @@ function FILLUP!(
                     X[best[2], d] = 1
                     capacity_left[d] -= sku_weight[best[2]]
 
-                    weight_inv = sku_weight[best[2]] > 0 ? 1.0 / sku_weight[best[2]] : 0.0
                     @inbounds for idx in nzrange(Q, best[2])
-                        state[q_rows[idx], d] += q_vals[idx] * weight_inv
+                        i_row = q_rows[idx]
+                        if sku_weight[i_row] > 0
+                            state[i_row, d] += q_vals[idx] / sku_weight[i_row]
+                        end
                     end
                 else
                     capacity_left[d] = 0
