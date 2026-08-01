@@ -45,7 +45,7 @@ filtered_df = df[in.(df.mode, Ref(keys(mode_mapping))), :]
 filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 
 # Add split ratio calculation for test
-filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
+filtered_df.split_ratio = filtered_df.parcel_test ./ (filtered_df.orders .* (1 .- filtered_df.train_test))
 
 # Define heuristics in order for table
 heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "EMCI", "RND"]
@@ -173,7 +173,7 @@ println("\\end{tabular}")
 println("\\begin{tablenotes}")
 println("      \\smaller")
 println(
-    "      \\item \\textit{Notes.} The split ratio is calculated using the number of split parcels and the number of orders.",
+    "      \\item \\textit{Notes.} The split ratio is calculated using the number of split parcels and the number of orders of the evaluated half of the dataset.",
 )
 println(
     "      \\item \$^a\$ Smaller sample size, as some larger instances could not be solved."

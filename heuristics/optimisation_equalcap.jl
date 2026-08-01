@@ -34,7 +34,7 @@ function FULLOPTEQ(
     @variable(allocation, X[GI, GK], Bin)
     @variable(allocation, Y[GJ, GK], Bin)
     @objective(allocation, Min, sum(Y[j, k] for j in GJ, k in GK))
-    @constraint(allocation, capconstraint[k in GK], sum(X[i, k] for i in GI) == capacity[k])
+    @constraint(allocation, capconstraint[k in GK], sum(X[i, k] for i in GI) <= capacity[k])
     @constraint(allocation, minallocation[i in GI], sum(X[i, k] for k in GK) == 1)
     @constraint(
         allocation, mapping[j in GJ, k in GK, i in GI; trans[j, i] == 1], X[i, k] <= Y[j, k]

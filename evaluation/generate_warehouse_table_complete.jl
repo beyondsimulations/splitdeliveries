@@ -45,7 +45,7 @@ filtered_df = df[in.(df.mode, Ref(keys(mode_mapping))), :]
 filtered_df.heuristic = [mode_mapping[mode] for mode in filtered_df.mode]
 
 # Add split ratio calculation
-filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
+filtered_df.split_ratio = filtered_df.parcel_test ./ (filtered_df.orders .* (1 .- filtered_df.train_test))
 
 # Define key heuristics for comparison (including RND as baseline)
 heuristics = ["QMK", "CHI", "KL", "GO", "GP", "GS", "BS", "EMCI", "RND"]

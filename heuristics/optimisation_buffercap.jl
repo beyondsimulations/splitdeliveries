@@ -50,7 +50,7 @@ function FULLOPTUEQ(
     @constraint(
         allocation, sku_to_warehouse[i in GI, j in GJ, k in GK], Z[j, i, k] <= X[i, k]
     )
-    @constraint(allocation, capconstraint[k in GK], sum(X[i, k] for i in GI) == capacity[k])
+    @constraint(allocation, capconstraint[k in GK], sum(X[i, k] for i in GI) <= capacity[k])
     @constraint(allocation, minallocation[i in GI], sum(X[i, k] for k in GK) >= 1)
     JuMP.optimize!(allocation)
     G =

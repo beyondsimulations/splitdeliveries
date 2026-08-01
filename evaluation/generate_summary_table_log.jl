@@ -57,7 +57,7 @@ println("Heuristics: $(sort(unique(filtered_df.heuristic)))")
 println()
 
 # Add split ratio calculation
-filtered_df.split_ratio = filtered_df.parcel_test ./ filtered_df.orders
+filtered_df.split_ratio = filtered_df.parcel_test ./ (filtered_df.orders .* (1 .- filtered_df.train_test))
 
 # Check for any invalid split ratios
 invalid_ratios = sum(isnan.(filtered_df.split_ratio) .| isinf.(filtered_df.split_ratio))

@@ -1,12 +1,15 @@
 ## function to sort the SKUs after the number of sales
 function SORTSALES(trans::SparseMatrixCSC{Bool,Int64}, sku_weight::Vector{<:Real})
     sales = zeros(Int64, size(trans, 2), 4)
-    sales[:, 3] = round.(Int64, sum(trans; dims = 1) ./ transpose(sku_weight))
+    # rank by the exact value per capacity unit; rounding the ratio would
+    # collapse the ranking under heterogeneous storage requirements
+    value_per_unit = vec(sum(trans; dims = 1)) ./ sku_weight
+    sales[:, 3] = round.(Int64, value_per_unit)
     sales[:, 4] .= 0
     for i in axes(trans, 2)
         sales[i, 1] = i
     end
-    sales = sortslices(sales; dims = 1, by = x->x[3], rev = true, alg = QuickSort)
+    sales = sales[sortperm(value_per_unit; rev = true, alg = QuickSort), :]
     for i in axes(trans, 2)
         sales[i, 2] = i
     end
