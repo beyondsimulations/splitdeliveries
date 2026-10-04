@@ -69,22 +69,22 @@ function FULLOPTUEQ(
 
     # Check if the solution is empty (no allocations made)
     if sum(out) == 0
-        if termination_status(mqkp) == MOI.INFEASIBLE
+        if termination_status(allocation) == MOI.INFEASIBLE
             error(
-                "MQKP optimization resulted in an infeasible model. Please check input parameters.",
+                "FULLOPTUEQ optimization resulted in an infeasible model. Please check input parameters.",
             )
         else
             println(
-                "MQKP optimization resulted in an empty solution. Status: $(termination_status(mqkp))",
+                "FULLOPTUEQ optimization resulted in an empty solution. Status: $(termination_status(allocation))",
             )
             println("Attempting basic allocation as fallback...")
             # Simple greedy allocation - assign each item to the first warehouse with capacity
             remaining_capacity = copy(capacity)
             for i in GI
                 for k in GK
-                    if remaining_capacity[k] >= sku_weight[i]
+                    if remaining_capacity[k] >= 1
                         out[i, k] = 1
-                        remaining_capacity[k] -= sku_weight[i]
+                        remaining_capacity[k] -= 1
                         break
                     end
                 end
