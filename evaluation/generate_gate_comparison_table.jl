@@ -2,7 +2,7 @@ using Pkg
 Pkg.activate("splitdeliveries")
 using CSV, DataFrames, Statistics
 
-# Ablation of the independence gate: CHI with the gate (production
+# Comparison of the independence gate: CHI with the gate (production
 # configuration) against CHI with the gate disabled, on identical scenario
 # grids. Uniform storage requirements only.
 df_gated = CSV.read("results/overall_results.csv", DataFrame)
@@ -44,7 +44,7 @@ mean_ratio(frame, dep, sku, col) = begin
     nrow(subset) > 0 ? round(mean(subset[!, col]) * 100; digits = 2) : nothing
 end
 
-println("Gate ablation analysis (test split ratio, gated vs ungated):")
+println("Gate comparison analysis (test split ratio, gated vs ungated):")
 println("="^60)
 for dep in dependency_levels
     for sku in sku_levels
@@ -61,7 +61,7 @@ println("\n\n")
 println(
     "\\caption{Average split ratio (in \\%) of CHI with and without the independence gate}",
 )
-println("\\label{tab:gate_ablation}")
+println("\\label{tab:gate_comparison}")
 println("\\begin{threeparttable}")
 println("\\begin{tabular}{l" * "rr"^length(sku_levels) * "}")
 println("\\toprule")
