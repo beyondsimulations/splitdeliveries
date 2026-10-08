@@ -46,5 +46,5 @@ frame_gated = load_data("results_chigate")
 frame_merged = vcat(frame[.!is_chi.(frame.mode), :], frame_gated[is_chi.(frame_gated.mode), :])
 CSV.write("results/overall_results.csv", frame_merged)
 
-# Ungated CHI rows from the main run, used for the gate ablation.
+# Ungated CHI rows from the main run, used for the gate comparison.
 CSV.write("results/overall_results_chiungated.csv", frame[is_chi.(frame.mode), :])
