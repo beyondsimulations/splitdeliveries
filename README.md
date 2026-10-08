@@ -1,19 +1,21 @@
 # Optimizing SKU-Warehouse Allocations to minimize Split Parcels in E-Commerce Environments
 
 ## About the Project
-This repository contains the implementation of novel heuristics for minimizing split deliveries in e-commerce warehouse allocation problems, as presented in our research article. We introduce two new approaches:
-- QMK heuristic
-- CHI heuristic
+This repository contains the implementation of the heuristics for minimizing split deliveries in e-commerce warehouse allocation problems, as presented in our research article. Our contribution is the CHI heuristic; the QMK heuristic is an adapted quadratic-multiple-knapsack baseline from earlier theses, included for comparison and not a contribution of this work:
+- CHI heuristic (our contribution)
+- QMK heuristic (adapted baseline)
 
 Additionally, we implement six state-of-the-art competing heuristics for comparison. This codebase enables full reproduction of our research results and can be adapted for any split-delivery minimization problem.
 
 ## Implemented Heuristics
 
-### Novel Approaches
+### Our Heuristic
+* **CHI**: Chi-square heuristic
+
+### Adapted Baseline (earlier theses)
 * **QMK**: QMK heuristic optimization model (Gurobi solver)
 * **QMKS**: QMK heuristic optimization model (SCIP solver)
 * **QMKJ**: QMK heuristic optimization model (Juniper solver)
-* **CHI**: Chi-square heuristic
 
 ### Benchmark Heuristics
 * **KL**: K-LINK heuristic ([Zhu et al., 2021](https://doi.org/10.1016/j.ejor.2020.08.024))
@@ -82,12 +84,12 @@ bash run_benchmarks.sh random       # random
 ```
 
 ### Reproducing the Results of the Article
-1. Run the full grid (all six dataset configurations at all four SKU scales) for each of the three weight modes as described above. `results_chigate/` contains the CHI results of the same grid with the aggregate independence gate enabled, which is the production configuration reported in the article.
+1. Run the full grid (all six dataset configurations at all four SKU scales, across the warehouse and capacity configurations) for each of the three weight modes as described above. This reproduces all 2,880 scenarios of the article; instances are seeded deterministically from the scenario parameters, so the runs are reproducible. `results_chigate/` contains the CHI results of the same grid with the aggregate independence gate enabled, which is the production configuration reported in the article.
 2. Aggregate all runs into a single file:
    ```bash
    julia aggregate_benchmarks.jl
    ```
-   This writes `results/overall_results.csv` (CHI rows taken from the gated run) and `results/overall_results_chiungated.csv` (ungated CHI rows, used for the gate ablation).
+   This writes `results/overall_results.csv` (CHI rows taken from the gated run) and `results/overall_results_chiungated.csv` (ungated CHI rows, used for the gate comparison).
 3. Generate the article's tables from the aggregated results:
    ```bash
    julia evaluation/generate_detailed_table.jl        # computation times
@@ -95,7 +97,7 @@ bash run_benchmarks.sh random       # random
    julia evaluation/generate_structure_table.jl       # split ratio by dataset structure
    julia evaluation/generate_warehouse_table_complete.jl
    julia evaluation/generate_weighted_table.jl        # heterogeneous storage requirements
-   julia evaluation/generate_gate_ablation_table.jl
+   julia evaluation/generate_gate_comparison_table.jl
    ```
 Instance generation is seeded deterministically from the scenario parameters, so re-runs produce identical instances. The `only_pairs` keyword of the `BENCHMARK` function additionally allows re-running a subset of scenarios in isolation while preserving these seeds.
 
@@ -121,6 +123,6 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 - For issues and feature requests, please use the [GitHub Issues](https://github.com/beyondsimulations/splitdeliveries/issues) page
 
 ## References
-* Lin, Y.-H., Zhu, S., Wang, R. (2025). Multi-Warehouse Assortment Selection: Minimizing Order Splitting in E-Commerce Logistics. Production and Operations Management. https://doi.org/10.1177/10591478251365581
+* Lin, H., Li, X., & Liu, F. (2026). Multi-Warehouse Assortment Selection: Minimizing Order Splitting in E-Commerce Logistics. Production and Operations Management, 35(3). https://doi.org/10.1177/10591478251365581
 * Zhu, S., Hu, X., Huang, K. et al. (2021). Optimization of product category allocation in multiple warehouses to minimize splitting of online supermarket customer orders. European Journal of Operational Research. https://doi.org/10.1016/j.ejor.2020.08.024
 * Catalan, A., Fisher, M. (2012). Assortment Allocation to Distribution Centers to Minimize Split Customer Orders. SSRN. https://doi.org/10.2139/ssrn.2166687
