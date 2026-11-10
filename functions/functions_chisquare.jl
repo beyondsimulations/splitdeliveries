@@ -3,7 +3,7 @@ function chi_part(a::Real, b::Real)
 end
 
 function INDEPENDENT(sum_cond_sku::Vector{<:Real}, J::Int64, i::Int64, j::Int64)
-    (sum_cond_sku[i] * sum_cond_sku[j])/J
+    (Float64(sum_cond_sku[i]) * sum_cond_sku[j])/J
 end
 
 # function used to perform the chi square test of independence upon
@@ -32,7 +32,7 @@ function HYOPTHESISTEST_SPARSE(
                 row = q_rows[idx]
                 row >= col && continue
                 qij = q_vals[idx]
-                independent = (sum_cond_sku[row] * sum_cond_sku[col]) / J
+                independent = (Float64(sum_cond_sku[row]) * sum_cond_sku[col]) / J
                 qij <= independent && continue
 
                 chi_nr = J - sum_cond_sku[row]
@@ -75,7 +75,7 @@ function HYOPTHESISTEST_SPARSE(
         dep_vals = Float32[]
         @inbounds for j_idx in 2:I
             @inbounds for i_idx in 1:(j_idx - 1)
-                independent = (sum_cond_sku[i_idx] * sum_cond_sku[j_idx]) / J
+                independent = (Float64(sum_cond_sku[i_idx]) * sum_cond_sku[j_idx]) / J
                 qij = Q[i_idx, j_idx]
                 qij <= independent && continue
 

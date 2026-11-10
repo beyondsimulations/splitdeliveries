@@ -48,7 +48,7 @@ Configuration of heuristics and parameters can be adjusted in `main_benchmark_se
 ## Getting Started
 
 ### Prerequisites
-- Julia installation
+- Julia 1.12 (the results were produced with Julia 1.12.5, the version recorded in `splitdeliveries/Manifest.toml`; Julia 1.13 generates different instances from the same seeds, so use 1.12.x to reproduce them, e.g. `juliaup add 1.12.5` and `julia +1.12.5 ...`)
 - Valid Gurobi license (required for QMK, KLQ, IIH, and OPT heuristics)
 
 ### Installation
