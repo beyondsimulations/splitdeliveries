@@ -238,13 +238,12 @@ function BENCHMARK(
                     effective_combination = combination
                 end
 
-                # Compute coappearance matrix for general local search
+                # Compute order-weighted coappearance matrix for general local search
                 can_ls = apply_ls && all(y->y==sku_weight[1], sku_weight)
                 time_Q_ls = 0.0
                 if can_ls
                     time_Q_ls = @elapsed begin
-                        Q_ls = COAPPEARENCE(trans_train, sku_weight)
-                        CLEANPRINCIPLE!(Q_ls)
+                        Q_ls = SPARSELINKS(trans_train, LINKADJUST(trans_train))
                     end
                 end
 
@@ -595,9 +594,7 @@ function BENCHMARK(
 
                 ## Start our reproduction of the  K-LINKS heuristic by
                 ## [S. Zhu, X. Hu, K. Huang and Y. Yuan (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
-                if start[1, :KL] == 1 &&
-                    all(w->w==sku_weight[1], sku_weight) &&
-                    sum(effective_capacity) == sum(sku_weight)
+                if start[1, :KL] == 1 && all(w->w==sku_weight[1], sku_weight)
                     try
                         sleep(0.01)
                         GC.gc()

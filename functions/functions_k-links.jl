@@ -28,18 +28,22 @@ function PAYOFF(
     DL(j, w1, w2, L, X) + DL(q, w2, w1, L, X) - 2 * L[j, q]
 end
 
-function LINKS(trans::SparseMatrixCSC{Bool,Int64}, ov::Vector{Float64})
+function SPARSELINKS(trans::SparseMatrixCSC{Bool,Int64}, ov::Vector{Float64})
     # L[j, q] = sum over orders m of ov[m] * trans[m, j] * trans[m, q], zero diagonal
-    L = Matrix(trans' * (Diagonal(ov) * trans))
-    L[diagind(L)] .= 0
+    L = trans' * (Diagonal(ov) * trans)
+    CLEANPRINCIPLE!(L)
     return L
+end
+
+function LINKS(trans::SparseMatrixCSC{Bool,Int64}, ov::Vector{Float64})
+    return Matrix(SPARSELINKS(trans, ov))
 end
 
 function LINKADJUST(trans::SparseMatrixCSC{Bool,Int64})
     ov = zeros(Float64, size(trans, 1))
-    transposed = trans'
+    order_size = vec(sum(trans; dims = 2))
     for i in axes(trans, 1)
-        n = sum(transposed[:, i])
+        n = order_size[i]
         if n > 1
             # contribution effect coefficient of Zhu et al. (2021): an order with n
             # SKUs can cause at most n-1 splits, spread over binomial(n,2) pairs

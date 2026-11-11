@@ -216,7 +216,8 @@ function SEARCHLOOP!(X::Matrix{Bool},
                     if X[i, k] && !X[i, g]
                         for j in wh_ranked[g]
                             if X[j, g] && !X[j, k]
-                                if POTENTIAL(state, i, j, k, g) > 0
+                                # gain above 1e-9: rounding noise in fractional Q must not decide ties
+                                if POTENTIAL(state, i, j, k, g) > 1e-9
                                     X[i, k] = X[j, g] = false
                                     X[i, g] = X[j, k] = true
                                     REFRESHSTATE!(state, Q, k, g, i, j)
