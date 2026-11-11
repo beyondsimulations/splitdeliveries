@@ -1,13 +1,15 @@
 #!/bin/bash
-# Usage: ./run_reruns_2026-11.sh kl|chi (from the repository root, uniform weights only, needs Julia 1.12.5 via juliaup)
+# Usage: ./run_reruns_2026-11.sh kl|chi [experiment ...] (from the repository root, uniform weights only, needs Julia 1.12.5 via juliaup)
+# Without experiments each group runs the scales listed below, e.g. "./run_reruns_2026-11.sh kl 10000" runs KL on 10000 SKUs only
 # kl:  KL alone on 100, 1000 and 10000 SKUs -> results/<experiment>_benchmark_<dependency>_klfaithful.csv
 # chi: CHI alone without gate and local search on all scales -> results/<experiment>_benchmark_<dependency>_gateoff.csv
 
 GROUP="$1"
 if [ "$GROUP" != "kl" ] && [ "$GROUP" != "chi" ]; then
-    echo "Usage: ./run_reruns_2026-11.sh kl|chi"
+    echo "Usage: ./run_reruns_2026-11.sh kl|chi [experiment ...]"
     exit 1
 fi
+shift
 
 # Folder for the generated per-dependency run scripts
 mkdir -p runs
@@ -49,12 +51,14 @@ EOL
 }
 
 if [ "$GROUP" = "kl" ]; then
-    for experiment in "100" "1000" "10000"; do
+    [ $# -gt 0 ] || set -- "100" "1000" "10000"
+    for experiment in "$@"; do
         launch kl $experiment '    only_modes = [:KL]
     results_tag = "_klfaithful"'
     done
 else
-    for experiment in "100" "1000" "10000" "100000"; do
+    [ $# -gt 0 ] || set -- "100" "1000" "10000" "100000"
+    for experiment in "$@"; do
         launch chi $experiment '    only_modes = [:CHI]
     gate_ratio = 0.0
     apply_ls = false
@@ -62,4 +66,4 @@ else
     done
 fi
 
-echo "All re-runs launched. Attach with: tmux attach -t rerun_${GROUP}_100"
+echo "All re-runs launched. Attach with: tmux attach -t rerun_${GROUP}_$1"

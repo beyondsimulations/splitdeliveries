@@ -72,9 +72,9 @@ for dependency in dependencies
     # Parameters for the KLINK heuristic
     ## trials: maximum number of trials, each starting from a new random solution (Trial_max)
     ## stagnant: stop after this many consecutive trials without a better solution than the best so far (Zhu et al. (2021) name 10 as an example; with stagnant >= trials every trial runs)
-    ## strategy: local search of each trial, which applies the best improving move until none is left
-    ###          -> 1: move SKU to a different warehouse if it improves the objective and the warehouse has capacity cap_left
-    ###          -> 2: pair-wise exchange between SKUs if it improves the objective
+    ## strategy: local search of each trial (Fig. 6 of Zhu et al. (2021)), which draws a random warehouse, applies the best improving move of its SKUs and stops when no warehouse has one
+    ###          -> 1: move SKU to a different warehouse if it improves the objective, the target has free capacity and the source keeps at least one SKU
+    ###          -> 2: pair-wise exchange between SKUs of two warehouses if it improves the objective
     ###          -> 3: the best move of strategy 1 if one improves, otherwise the best move of strategy 2
     ## klinkstatus: display the current iteration during the heuristic
     trials = 100
