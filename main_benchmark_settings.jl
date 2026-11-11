@@ -8,6 +8,20 @@ if !@isdefined(weight_mode)
     weight_mode = :uniform
 end
 
+# Defaults for a targeted re-run (override by setting them before include)
+## gate_ratio and apply_ls: see their sections below
+## results_tag: appended to the names of the result csv and log files
+## only_modes: if defined, run only these columns of start, e.g. [:KL]
+if !@isdefined(gate_ratio)
+    gate_ratio = 2.0
+end
+if !@isdefined(apply_ls)
+    apply_ls = true
+end
+if !@isdefined(results_tag)
+    results_tag = ""
+end
+
 # iterate over all dependencies
 for dependency in dependencies
 
@@ -23,16 +37,17 @@ for dependency in dependencies
     cpu_cores = 4
 
     # Choose Optimisations and Heuristics to evaluate in the benchmark
-    # Solver-based methods and KL only run at the small scales; the scalable
-    # heuristics run everywhere. The experiment variable is set by the run
-    # scripts generated through run_benchmarks.sh.
+    # Solver-based methods only run at the small scales and KL up to 10,000 SKUs,
+    # as it needs a dense SKU-by-SKU link matrix; the scalable heuristics run
+    # everywhere. The experiment variable is set by the run scripts generated
+    # through run_benchmarks.sh.
     small_scales = experiment in ("100", "1000")
     start = DataFrame(;
         QMK = [0], # quadratic-multiple knapsack heuristic with Gurobi as solver
         QMKJ = [small_scales ? 1 : 0], # quadratic-multiple knapsack heuristic with Juniper as solver
         QMKS = [0], # quadratic-multiple knapsack heuristic with SCIP as solver
         CHI = [1], # main chi-square heuristic
-        KL = [small_scales ? 1 : 0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        KL = [experiment in ("100", "1000", "10000") ? 1 : 0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         KLQ = [0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         GO = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         GP = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
@@ -43,6 +58,7 @@ for dependency in dependencies
         IIHS = [0], # IIH with SCIP by Lin et al. (2025) -- 2-warehouse overlapping
         OPT = [small_scales ? 1 : 0], # optimisation model to determine the optimal solution with Gurobi
     )
+    @isdefined(only_modes) && (start[1, Not(only_modes)] .= 0)
 
     # SKU weight mode (set before include to override)
     ## :uniform  — all weights = 1 (default, classic benchmark)
@@ -51,19 +67,18 @@ for dependency in dependencies
     weight_range = 1:10
 
     # Parameters for the local search heuristic
-    ## apply_ls: apply the local search heuristic after the greedy heuristics
-    apply_ls = true
+    ## apply_ls: apply the local search heuristic after the greedy heuristics (default true, set at the top)
 
     # Parameters for the KLINK heuristic
-    ## trials: number of different trials with a completly new random solution
-    ## stagnant: number of local search iterations without improvement till termination
-    ## strategy: select the local search strategy of the KLINK heuristic
+    ## trials: maximum number of trials, each starting from a new random solution (Trial_max)
+    ## stagnant: stop after this many consecutive trials without a better solution than the best so far (Zhu et al. (2021) name 10 as an example; with stagnant >= trials every trial runs)
+    ## strategy: local search of each trial, which applies the best improving move until none is left
     ###          -> 1: move SKU to a different warehouse if it improves the objective and the warehouse has capacity cap_left
     ###          -> 2: pair-wise exchange between SKUs if it improves the objective
-    ###          -> 3: both strategies above are applied with a chance of 50:50
+    ###          -> 3: the best move of strategy 1 if one improves, otherwise the best move of strategy 2
     ## klinkstatus: display the current iteration during the heuristic
     trials = 100
-    stagnant = 10
+    stagnant = 100
     strategy = 3
     klinkstatus = false
 
@@ -81,13 +96,12 @@ for dependency in dependencies
     ## sig_levels:  significance levels alpha to apply with the chi-square tests
     ## max_ls:      maximum number of local search runs before termination
     ## chi_status:  choose whether a detailled progress of the chi heuristic should be shown
-    ## gate_ratio:  factor kappa of the aggregate independence gate (0.0 disables the gate)
+    ## gate_ratio:  factor kappa of the aggregate independence gate (0.0 disables the gate; default 2.0, set at the top)
     sig_levels = [1.0e-5]
     max_ls = 100
     chistatus = false
     min_effect = 0.01
     ls_neighborhood = 1.0
-    gate_ratio = 2.0
 
     # Parameters for IIH (Lin et al. 2025)
     ## max_iih_iterations: maximum number of alternating optimization rounds
@@ -165,6 +179,7 @@ for dependency in dependencies
         train_test::Float64,
         dependency::String;
         gate_ratio = gate_ratio,
+        results_tag = results_tag,
     )
 
     print("\nbenchmark finished at ", now(), ".")

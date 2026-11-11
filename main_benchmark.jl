@@ -30,10 +30,11 @@ function BENCHMARK(
     dependency::String;
     gate_ratio::Float64 = 2.0,
     only_pairs::Union{Nothing,Set{Tuple{Int,Int}}} = nothing,
+    results_tag::String = "",
 )
 
     # Open log file for this benchmark run
-    logfile = "results/benchmark_$(experiment)_$(dependency).log"
+    logfile = "results/benchmark_$(experiment)_$(dependency)$(results_tag).log"
     logio = open(logfile, "a")
     println(logio, "\n", "="^60)
     println(logio, "Benchmark started at ", Dates.now())
@@ -1502,77 +1503,80 @@ function BENCHMARK(
                     end
                 end
 
-                ## Benchmark the random allocation of SKUs
-                try
-                    sleep(0.01)
-                    GC.gc()
-                    time_benchmark = @elapsed parcels_benchmark, flex_benchmark = RANDOMBENCH(
-                        trans_test,
-                        effective_capacity,
-                        iterations,
-                        sku_weight,
-                        effective_combination,
-                    )
-                    parcels_train, _ = RANDOMBENCH(
-                        trans_train,
-                        effective_capacity,
-                        iterations,
-                        sku_weight,
-                        effective_combination,
-                    )
-                    print(
-                        "\n    RND: parcels test data: ",
-                        parcels_benchmark,
-                        " / parcels training data: ",
-                        parcels_train,
-                        " / flex: ",
-                        flex_benchmark,
-                        " / time: ",
-                        round(time_benchmark; digits = 3),
-                        " / benchmarks: ",
-                        iterations,
-                        " / warehouse: ",
-                        sum(W; dims = 1),
-                        "\n",
-                    )
+                ## Benchmark the random allocation of SKUs; it reports the capacity used by the last
+                ## heuristic (W) and therefore only runs if a heuristic has run on this instance
+                if @isdefined(W)
+                    try
+                        sleep(0.01)
+                        GC.gc()
+                        time_benchmark = @elapsed parcels_benchmark, flex_benchmark = RANDOMBENCH(
+                            trans_test,
+                            effective_capacity,
+                            iterations,
+                            sku_weight,
+                            effective_combination,
+                        )
+                        parcels_train, _ = RANDOMBENCH(
+                            trans_train,
+                            effective_capacity,
+                            iterations,
+                            sku_weight,
+                            effective_combination,
+                        )
+                        print(
+                            "\n    RND: parcels test data: ",
+                            parcels_benchmark,
+                            " / parcels training data: ",
+                            parcels_train,
+                            " / flex: ",
+                            flex_benchmark,
+                            " / time: ",
+                            round(time_benchmark; digits = 3),
+                            " / benchmarks: ",
+                            iterations,
+                            " / warehouse: ",
+                            sum(W; dims = 1),
+                            "\n",
+                        )
 
-                    push!(
-                        benchmark,
-                        (
-                            dependency = dependency,
-                            skus = skus_benchmark[a],
-                            wareh = length(capacity),
-                            diff = diff_benchmark[a],
-                            buffer = buff_benchmark[a],
-                            weight_mode = string(weight_mode),
-                            mode = "RND",
-                            benchiter = benchnr,
-                            orders = size(trans, 1),
-                            train_test = train_test,
-                            parcel_train = parcels_train,
-                            parcel_test = parcels_benchmark,
-                            flexibility = flex_benchmark,
-                            duration = time_benchmark,
-                            cap_used = sum(W),
-                            local_search = 0,
-                            gap = 0,
-                        ),
-                    )
-                catch e
-                    bt = catch_backtrace()
-                    @warn "RND failed" exception=(e, bt)
-                    log_failure(
-                        logio,
-                        "RND",
-                        e,
-                        bt,
-                        benchnr,
-                        skus_benchmark[a],
-                        capacity,
-                        effective_capacity,
-                        orders,
-                        weight_mode,
-                    )
+                        push!(
+                            benchmark,
+                            (
+                                dependency = dependency,
+                                skus = skus_benchmark[a],
+                                wareh = length(capacity),
+                                diff = diff_benchmark[a],
+                                buffer = buff_benchmark[a],
+                                weight_mode = string(weight_mode),
+                                mode = "RND",
+                                benchiter = benchnr,
+                                orders = size(trans, 1),
+                                train_test = train_test,
+                                parcel_train = parcels_train,
+                                parcel_test = parcels_benchmark,
+                                flexibility = flex_benchmark,
+                                duration = time_benchmark,
+                                cap_used = sum(W),
+                                local_search = 0,
+                                gap = 0,
+                            ),
+                        )
+                    catch e
+                        bt = catch_backtrace()
+                        @warn "RND failed" exception=(e, bt)
+                        log_failure(
+                            logio,
+                            "RND",
+                            e,
+                            bt,
+                            benchnr,
+                            skus_benchmark[a],
+                            capacity,
+                            effective_capacity,
+                            orders,
+                            weight_mode,
+                        )
+                    end
                 end
 
                 # Free training/test data before next iteration
@@ -1586,7 +1590,7 @@ function BENCHMARK(
                 # Export the results after each stage
                 wm_suffix = weight_mode == :uniform ? "" : "_$(weight_mode)"
                 CSV.write(
-                    "results/$(experiment)_benchmark_$(dependency)$(wm_suffix).csv",
+                    "results/$(experiment)_benchmark_$(dependency)$(wm_suffix)$(results_tag).csv",
                     benchmark,
                 )
             end
