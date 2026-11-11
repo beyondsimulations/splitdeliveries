@@ -47,8 +47,8 @@ for dependency in dependencies
         QMKJ = [small_scales ? 1 : 0], # quadratic-multiple knapsack heuristic with Juniper as solver
         QMKS = [0], # quadratic-multiple knapsack heuristic with SCIP as solver
         CHI = [1], # main chi-square heuristic
-        KL = [experiment in ("100", "1000", "10000") ? 1 : 0], # K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
-        KLQ = [0], # K-LINK optimisation with Gurobi by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        KL = [experiment in ("100", "1000", "10000") ? 1 : 0], # K-LINK heuristic by S. Zhu, X. Hu, K. Huang and Y. Yuan (2021) https://doi.org/10.1016/j.ejor.2020.08.024
+        KLQ = [0], # K-LINK optimisation with Gurobi by S. Zhu, X. Hu, K. Huang and Y. Yuan (2021) https://doi.org/10.1016/j.ejor.2020.08.024
         GO = [1], # greedy orders heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         GP = [1], # greedy pairs heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687
         GS = [1], # greedy seeds heuristic by A. Catalan and M. Fisher (2012) https://doi.org/10.2139/ssrn.2166687

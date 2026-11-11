@@ -1,4 +1,4 @@
-# K-LINK heuristic by Zhang, W.-H. Lin, M. Huang and X. Hu (2021) doi:10.1016/j.ejor.2019.07.004
+# K-LINK heuristic by S. Zhu, X. Hu, K. Huang and Y. Yuan (2021) doi:10.1016/j.ejor.2020.08.024
 function KLINKS(
     trans::SparseMatrixCSC{Bool,Int64},
     capacity::Array{Int64,1},

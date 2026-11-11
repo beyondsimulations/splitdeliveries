@@ -594,7 +594,7 @@ function BENCHMARK(
                 end
 
                 ## Start our reproduction of the  K-LINKS heuristic by
-                ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
+                ## [S. Zhu, X. Hu, K. Huang and Y. Yuan (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
                 if start[1, :KL] == 1 &&
                     all(w->w==sku_weight[1], sku_weight) &&
                     sum(effective_capacity) == sum(sku_weight)
@@ -697,7 +697,7 @@ function BENCHMARK(
                 end
 
                 ## Start our reproduction of the  K-LINKS optimization with SBB by
-                ## [Zhang, W.-H. Lin, M. Huang and X. Hu (2021)](https://doi.org/10.1016/j.ejor.2019.07.004)
+                ## [S. Zhu, X. Hu, K. Huang and Y. Yuan (2021)](https://doi.org/10.1016/j.ejor.2020.08.024)
                 if start[1, :KLQ] == 1 &&
                     all(w->w==sku_weight[1], sku_weight) &&
                     sum(effective_capacity) == sum(sku_weight)
