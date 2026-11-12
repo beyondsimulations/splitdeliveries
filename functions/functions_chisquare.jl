@@ -127,22 +127,41 @@ function CURVEBALL(trans::SparseMatrixCSC{Bool,Int64}; trades_per_order::Int64 =
     for j in 1:S, idx in nzrange(trans, j)
         push!(orders[rows[idx]], Int32(j))
     end
-    for _ in 1:(trades_per_order * M)
+    # in_a[x] == t (in_b[x] == t): SKU x is in order a (b) of trade t
+    in_a = zeros(Int, S)
+    in_b = zeros(Int, S)
+    # SKUs in only one of the two orders, A's first, and SKUs in both, in A's order
+    pool = Int32[]
+    shared = Int32[]
+    for t in 1:(trades_per_order * M)
         a = rand(rng, 1:M)
         b = rand(rng, 1:M)
         a == b && continue
         A, B = orders[a], orders[b]
         (isempty(A) || isempty(B)) && continue
-        sA, sB = Set(A), Set(B)
-        onlyA = Int32[x for x in A if !(x in sB)]
-        onlyB = Int32[x for x in B if !(x in sA)]
-        (isempty(onlyA) || isempty(onlyB)) && continue
-        pool = vcat(onlyA, onlyB)
+        for x in A
+            in_a[x] = t
+        end
+        for x in B
+            in_b[x] = t
+        end
+        empty!(pool)
+        empty!(shared)
+        for x in A
+            in_b[x] == t ? push!(shared, x) : push!(pool, x)
+        end
+        kA = length(pool)
+        for x in B
+            in_a[x] == t || push!(pool, x)
+        end
+        (kA == 0 || kA == length(pool)) && continue
         shuffle!(rng, pool)
-        kA = length(onlyA)
-        shared = Int32[x for x in A if x in sB]
-        orders[a] = vcat(shared, pool[1:kA])
-        orders[b] = vcat(shared, pool[(kA + 1):end])
+        # both orders keep their sizes: shared SKUs first, then their part of the pool
+        n = length(shared)
+        copyto!(A, shared)
+        copyto!(A, n + 1, pool, 1, kA)
+        copyto!(B, shared)
+        copyto!(B, n + 1, pool, kA + 1, length(pool) - kA)
     end
     nnz_total = sum(length, orders)
     I_ = Vector{Int64}(undef, nnz_total)
@@ -339,24 +358,18 @@ function ADDDEPENDENT!(
     sku_weight::Vector{<:Real},
     n_allocated::Ref{Int},
 )
-    pot_dep = zeros(Float64, size(X, 1))
-    pot_nor = zeros(Float64, size(X, 1))
     while capacity_left[k] > 0 && n_allocated[] < size(X, 1)
-        FINDDEP!(
+        max_dep_val, i, max_nor_val = FINDDEP(
             X,
             k,
             state_dep,
             state_nor,
-            pot_dep,
-            pot_nor,
             allocated,
             sku_weight,
             capacity_left,
         )
-        max_dep_val, i = findmax(pot_dep)
         max_dep_val <= 0 && break
-        max_nor_val = findmax(pot_nor)[1]
-        if pot_dep[i] >= max_nor_val && capacity_left[k] >= sku_weight[i]
+        if max_dep_val >= max_nor_val && capacity_left[k] >= sku_weight[i]
             ALLOCATEONE!(
                 X,
                 dep,
@@ -378,30 +391,41 @@ function ADDDEPENDENT!(
     end
 end
 
-# function to check the dependencies to already allocated SKUs
-function FINDDEP!(
+# function to check the dependencies to already allocated SKUs: returns the highest
+# dependent value among the unallocated SKUs that fit into warehouse k, the first SKU
+# with this value and the highest independent value. The dependent value is NaN if any
+# value is NaN.
+function FINDDEP(
     X::Array{Bool,2},
     k::Int64,
     state_dep::Matrix{<:Real},
     state_nor::Matrix{<:Real},
-    pot_dep::Vector{<:Real},
-    pot_nor::Vector{<:Real},
     allocated::Vector{Bool},
     sku_weight::Vector{<:Real},
     capacity_left::Vector{<:Real},
 )
-    @inbounds @simd for j in 1:size(X, 1)
+    max_dep_val, i, max_nor_val = -Inf, 1, -Inf
+    nan = false
+    @inbounds for j in 1:size(X, 1)
+        pot_dep = pot_nor = 0.0
         if allocated[j] == 0 && capacity_left[k] >= sku_weight[j]
             weight_inv = 1.0 / sku_weight[j]
-            pot_dep[j] = state_dep[j, k] * weight_inv
-            pot_nor[j] = state_nor[j, k] * weight_inv
-            if pot_dep[j] > 0
-                pot_dep[j] += pot_nor[j]
+            pot_dep = state_dep[j, k] * weight_inv
+            pot_nor = state_nor[j, k] * weight_inv
+            if pot_dep > 0
+                pot_dep += pot_nor
             end
-        else
-            pot_dep[j] = pot_nor[j] = 0
+        end
+        nan |= isnan(pot_dep) | isnan(pot_nor)
+        if pot_dep > max_dep_val
+            max_dep_val, i = pot_dep, j
+        end
+        if pot_nor > max_nor_val
+            max_nor_val = pot_nor
         end
     end
+    nan && (max_dep_val = NaN)
+    return max_dep_val, i, max_nor_val
 end
 
 # function to allocate a selcted product to a selected warehouse
