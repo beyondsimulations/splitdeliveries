@@ -136,34 +136,19 @@ function PARCELSSEND(
             parcel = trans * X
             parcel = sum(parcel .> 0)
         else
-            warehouse_combination = zeros(Int64, size(X, 1), size(combination, 1))
-            parcels_out = zeros(size(combination, 1))
-            for i in axes(combination, 1)
-                for j in axes(combination[i], 1)
-                    for k in axes(X, 1)
-                        if X[k, combination[i][j]] == [1]
-                            warehouse_combination[k, i] = 1
-                        end
-                    end
-                    parcels_out[i] += 1
-                end
-            end
-            warehouse_combination = dropzeros(sparse(warehouse_combination))
-            parcel_evalu = trans * warehouse_combination
-            parcel_check = sum(trans; dims = 2)
+            # warehouses that store each SKU and warehouses of each combination, as bitmasks
+            sku_mask = [reduce(|, (UInt64(1) << (k - 1) for k in axes(X, 2) if X[i, k]); init = UInt64(0)) for i in axes(X, 1)]
+            combination_mask = [reduce(|, (UInt64(1) << (k[1] - 1) for k in c); init = UInt64(0)) for c in combination]
+            parcels_out = Float64.(length.(combination))
+            # one column per order
+            orders = dropzeros!(permutedims(trans))
+            skus = rowvals(orders)
             parcel = 0
-            for i in axes(parcel_evalu, 1)
-                for j in axes(parcel_evalu, 2)
-                    if parcel_evalu[i, j] == parcel_check[i]
-                        parcel += parcels_out[j]
-                        break
-                    end
-                    if j == size(parcel_evalu, 2)
-                        if parcel_evalu[i, j] != parcel_check[i]
-                            error("Order was not fully dispatched!")
-                        end
-                    end
-                end
+            for o in axes(orders, 2)
+                # first combination that stores every SKU of the order
+                j = findfirst(m -> all(p -> sku_mask[skus[p]] & m != 0, nzrange(orders, o)), combination_mask)
+                j === nothing && error("Order was not fully dispatched!")
+                parcel += parcels_out[j]
             end
         end
         parcel -= size(trans, 1)
