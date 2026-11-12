@@ -6,6 +6,7 @@
 #   ./run_benchmarks.sh              # uniform weights (default)
 #   ./run_benchmarks.sh frequency    # frequency-based weights
 #   ./run_benchmarks.sh random       # random weights
+# Needs Julia 1.12.5 via juliaup.
 
 # Weight mode (default: uniform)
 WEIGHT_MODE="${1:-uniform}"
@@ -46,7 +47,7 @@ for experiment in "${experiments[@]}"; do
     include("${PROJDIR}/main_benchmark_settings.jl")
 EOL
 
-        tmux send-keys -t $session_name:$dep "cd $(pwd) && julia runs/run_${experiment}_${dep}_${WEIGHT_MODE}.jl" C-m
+        tmux send-keys -t $session_name:$dep "cd $(pwd) && julia +1.12.5 runs/run_${experiment}_${dep}_${WEIGHT_MODE}.jl" C-m
     done
 
     echo "Started experiment=${experiment} weight_mode=${WEIGHT_MODE} in tmux session '${session_name}'"
