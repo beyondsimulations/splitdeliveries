@@ -74,6 +74,9 @@ function CHISQUAREHEUR(
                 throw(packing_error)
             end
             alloc_capacity = RESERVE(capacity, target)
+            if attempt > 0
+                print("\n  CHI: single copies repeated with target ", target, " (attempt ", attempt, ").")
+            end
             p = sortperm(alloc_capacity; rev = true)
             packed = false
             try
