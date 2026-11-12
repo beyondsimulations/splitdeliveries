@@ -84,7 +84,8 @@ function CHISQUAREHEUR(
                 cap_left .+= (capacity .- alloc_capacity)[p]
                 FILLRESERVE!(X, Q, cap_left, sku_weight, ordered_skus, nor_order, !gate_fired)
                 X = X[:, invperm(p)]
-                packed = all(any(X; dims = 2)) && all(vec(X' * sku_weight) .<= capacity)
+                ## the tolerance absorbs rounding in the summed storage requirements
+                packed = all(any(X; dims = 2)) && all(vec(X' * sku_weight) .<= capacity .* (1 + 1e-9))
             catch e
                 if !(e isa ErrorException && occursin(r"^(SWAPREPAIR!|Cannot allocate SKU)", e.msg))
                     rethrow()
