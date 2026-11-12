@@ -742,3 +742,104 @@ function FILLUP!(
         end
     end
 end
+
+# Capacities for the allocation of the single copies: the buffer sum(capacity) - target is
+# held free in equal whole shares in every warehouse but the largest (capacity sorted
+# decreasingly). A share is capped at the warehouse's capacity; what cannot be held free
+# there is held free in the largest warehouse.
+function RESERVE(capacity::Vector{Int64}, target::Int64)
+    K = length(capacity)
+    R = sum(capacity) - target
+    r = zeros(Int64, K)
+    while R > 0
+        open = [k for k in 2:K if r[k] < capacity[k]]
+        if isempty(open)
+            r[1] += R
+            break
+        end
+        q = max(R ÷ length(open), 1)
+        for k in open
+            a = min(q, capacity[k] - r[k], R)
+            r[k] += a
+            R -= a
+        end
+    end
+    return capacity .- r
+end
+
+# Fill the capacity left in each warehouse, one warehouse after the other. A copy of SKU i
+# in warehouse d is valued by the coappearances of i with the SKUs in d that share no
+# warehouse with i, per storage unit; ties go to the higher order frequency. If use_pairs is
+# false or no candidate has a positive value, the next SKU of nor_order that is not in d and
+# fits is copied.
+function FILLRESERVE!(
+    X::Matrix{Bool},
+    Q::SparseMatrixCSC{<:Real},
+    cap_left::Vector{<:Real},
+    sku_weight::Vector{<:Real},
+    ordered_skus::Vector{<:Real},
+    nor_order::Vector{Int64},
+    use_pairs::Bool,
+)
+    I, D = size(X)
+    # mask[i]: one bit per warehouse that holds SKU i
+    mask = [reduce(|, (UInt64(X[i, d]) << (d - 1) for d in 1:D)) for i in 1:I]
+    # P[i, d]: coappearances of i with the SKUs in d that share no warehouse with i
+    P = zeros(Float64, I, D)
+    rows = rowvals(Q)
+    vals = nonzeros(Q)
+    if use_pairs
+        for i in 1:I, idx in nzrange(Q, i)
+            j = rows[idx]
+            (j == i || mask[i] & mask[j] != 0) && continue
+            for d in 1:D
+                X[j, d] && (P[i, d] += vals[idx])
+            end
+        end
+    end
+    minw = minimum(sku_weight)
+    for d in 1:D
+        while cap_left[d] >= minw
+            best, bf, bi = 0.0, -1.0, 0
+            if use_pairs
+                @inbounds for i in 1:I
+                    (X[i, d] || cap_left[d] < sku_weight[i]) && continue
+                    v = P[i, d] / sku_weight[i]
+                    if v > best || (v == best && v > 0 && ordered_skus[i] > bf)
+                        best, bf, bi = v, Float64(ordered_skus[i]), i
+                    end
+                end
+            end
+            if bi == 0
+                for i in nor_order
+                    if !X[i, d] && cap_left[d] >= sku_weight[i]
+                        bi = i
+                        break
+                    end
+                end
+            end
+            bi == 0 && break
+            if use_pairs
+                # pairs of bi that become stored together stop counting in every warehouse;
+                # SKUs that are not in d can be brought together with bi there
+                for idx in nzrange(Q, bi)
+                    j = rows[idx]
+                    (j == bi || mask[bi] & mask[j] != 0) && continue
+                    if X[j, d]
+                        for e in 1:D
+                            e == d && continue
+                            X[j, e] && (P[bi, e] -= vals[idx])
+                            X[bi, e] && (P[j, e] -= vals[idx])
+                        end
+                    else
+                        P[j, d] += vals[idx]
+                    end
+                end
+            end
+            X[bi, d] = true
+            mask[bi] |= UInt64(1) << (d - 1)
+            cap_left[d] -= sku_weight[bi]
+        end
+    end
+    return nothing
+end
