@@ -492,7 +492,7 @@ function BENCHMARK(
                         for sig in sig_levels
                             sleep(0.01)
                             GC.gc()
-                            time_benchmark = @elapsed W, ls = CHISQUAREHEUR(
+                            time_benchmark = @elapsed W, ls, gate_fired = CHISQUAREHEUR(
                                 trans_train,
                                 effective_capacity,
                                 sig,
@@ -549,6 +549,7 @@ function BENCHMARK(
                                     gap = 0,
                                 ),
                             )
+                            ## without dependency premiums the allocation is not refined
                             if can_ls
                                 RUN_LS!(
                                     benchmark,
@@ -558,7 +559,7 @@ function BENCHMARK(
                                     Q_ls,
                                     effective_capacity,
                                     effective_combination,
-                                    max_ls,
+                                    gate_fired ? 0 : max_ls,
                                     "CHI_$sig",
                                     dependency,
                                     skus_benchmark[a],
