@@ -186,16 +186,18 @@ function GREEDYORDERSMAIN!(
     X::Matrix{Bool},
     sku_weight::Vector{<:Real},
 )
+    # one column per order
+    orders = dropzeros!(permutedims(trans))
+    skus = rowvals(orders)
     for order in order_sort
-        for sku in axes(trans, 2)
+        for p in nzrange(orders, order)
+            sku = skus[p]
             # Determine the warehouse d with the lowest index that has one unallocated space
-            if trans[order, sku] == 1
-                for d in 1:length(capacity_left)
-                    if capacity_left[d] >= sku_weight[sku]
-                        if sum(X[sku, :]) == 0
-                            X[sku, d] = 1
-                            capacity_left[d] -= sku_weight[sku]
-                        end
+            for d in 1:length(capacity_left)
+                if capacity_left[d] >= sku_weight[sku]
+                    if sum(X[sku, :]) == 0
+                        X[sku, d] = 1
+                        capacity_left[d] -= sku_weight[sku]
                     end
                 end
             end
