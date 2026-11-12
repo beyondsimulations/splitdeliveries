@@ -42,7 +42,7 @@ function KLINKS(
         ## improving move of a SKU in k, stop when no warehouse has an improving move left
         # S[i, k]: links of SKU i to the SKUs in warehouse k, so DL(i, m, g) = S[i, g] - S[i, m]
         S = L * X
-        wh = [findfirst(view(X, i, :)) for i in 1:N]
+        wh = Int64[findfirst(view(X, i, :)) for i in 1:N]
         load = vec(sum(X; dims = 1))
         # closed[k]: warehouse k has no improving move in the current allocation; drawing k
         # uniformly among the open warehouses equals the uniform draw of Fig. 6 with the
