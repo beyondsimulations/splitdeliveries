@@ -76,7 +76,9 @@ function SWAPREPAIR!(
 
         d_old = fill(d, length(to_evict))
         d_new = zeros(Int, length(to_evict))
-        for (idx, j) in enumerate(to_evict)
+        # heaviest first, the order FEASIBLE_REMAINING has checked
+        for idx in sortperm(evicted_w; rev = true)
+            j = to_evict[idx]
             d2 = argmax(cap_left)
             X[j, d2] = true
             cap_left[d2] -= sku_weight[j]
