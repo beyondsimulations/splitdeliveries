@@ -23,8 +23,14 @@ for config in configs
     orders = 1000
 
     # Generate transactions
-    max_gs = ceil(Int64, max(skus / group_size_scaling, group_size_min))
-    mean_gs = ceil(Int64, max(max_gs / mean_group_divisor, mean_group_min))
+    max_gs, mean_gs = GROUPSIZES(
+        skus,
+        group_size_scaling,
+        group_size_cap,
+        group_size_min,
+        mean_group_divisor,
+        mean_group_min,
+    )
     trans, C, group_sizes_gen = RANDOMTRANS(
         skus,
         orders,

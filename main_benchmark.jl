@@ -158,10 +158,14 @@ function BENCHMARK(
                         skus_benchmark[a] + 31 * order_set + 1_009 * a +
                         65_537 * sum(Int, codeunits(dependency)) + 7 * benchnr,
                     )
-                    max_gs = ceil(
-                        Int64, max(skus_benchmark[a] / group_size_scaling, group_size_min)
+                    max_gs, mean_gs = GROUPSIZES(
+                        skus_benchmark[a],
+                        group_size_scaling,
+                        group_size_cap,
+                        group_size_min,
+                        mean_group_divisor,
+                        mean_group_min,
                     )
-                    mean_gs = ceil(Int64, max(max_gs / mean_group_divisor, mean_group_min))
                     time = @elapsed trans, C, group_sizes_gen = RANDOMTRANS(
                         skus_benchmark[a],
                         orders,

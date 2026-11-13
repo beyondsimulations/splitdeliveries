@@ -14,7 +14,8 @@ dep_strength_strong = (0.50, 0.95)  # Co-purchase probability range for strong g
 dep_strength_medium = (0.05, 0.50)  # Co-purchase probability range for medium groups
 
 # Group size scaling
-group_size_scaling = 20        # Max group size divisor: g_max = ⌈max(S / this, group_size_min)⌉
+group_size_scaling = 20        # Max group size divisor: g_max = ⌈max(min(S / this, group_size_cap), group_size_min)⌉
+group_size_cap = 500       # Upper bound on S / group_size_scaling
 group_size_min = 10        # Minimum max group size
 mean_group_divisor = 4         # Mean group size divisor: g_mean = ⌈max(g_max / this, mean_group_min)⌉
 mean_group_min = 5         # Minimum mean group size

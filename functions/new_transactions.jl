@@ -1,6 +1,22 @@
 # RANDOMTRANS: Generates synthetic transactional datasets with controlled
 #              dependency structures for benchmarking warehouse allocation heuristics.
 
+# Largest and mean group size for a catalog of skus SKUs: (max_group_size, mean_group_size)
+function GROUPSIZES(
+    skus::Int64,
+    group_size_scaling::Real,
+    group_size_cap::Real,
+    group_size_min::Real,
+    mean_group_divisor::Real,
+    mean_group_min::Real,
+)
+    max_group_size = ceil(
+        Int64, max(min(skus / group_size_scaling, group_size_cap), group_size_min)
+    )
+    mean_group_size = ceil(Int64, max(max_group_size / mean_group_divisor, mean_group_min))
+    return max_group_size, mean_group_size
+end
+
 function RANDOMTRANS(
     skus::Int64,
     orders::Int64,
