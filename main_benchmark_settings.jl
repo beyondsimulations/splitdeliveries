@@ -16,7 +16,7 @@ if !@isdefined(gate_ratio)
     gate_ratio = 2.0
 end
 if !@isdefined(apply_ls)
-    apply_ls = true
+    apply_ls = experiment != "1000000"
 end
 if !@isdefined(results_tag)
     results_tag = ""
@@ -67,7 +67,7 @@ for dependency in dependencies
     weight_range = 1:10
 
     # Parameters for the local search heuristic
-    ## apply_ls: apply the local search heuristic after the greedy heuristics (default true, set at the top)
+    ## apply_ls: apply the local search heuristic after the greedy heuristics (default true, false at 1,000,000 SKUs, set at the top)
 
     # Parameters for the KLINK heuristic
     ## trials: maximum number of trials, each starting from a new random solution (Trial_max)

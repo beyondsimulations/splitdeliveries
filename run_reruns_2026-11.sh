@@ -57,7 +57,7 @@ if [ "$GROUP" = "kl" ]; then
     results_tag = "_klfaithful"'
     done
 else
-    [ $# -gt 0 ] || set -- "100" "1000" "10000" "100000"
+    [ $# -gt 0 ] || set -- "100" "1000" "10000" "100000" "1000000"
     for experiment in "$@"; do
         launch chi $experiment '    only_modes = [:CHI]
     gate_ratio = 0.0

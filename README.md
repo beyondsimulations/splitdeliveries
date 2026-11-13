@@ -70,18 +70,20 @@ Configuration of heuristics and parameters can be adjusted in `main_benchmark_se
 `main_benchmark_settings.jl` holds all parameters and expects three variables to be defined before it is included: the dataset configurations, the SKU scale, and the storage-requirement mode. A single run looks like this:
 ```julia
 dependencies = ["HD-VF"]        # any of ID/MD/HD x SF/VF
-experiment   = "1000"           # SKU scale: "100", "1000", "10000", "100000"
+experiment   = "1000"           # SKU scale: "100", "1000", "10000", "100000", "1000000"
 weight_mode  = :uniform         # :uniform, :frequency, or :random
 include("main_benchmark_settings.jl")
 ```
 Results are saved to the `results` directory as `<experiment>_benchmark_<dependency>[_<weight_mode>].csv`.
 
-To run all six dataset configurations in parallel via tmux (one session per SKU scale, edit the `experiments` array in the script to select scales):
+To run all six dataset configurations in parallel via tmux (one session per SKU scale; scales passed after the weight mode restrict the run to these, otherwise all five run):
 ```bash
 bash run_benchmarks.sh              # uniform storage requirements
 bash run_benchmarks.sh frequency    # frequency-proportional
 bash run_benchmarks.sh random       # random
+bash run_benchmarks.sh frequency 1000000    # frequency-proportional, 1,000,000 SKUs only
 ```
+At 1,000,000 SKUs only CHI, GO, GP, GS, BS and EMCI run, and the local search is off.
 
 ### Reproducing the Results of the Article
 1. Run the full grid (all six dataset configurations at all four SKU scales, across the warehouse and capacity configurations) for each of the three weight modes as described above. This reproduces all 2,880 scenarios of the article; instances are seeded deterministically from the scenario parameters, so the runs are reproducible. `results_chigate/` contains the CHI results of the same grid with the aggregate independence gate enabled, which is the production configuration reported in the article.

@@ -1,15 +1,17 @@
 #!/bin/bash
 
-# ./run_benchmarks.sh [weight_mode]
+# ./run_benchmarks.sh [weight_mode] [experiment ...]
 # Runs benchmarks in parallel via tmux.
 # Usage:
 #   ./run_benchmarks.sh              # uniform weights (default)
 #   ./run_benchmarks.sh frequency    # frequency-based weights
 #   ./run_benchmarks.sh random       # random weights
+#   ./run_benchmarks.sh frequency 1000000    # frequency-based weights on 1000000 SKUs only (default: all scales)
 # Needs Julia 1.12.5 via juliaup.
 
 # Weight mode (default: uniform)
 WEIGHT_MODE="${1:-uniform}"
+[ $# -gt 0 ] && shift
 
 # Folder for the generated per-dependency run scripts
 mkdir -p runs
@@ -25,7 +27,8 @@ dependencies=(
 )
 
 # Experiments to run in parallel
-experiments=("100" "1000" "10000" "100000")
+[ $# -gt 0 ] || set -- "100" "1000" "10000" "100000" "1000000"
+experiments=("$@")
 
 for experiment in "${experiments[@]}"; do
     session_name="benchmarks_${experiment}_${WEIGHT_MODE}"
