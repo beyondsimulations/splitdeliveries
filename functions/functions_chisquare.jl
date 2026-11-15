@@ -704,35 +704,63 @@ function FILLUP!(
 
     # Track which SKUs still need their first allocation
     unallocated = [sum(@view(X[i, :])) == 0 for i in 1:size(X, 1)]
+    n_unallocated = count(unallocated)
 
     best_allocation = zeros(Float64, size(Q, 1))
     q_rows = rowvals(Q)
     q_vals = nonzeros(Q)
 
-    @inbounds for d in 1:size(capacity_left, 1)
-        while capacity_left[d] >= min_weight
-            fill!(best_allocation, 0.0)
+    # With positive finite storage requirements and finite coappearances of at least zero,
+    # the states of a warehouse only grow while it is filled and the next copy comes from
+    # a max-heap of these states (FILLTOP!); otherwise each copy scans all SKUs
+    use_heap =
+        all(w -> 0 < w < Inf && 1.0 / w < Inf, sku_weight) &&
+        all(v -> isfinite(v) && v >= 0, q_vals)
+    heap = Tuple{Float64,Int64}[]
 
-            @inbounds @simd for i in 1:size(Q, 1)
-                if !X[i, d] && capacity_left[d] >= sku_weight[i]
-                    best_allocation[i] = state[i, d]
+    @inbounds for d in 1:size(capacity_left, 1)
+        # heap of warehouse d: (state, SKU) of the SKUs not in d with a state above zero
+        if use_heap && capacity_left[d] >= min_weight
+            empty!(heap)
+            for i in 1:size(X, 1)
+                if !X[i, d] && state[i, d] > 0
+                    push!(heap, (state[i, d], i))
+                end
+            end
+            sort!(heap; lt = HEAPBEFORE)
+        end
+        while capacity_left[d] >= min_weight
+            if !use_heap
+                fill!(best_allocation, 0.0)
+
+                @inbounds @simd for i in 1:size(Q, 1)
+                    if !X[i, d] && capacity_left[d] >= sku_weight[i]
+                        best_allocation[i] = state[i, d]
+                    end
                 end
             end
 
             # Prioritize SKUs that have no allocation yet
             fallback = 0
-            for i in 1:size(X, 1)
-                if unallocated[i] && capacity_left[d] >= sku_weight[i]
-                    fallback = i
-                    break
+            if n_unallocated > 0
+                for i in 1:size(X, 1)
+                    if unallocated[i] && capacity_left[d] >= sku_weight[i]
+                        fallback = i
+                        break
+                    end
                 end
             end
             if fallback > 0
                 X[fallback, d] = 1
                 capacity_left[d] -= sku_weight[fallback]
                 unallocated[fallback] = false
+                n_unallocated -= 1
             else
-                best = findmax(best_allocation)
+                best = if use_heap
+                    FILLTOP!(heap, X, state, capacity_left, sku_weight, d)
+                else
+                    findmax(best_allocation)
+                end
                 if best[1] > 0
                     X[best[2], d] = 1
                     capacity_left[d] -= sku_weight[best[2]]
@@ -740,7 +768,11 @@ function FILLUP!(
                     @inbounds for idx in nzrange(Q, best[2])
                         i_row = q_rows[idx]
                         if sku_weight[i_row] > 0
+                            value = state[i_row, d]
                             state[i_row, d] += q_vals[idx] / sku_weight[i_row]
+                            if use_heap && !X[i_row, d] && state[i_row, d] != value
+                                HEAPPUSH!(heap, (state[i_row, d], Int64(i_row)))
+                            end
                         end
                     end
                 else
@@ -750,6 +782,27 @@ function FILLUP!(
             end
         end
     end
+end
+
+# first entry of the heap h of warehouse d whose SKU is not in d, whose value equals the
+# state of the SKU and whose SKU fits into d, or (0.0, 0) if there is none; the entries
+# before it are dropped. While d is filled, X[:, d] is only set, the states of d only grow
+# and the capacity left of d only falls, so a dropped entry never qualifies again.
+function FILLTOP!(
+    h::Vector{Tuple{Float64,Int64}},
+    X::Array{Bool,2},
+    state::Matrix{Float64},
+    capacity_left::Vector{<:Real},
+    sku_weight::Vector{<:Real},
+    d::Int64,
+)
+    while !isempty(h)
+        e = HEAPPOP!(h)
+        if !X[e[2], d] && state[e[2], d] == e[1] && capacity_left[d] >= sku_weight[e[2]]
+            return e
+        end
+    end
+    return (0.0, 0)
 end
 
 # Capacities for the allocation of the single copies: the buffer sum(capacity) - target is
