@@ -166,9 +166,12 @@ function RANDOMTRANS(
         for k in 1:skus
             sku_weights[rank_to_sku[k]] = raw_weights[k] / total_weight
         end
-        sku_dist = Categorical(sku_weights)
+        # Cumulative selection probabilities in SKU order, summed one by one as
+        # rand(Categorical(sku_weights)) does: the seed SKU for a uniform draw u is the
+        # first SKU whose cumulative probability exceeds u, or the last SKU
+        sku_cumulative = cumsum(sku_weights)
     else
-        sku_dist = nothing
+        sku_cumulative = nothing
     end
 
     # Step 2: Pre-compute order size distribution (Negative Binomial)
@@ -179,63 +182,60 @@ function RANDOMTRANS(
     p_nbd = nbd_dispersion / (nbd_dispersion + effective_mean)
     order_size_dist = NegativeBinomial(nbd_dispersion, p_nbd)
 
-    # Step 3: Generate orders in chunks for memory efficiency
-    trans = spzeros(Bool, 0, skus)
-    if rem(orders, 10000) != 0 || orders <= 10000
-        divide = 1
-    else
-        divide = orders ÷ 10000
-    end
+    # Step 3: Generate orders; the SKUs of order i are
+    # order_skus[order_start[i]:(order_start[i + 1] - 1)] in ascending order
+    order_skus = Int64[]
+    order_start = Vector{Int64}(undef, orders + 1)
+    order_start[1] = 1
 
-    for part in 1:divide
-        chunk_size = round(Int64, orders / divide)
-        transactions = spzeros(Bool, chunk_size, skus)
+    for i in 1:orders
+        # Draw order size from NBD, capped at total number of SKUs
+        order_size = min(min_order_size + rand(order_size_dist), skus)
+        items_in_order = Set{Int64}()
 
-        for i in 1:chunk_size
-            # Draw order size from NBD, capped at total number of SKUs
-            order_size = min(min_order_size + rand(order_size_dist), skus)
-            items_in_order = Set{Int64}()
+        while length(items_in_order) < order_size
+            # Draw seed SKU from frequency distribution
+            if sku_frequency_mode == :zipf
+                seed = min(searchsortedlast(sku_cumulative, rand()) + 1, skus)
+            else
+                seed = rand(1:skus)
+            end
 
-            while length(items_in_order) < order_size
-                # Draw seed SKU from frequency distribution
-                if sku_frequency_mode == :zipf
-                    seed = rand(sku_dist)
-                else
-                    seed = rand(1:skus)
-                end
+            push!(items_in_order, seed)
 
-                push!(items_in_order, seed)
+            # Multi-hop dependency propagation via BFS queue
+            # Each newly added SKU can trigger its own dependents
+            queue = [seed]
+            while !isempty(queue) && length(items_in_order) < order_size
+                current = popfirst!(queue)
+                dep_range = nzrange(C, current)
+                dep_skus = view(rowvals(C), dep_range)
+                dep_strengths = view(nonzeros(C), dep_range)
 
-                # Multi-hop dependency propagation via BFS queue
-                # Each newly added SKU can trigger its own dependents
-                queue = [seed]
-                while !isempty(queue) && length(items_in_order) < order_size
-                    current = popfirst!(queue)
-                    dep_indices = findnz(C[:, current])
-                    dep_skus = dep_indices[1]
-                    dep_strengths = dep_indices[2]
-
-                    if length(dep_skus) > 0 && rand() < dep_activation_prob
-                        for j in randperm(length(dep_skus))
-                            if length(items_in_order) >= order_size
-                                break
-                            end
-                            if dep_skus[j] ∉ items_in_order && rand() < dep_strengths[j]
-                                push!(items_in_order, dep_skus[j])
-                                push!(queue, dep_skus[j])
-                            end
+                if length(dep_skus) > 0 && rand() < dep_activation_prob
+                    for j in randperm(length(dep_skus))
+                        if length(items_in_order) >= order_size
+                            break
+                        end
+                        if dep_skus[j] ∉ items_in_order && rand() < dep_strengths[j]
+                            push!(items_in_order, dep_skus[j])
+                            push!(queue, dep_skus[j])
                         end
                     end
                 end
             end
-
-            # Write to transaction matrix
-            for sku in items_in_order
-                transactions[i, sku] = true
-            end
         end
-        trans = vcat(trans, transactions)
+
+        # Write the SKUs of the order in ascending order
+        append!(order_skus, items_in_order)
+        sort!(view(order_skus, order_start[i]:length(order_skus)))
+        order_start[i + 1] = length(order_skus) + 1
     end
+
+    # One column per order, turned into one row per order
+    trans = permutedims(
+        SparseMatrixCSC(skus, orders, order_start, order_skus, fill(true, length(order_skus)))
+    )
 
     return trans, C, group_sizes
 end
