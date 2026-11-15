@@ -232,9 +232,8 @@ function BESTSELLINGSTART!(
 )
     nonuniform = !all(w -> w == sku_weight[1], sku_weight)
     if nonuniform
-        remaining_w = sort(
-            [sku_weight[sales[j, 1]] for j in axes(sales, 1) if sales[j, 4] == 0];
-            rev = true,
+        remaining_w, remaining_n, remaining_total = REMAINING_WEIGHTS(
+            [sku_weight[sales[j, 1]] for j in axes(sales, 1) if sales[j, 4] == 0]
         )
     end
     for d in axes(capacity_left, 1)
@@ -257,12 +256,16 @@ function BESTSELLINGSTART!(
                     idx_rm = 0
                     if first_placement
                         idx_rm = searchsortedfirst(remaining_w, w_i; rev = true)
-                        deleteat!(remaining_w, idx_rm)
+                        remaining_n[idx_rm] -= 1
+                        remaining_total -= w_i
                     end
-                    if !FEASIBLE_REMAINING(capacity_left, remaining_w)
+                    if !FEASIBLE_REMAINING(
+                        capacity_left, remaining_w, remaining_n, remaining_total
+                    )
                         capacity_left[d] += w_i
                         if first_placement
-                            insert!(remaining_w, idx_rm, w_i)
+                            remaining_n[idx_rm] += 1
+                            remaining_total += w_i
                         end
                         break
                     end
@@ -290,9 +293,8 @@ function BESTSELLINGTOP!(
 )
     nonuniform = !all(w -> w == sku_weight[1], sku_weight)
     if nonuniform
-        remaining_w = sort(
-            [sku_weight[sales[j, 1]] for j in axes(sales, 1) if sales[j, 4] == 0];
-            rev = true,
+        remaining_w, remaining_n, remaining_total = REMAINING_WEIGHTS(
+            [sku_weight[sales[j, 1]] for j in axes(sales, 1) if sales[j, 4] == 0]
         )
     end
     for d in axes(capacity_left, 1)
@@ -316,12 +318,16 @@ function BESTSELLINGTOP!(
                 idx_rm = 0
                 if first_placement
                     idx_rm = searchsortedfirst(remaining_w, w_i; rev = true)
-                    deleteat!(remaining_w, idx_rm)
+                    remaining_n[idx_rm] -= 1
+                    remaining_total -= w_i
                 end
-                if !FEASIBLE_REMAINING(capacity_left, remaining_w)
+                if !FEASIBLE_REMAINING(
+                    capacity_left, remaining_w, remaining_n, remaining_total
+                )
                     capacity_left[d] += w_i
                     if first_placement
-                        insert!(remaining_w, idx_rm, w_i)
+                        remaining_n[idx_rm] += 1
+                        remaining_total += w_i
                     end
                     break
                 end

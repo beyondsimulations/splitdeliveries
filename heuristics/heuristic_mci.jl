@@ -97,7 +97,9 @@ function EMCIALLOC(
         # Per-warehouse replication budget
         repl_budget = budget / (D - 1)
 
-        # Phase 1: Replicate top-ranked SKUs to ALL warehouses within budget
+        # Phase 1: Replicate top-ranked SKUs to ALL warehouses within budget;
+        # the unallocated SKUs are those ranked after the current position
+        remaining_w, remaining_n, remaining_total = REMAINING_WEIGHTS(sku_weight)
         pos = 1
         budget_left = repl_budget
         while pos <= N && budget_left > 0
@@ -114,11 +116,9 @@ function EMCIALLOC(
             for d in 1:D
                 cap_left[d] -= w
             end
-            remaining_w = [
-                sku_weight[ranking[idx]] for
-                idx in (pos + 1):N if sum(W[ranking[idx], :]) == 0
-            ]
-            if !FEASIBLE_REMAINING(cap_left, remaining_w)
+            remaining_n[searchsortedfirst(remaining_w, w; rev = true)] -= 1
+            remaining_total -= w
+            if !FEASIBLE_REMAINING(cap_left, remaining_w, remaining_n, remaining_total)
                 for d in 1:D
                     cap_left[d] += w
                 end

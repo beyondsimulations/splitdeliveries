@@ -1,12 +1,45 @@
+# Distinct storage requirements in descending order, the number of SKUs with each
+# requirement and the total requirement, the input of FEASIBLE_REMAINING
+function REMAINING_WEIGHTS(weights::Vector{<:Real})
+    remaining_w = sort(unique(weights); rev = true)
+    remaining_n = zeros(Int64, length(remaining_w))
+    for w in weights
+        remaining_n[searchsortedfirst(remaining_w, w; rev = true)] += 1
+    end
+    return remaining_w, remaining_n, sum(weights)
+end
+
 # Check if remaining unallocated SKUs can be feasibly assigned to warehouses.
 # Simulates greedy assignment (heaviest first, argmax warehouse).
 # Used during replication phases to prevent over-replication.
-function FEASIBLE_REMAINING(cap_left::Vector{<:Real}, remaining_weights::Vector{<:Real})
+# The remaining SKUs are given as in REMAINING_WEIGHTS: remaining_n[k] SKUs with storage
+# requirement remaining_w[k] (descending, counts may be zero) and their total requirement.
+function FEASIBLE_REMAINING(
+    cap_left::Vector{<:Real},
+    remaining_w::Vector{<:Real},
+    remaining_n::Vector{Int64},
+    total::Real,
+)
+    # Free capacity minus the requirement still to place; placing a SKU does not change
+    # it. Once it is at least (D - 1) * w for the next requirement w, every later
+    # requirement w' <= w finds at least D * w' free capacity in total, hence at least w'
+    # in the warehouse with the most, and the rest fits. The margin of 1e-6 of the free
+    # capacity keeps this early return clear of rounding with non-integer requirements:
+    # the sums here, the running total in the caller and the simulated capacities round
+    # by at most about 1e-16 of the values involved per operation. Integer requirements
+    # give exact values.
+    slack = sum(cap_left) - total
+    margin = 1e-6 * sum(cap_left)
     sim_cap = copy(cap_left)
-    for w in sort(remaining_weights; rev = true)
-        d = argmax(sim_cap)
-        sim_cap[d] < w && return false
-        sim_cap[d] -= w
+    for k in eachindex(remaining_w)
+        remaining_n[k] == 0 && continue
+        w = remaining_w[k]
+        slack >= (length(cap_left) - 1) * w + margin && return true
+        for _ in 1:remaining_n[k]
+            d = argmax(sim_cap)
+            sim_cap[d] < w && return false
+            sim_cap[d] -= w
+        end
     end
     return true
 end
@@ -64,7 +97,7 @@ function SWAPREPAIR!(
         sim_cap = copy(cap_left)
         sim_cap[d] += freed - w_heavy
         evicted_w = [sku_weight[j] for j in to_evict]
-        FEASIBLE_REMAINING(sim_cap, evicted_w) || continue
+        FEASIBLE_REMAINING(sim_cap, REMAINING_WEIGHTS(evicted_w)...) || continue
 
         # Commit: evict, place heavy, re-allocate evicted
         for j in to_evict
