@@ -393,7 +393,12 @@ CURRENT(queue::DEPQUEUE, e::Tuple{Float64,Int64}, v::Int64, k::Int64) =
 HEAPBEFORE(a::Tuple{Float64,Int64}, b::Tuple{Float64,Int64}) =
     a[1] > b[1] || (a[1] == b[1] && a[2] < b[2])
 
-function HEAPPUSH!(h::Vector{Tuple{Float64,Int64}}, e::Tuple{Float64,Int64})
+# heap order of FILLRESERVE!, entries (value, order frequency, SKU): higher value first, then
+# higher order frequency, then the smaller SKU
+HEAPBEFORE(a::Tuple{Float64,Float64,Int64}, b::Tuple{Float64,Float64,Int64}) =
+    a[1] > b[1] || (a[1] == b[1] && (a[2] > b[2] || (a[2] == b[2] && a[3] < b[3])))
+
+function HEAPPUSH!(h::Vector{T}, e::T) where {T<:Tuple}
     push!(h, e)
     c = length(h)
     @inbounds while c > 1 && HEAPBEFORE(h[c], h[c >> 1])
@@ -402,7 +407,7 @@ function HEAPPUSH!(h::Vector{Tuple{Float64,Int64}}, e::Tuple{Float64,Int64})
     end
 end
 
-function HEAPPOP!(h::Vector{Tuple{Float64,Int64}})
+function HEAPPOP!(h::Vector{T}) where {T<:Tuple}
     top = h[1]
     e = pop!(h)
     n = length(h)
@@ -860,10 +865,40 @@ function FILLRESERVE!(
         end
     end
     minw = minimum(sku_weight)
+    # with storage requirements above zero and finite inverses, finite coappearances >= 0 and
+    # order frequencies exact in Float64, the SKU of a copy comes from a max-heap of the
+    # warehouse and a position in nor_order; both select the SKU of the scans
+    use_heap =
+        all(w -> 0 < w < Inf && 1.0 / w < Inf, sku_weight) &&
+        all(q -> isfinite(q) && q >= 0, vals) &&
+        all(f -> Float64(f) == f, ordered_skus)
+    heap = Tuple{Float64,Float64,Int64}[]
     for d in 1:D
+        # entries (value, order frequency, SKU) of the SKUs not in d with a value above zero;
+        # while d is filled, column d of P only grows and cap_left[d] only falls
+        pos = 1
+        if use_heap && use_pairs
+            empty!(heap)
+            for i in 1:I
+                v = P[i, d] / sku_weight[i]
+                !X[i, d] && v > 0 && HEAPPUSH!(heap, (v, Float64(ordered_skus[i]), i))
+            end
+        end
         while cap_left[d] >= minw
             best, bf, bi = 0.0, -1.0, 0
-            if use_pairs
+            if use_heap
+                # first entry that is current and fits; entries that are not current or do
+                # not fit stay so while d is filled and are dropped
+                while !isempty(heap)
+                    v, _, i = heap[1]
+                    if X[i, d] || P[i, d] / sku_weight[i] != v || cap_left[d] < sku_weight[i]
+                        HEAPPOP!(heap)
+                    else
+                        bi = i
+                        break
+                    end
+                end
+            elseif use_pairs
                 @inbounds for i in 1:I
                     (X[i, d] || cap_left[d] < sku_weight[i]) && continue
                     v = P[i, d] / sku_weight[i]
@@ -872,7 +907,14 @@ function FILLRESERVE!(
                     end
                 end
             end
-            if bi == 0
+            if bi == 0 && use_heap
+                # the SKUs of nor_order before pos are in d or do not fit
+                while pos <= length(nor_order) &&
+                      (X[nor_order[pos], d] || cap_left[d] < sku_weight[nor_order[pos]])
+                    pos += 1
+                end
+                pos <= length(nor_order) && (bi = nor_order[pos])
+            elseif bi == 0
                 for i in nor_order
                     if !X[i, d] && cap_left[d] >= sku_weight[i]
                         bi = i
@@ -895,6 +937,10 @@ function FILLRESERVE!(
                         end
                     else
                         P[j, d] += vals[idx]
+                        if use_heap
+                            v = P[j, d] / sku_weight[j]
+                            v > 0 && HEAPPUSH!(heap, (v, Float64(ordered_skus[j]), Int64(j)))
+                        end
                     end
                 end
             end
