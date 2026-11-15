@@ -146,6 +146,13 @@ function SINGLECOPIES(
     state_dep = zeros(Float64, size(X, 1), length(cap_left))
     state_nor = zeros(Float64, size(X, 1), length(cap_left))
     allocated = zeros(Bool, size(X, 1))
+    ## Heaps of the values that ADDDEPENDENT! compares, if every storage requirement is
+    ## positive and finite with a finite inverse; otherwise ADDDEPENDENT! scans all SKUs
+    queue = if all(w -> 0 < w < Inf && 1.0 / w < Inf, sku_weight)
+        DEPQUEUE(state_dep, state_nor, sku_weight, allocated)
+    else
+        nothing
+    end
     ## Calculate the weight of each warehouse. It shows us the density of
     ## the independent coappearances in each warehouse if we were to allocate
     ## all SKUs simply according to the highest independent coappearances.
@@ -207,6 +214,7 @@ function SINGLECOPIES(
             i,
             k,
             n_allocated,
+            queue,
         )
         ## Check for all unallocated SKUs whether they have positive
         ## dependencies to the SKUs in the warehouse k the last SKU was allocated
@@ -226,6 +234,7 @@ function SINGLECOPIES(
             allocated,
             sku_weight,
             n_allocated,
+            queue,
         )
         FILLLAST!(X, cap_left, allocated, sku_weight, n_allocated)
     end

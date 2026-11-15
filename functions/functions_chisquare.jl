@@ -339,6 +339,136 @@ function WHPOTDEP(
     return pot_dep::Vector{Float64}
 end
 
+# Max-heaps per warehouse of the values that FINDDEP compares, entries (value, SKU): dep
+# holds the dependent values above zero, nor the independent values above zero. An entry is
+# current while its SKU is unallocated and its value equals the value of the current state.
+# Every change of a state adds an entry; entries that are not current are dropped at the
+# top. nan is set once a value is NaN; FINDDEP decides from then on.
+mutable struct DEPQUEUE{S<:Real,W<:Real}
+    state_dep::Matrix{S}
+    state_nor::Matrix{S}
+    sku_weight::Vector{W}
+    allocated::Vector{Bool}
+    dep::Vector{Vector{Tuple{Float64,Int64}}}
+    nor::Vector{Vector{Tuple{Float64,Int64}}}
+    aside::Vector{Tuple{Float64,Int64}}
+    nan::Bool
+end
+function DEPQUEUE(
+    state_dep::Matrix{<:Real},
+    state_nor::Matrix{<:Real},
+    sku_weight::Vector{<:Real},
+    allocated::Vector{Bool},
+)
+    K = size(state_dep, 2)
+    return DEPQUEUE(
+        state_dep,
+        state_nor,
+        sku_weight,
+        allocated,
+        [Tuple{Float64,Int64}[] for _ in 1:K],
+        [Tuple{Float64,Int64}[] for _ in 1:K],
+        Tuple{Float64,Int64}[],
+        false,
+    )
+end
+
+# dependent and independent value of SKU j for warehouse k, computed as in FINDDEP
+@inline function DEPVALUES(queue::DEPQUEUE, j::Integer, k::Int64)
+    weight_inv = 1.0 / queue.sku_weight[j]
+    pot_dep = queue.state_dep[j, k] * weight_inv
+    pot_nor = queue.state_nor[j, k] * weight_inv
+    if pot_dep > 0
+        pot_dep += pot_nor
+    end
+    return pot_dep, pot_nor
+end
+
+# entry e of the heap of warehouse k with the dependent (v = 1) or the independent (v = 2)
+# values is current
+CURRENT(queue::DEPQUEUE, e::Tuple{Float64,Int64}, v::Int64, k::Int64) =
+    !queue.allocated[e[2]] && DEPVALUES(queue, e[2], k)[v] == e[1]
+
+# heap order: higher value first, ties to the smaller SKU
+HEAPBEFORE(a::Tuple{Float64,Int64}, b::Tuple{Float64,Int64}) =
+    a[1] > b[1] || (a[1] == b[1] && a[2] < b[2])
+
+function HEAPPUSH!(h::Vector{Tuple{Float64,Int64}}, e::Tuple{Float64,Int64})
+    push!(h, e)
+    c = length(h)
+    @inbounds while c > 1 && HEAPBEFORE(h[c], h[c >> 1])
+        h[c], h[c >> 1] = h[c >> 1], h[c]
+        c >>= 1
+    end
+end
+
+function HEAPPOP!(h::Vector{Tuple{Float64,Int64}})
+    top = h[1]
+    e = pop!(h)
+    n = length(h)
+    if n > 0
+        p = 1
+        @inbounds while 2p <= n
+            c = 2p < n && HEAPBEFORE(h[2p + 1], h[2p]) ? 2p + 1 : 2p
+            HEAPBEFORE(h[c], e) || break
+            h[p] = h[c]
+            p = c
+        end
+        h[p] = e
+    end
+    return top
+end
+
+# add the values of the unallocated SKU j for warehouse k after a change of its state; a
+# heap with more than twice as many entries as SKUs keeps only its current entries, each
+# once
+function PUSHDEP!(queue::DEPQUEUE, j::Integer, k::Int64)
+    pot_dep, pot_nor = DEPVALUES(queue, j, k)
+    queue.nan |= isnan(pot_dep) | isnan(pot_nor)
+    pot_dep > 0 && HEAPPUSH!(queue.dep[k], (pot_dep, Int64(j)))
+    pot_nor > 0 && HEAPPUSH!(queue.nor[k], (pot_nor, Int64(j)))
+    for (h, v) in ((queue.dep[k], 1), (queue.nor[k], 2))
+        if length(h) > 2 * length(queue.allocated)
+            filter!(e -> CURRENT(queue, e, v, k), h)
+            unique!(sort!(h; lt = HEAPBEFORE))
+        end
+    end
+end
+
+# first current entry of the heap of warehouse k with the dependent (v = 1) or independent
+# (v = 2) values whose SKU fits into k, or (0.0, 0). Entries that are not current are
+# dropped, current entries of SKUs that do not fit stay in the heap.
+function TOPFIT!(queue::DEPQUEUE, v::Int64, k::Int64, capacity_left::Vector{<:Real})
+    h = v == 1 ? queue.dep[k] : queue.nor[k]
+    top = (0.0, 0)
+    while !isempty(h)
+        e = h[1]
+        if !CURRENT(queue, e, v, k)
+            HEAPPOP!(h)
+        elseif capacity_left[k] < queue.sku_weight[e[2]]
+            push!(queue.aside, HEAPPOP!(h))
+        else
+            top = e
+            break
+        end
+    end
+    for e in queue.aside
+        HEAPPUSH!(h, e)
+    end
+    empty!(queue.aside)
+    return top
+end
+
+# FINDDEP from the heaps of warehouse k: the highest dependent value among the unallocated
+# SKUs that fit into k, the first SKU with this value and the highest independent value
+# among these SKUs. A value of zero stands for none above zero; ADDDEPENDENT! decides as
+# with FINDDEP.
+function QUEUEDEP(queue::DEPQUEUE, k::Int64, capacity_left::Vector{<:Real})
+    max_dep_val, i = TOPFIT!(queue, 1, k, capacity_left)
+    i == 0 && return 0.0, 1, 0.0
+    return max_dep_val, i, TOPFIT!(queue, 2, k, capacity_left)[1]
+end
+
 # function to check for all unallocated SKUs whether they have positive 
 # dependencies to the SKUs in the warehouse k the last SKU was allocated 
 # to. If so, check whether the dependencies are expected to dominate the 
@@ -357,17 +487,14 @@ function ADDDEPENDENT!(
     allocated::Vector{Bool},
     sku_weight::Vector{<:Real},
     n_allocated::Ref{Int},
+    queue::Union{DEPQUEUE,Nothing},
 )
     while capacity_left[k] > 0 && n_allocated[] < size(X, 1)
-        max_dep_val, i, max_nor_val = FINDDEP(
-            X,
-            k,
-            state_dep,
-            state_nor,
-            allocated,
-            sku_weight,
-            capacity_left,
-        )
+        max_dep_val, i, max_nor_val = if queue === nothing || queue.nan
+            FINDDEP(X, k, state_dep, state_nor, allocated, sku_weight, capacity_left)
+        else
+            QUEUEDEP(queue, k, capacity_left)
+        end
         max_dep_val <= 0 && break
         if max_dep_val >= max_nor_val && capacity_left[k] >= sku_weight[i]
             ALLOCATEONE!(
@@ -384,6 +511,7 @@ function ADDDEPENDENT!(
                 i,
                 k,
                 n_allocated,
+                queue,
             )
         else
             break
@@ -428,7 +556,8 @@ function FINDDEP(
     return max_dep_val, i, max_nor_val
 end
 
-# function to allocate a selcted product to a selected warehouse
+# function to allocate a selcted product to a selected warehouse; every changed state of an
+# unallocated SKU is added to the heaps of queue
 function ALLOCATEONE!(
     X::Array{Bool,2},
     dep::AbstractMatrix{<:Real},
@@ -443,6 +572,7 @@ function ALLOCATEONE!(
     i::Int64,
     k::Int64,
     n_allocated::Ref{Int},
+    queue::Union{DEPQUEUE,Nothing} = nothing,
 )
     if !allocated[i]
         if capacity_left[k] < sku_weight[i]
@@ -466,6 +596,10 @@ function ALLOCATEONE!(
                             state_nor[m, d_old[ei]] -= nv
                             state_dep[m, d_new[ei]] += dv
                             state_nor[m, d_new[ei]] += nv
+                            if queue !== nothing
+                                PUSHDEP!(queue, m, d_old[ei])
+                                PUSHDEP!(queue, m, d_new[ei])
+                            end
                         end
                     end
                 end
@@ -477,6 +611,7 @@ function ALLOCATEONE!(
                         dv = dep[m, i]
                         state_dep[m, d_placed] += dv
                         state_nor[m, d_placed] += q_vals[idx] - dv
+                        queue === nothing || PUSHDEP!(queue, m, d_placed)
                     end
                 end
                 allocated[i] = true
@@ -506,6 +641,7 @@ function ALLOCATEONE!(
                 dv = dep[j, i]
                 state_dep[j, k] += dv
                 state_nor[j, k] += q_vals[idx] - dv
+                queue === nothing || PUSHDEP!(queue, j, k)
             end
         end
     else
